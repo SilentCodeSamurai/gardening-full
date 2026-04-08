@@ -1,4 +1,34 @@
-Welcome to your new TanStack Start app! 
+Welcome to your new TanStack Start fullstack app! 
+
+This project is structured with a clear separation between app code and backend code.
+
+## Project Structure
+
+```
+src/
+├── app/                    # Fullstack app code
+│   ├── routes/            # File-based routing
+│   │   ├── api/          # API routes
+│   │   └── [pages]
+│   ├── components/
+│   ├── hooks/
+│   ├── integrations/
+│   ├── lib/
+│   ├── orpc/client.ts    # oRPC client
+│   ├── paraglide/        # i18n
+│   ├── router.tsx
+│   └── styles.css
+│
+└── backend/              # Backend-only code
+    ├── db/              # Database schemas
+    ├── lib/auth.ts      # Auth config
+    ├── orpc/            # oRPC router & schemas
+    └── polyfill.ts
+```
+
+**Aliases:**
+- `@/*` → `src/app/*`
+- `@backend/*` → `src/backend/*`
 
 # Getting Started
 
@@ -33,8 +63,8 @@ This project uses [Tailwind CSS](https://tailwindcss.com/) for styling.
 
 If you prefer not to use Tailwind CSS:
 
-1. Remove the demo pages in `src/routes/demo/`
-2. Replace the Tailwind import in `src/styles.css` with your own styles
+1. Remove the demo pages in `src/app/routes/demo/`
+2. Replace the Tailwind import in `src/app/styles.css` with your own styles
 3. Remove `tailwindcss()` from the plugins array in `vite.config.ts`
 4. Uninstall the packages: `bun install @tailwindcss/vite tailwindcss -D`
 
@@ -56,7 +86,7 @@ This add-on wires up ParaglideJS for localized routing and message formatting.
 
 - Messages live in `project.inlang/messages`.
 - URLs are localized through the Paraglide Vite plugin and router `rewrite` hooks.
-- Run the dev server or build to regenerate the `src/paraglide` outputs.
+- Run the dev server or build to regenerate the `src/app/paraglide` outputs.
 
 
 ## Setting up Better Auth
@@ -74,13 +104,16 @@ This add-on wires up ParaglideJS for localized routing and message formatting.
 Better Auth can work in stateless mode, but to persist user data, add a database:
 
 ```typescript
-// src/lib/auth.ts
+// src/backend/lib/auth.ts
 import { betterAuth } from "better-auth";
-import { Pool } from "pg";
+import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { db } from "@backend/db";
+import * as schema from "@backend/db/schema";
 
 export const auth = betterAuth({
-  database: new Pool({
-    connectionString: process.env.DATABASE_URL,
+  database: drizzleAdapter(db, {
+    provider: "pg",
+    schema,
   }),
   // ... rest of config
 });
@@ -96,11 +129,11 @@ bunx --bun @better-auth/cli migrate
 
 ## Routing
 
-This project uses [TanStack Router](https://tanstack.com/router) with file-based routing. Routes are managed as files in `src/routes`.
+This project uses [TanStack Router](https://tanstack.com/router) with file-based routing. Routes are managed as files in `src/app/routes`.
 
 ### Adding A Route
 
-To add a new route to your application just add a new file in the `./src/routes` directory.
+To add a new route to your application just add a new file in the `./src/app/routes` directory.
 
 TanStack will automatically generate the content of the route file for you.
 
@@ -126,7 +159,7 @@ More information on the `Link` component can be found in the [Link documentation
 
 ### Using A Layout
 
-In the File Based Routing setup the layout is located in `src/routes/__root.tsx`. Anything you add to the root route will appear in all the routes. The route content will appear in the JSX where you render `{children}` in the `shellComponent`.
+In the File Based Routing setup the layout is located in `src/app/routes/__root.tsx`. Anything you add to the root route will appear in all the routes. The route content will appear in the JSX where you render `{children}` in the `shellComponent`.
 
 Here is an example layout that includes a header:
 
@@ -190,7 +223,7 @@ function MyComponent() {
 
 ## API Routes
 
-You can create API routes by using the `server` property in your route definitions:
+You can create API routes in `src/app/routes/api/` using the `server` property in your route definitions:
 
 ```tsx
 import { createFileRoute } from '@tanstack/react-router'
@@ -204,6 +237,8 @@ export const Route = createFileRoute('/api/hello')({
   },
 })
 ```
+
+Backend logic (database queries, authentication, etc.) should be placed in `src/backend/` and imported via the `@backend` alias.
 
 ## Data Fetching
 
@@ -235,6 +270,17 @@ function PeopleComponent() {
 ```
 
 Loaders simplify your data fetching logic dramatically. Check out more information in the [Loader documentation](https://tanstack.com/router/latest/docs/framework/react/guide/data-loading#loader-parameters).
+
+## Backend Integration
+
+Backend code is kept separate in `src/backend/`. Use the `@backend` alias to import backend utilities:
+
+```tsx
+// In src/app/routes/api/todos.ts
+import { db } from '@backend/db'
+import { todos } from '@backend/db/schema'
+import { auth } from '@backend/lib/auth'
+```
 
 # Demo files
 
