@@ -1,8 +1,11 @@
-import type { SpeciesCategoryRepositoryPort } from "../../ports/repositories/gardening/species-category.repository.port";
-import type { SpeciesRepositoryPort } from "../../ports/repositories/gardening/species.repository.port";
 import type { SpeciesCategoryEntityId } from "@backend/core/domain/gardening/entities";
+import type { SpeciesRepositoryPort } from "../../ports/repositories/gardening/species.repository.port";
+import type { SpeciesCategoryRepositoryPort } from "../../ports/repositories/gardening/species-category.repository.port";
+import { gardeningCatalogRootRef, gardeningSpeciesCategoryRef, gardeningSpeciesRef } from "../../resource-refs";
+import type { AccessControlApplicationService } from "../../services/access-control/access-control.application-service";
 import { BaseUseCaseError } from "../shared/errors";
 import type { IUseCase } from "../shared/use-case.interface";
+import type { UseCaseRequest } from "../use-case-context";
 
 import type { DefaultCatalogCategory, DefaultCatalogDefinition } from "./default-catalog.config";
 
@@ -26,9 +29,9 @@ export class PopulateDefaultCatalogUseCaseUnknownCategorySlugError extends BaseU
 	}
 }
 
-export type PopulateDefaultCatalogInput = {
+export type PopulateDefaultCatalogInput = UseCaseRequest<{
 	catalog: DefaultCatalogDefinition<readonly DefaultCatalogCategory[]>;
-};
+}>;
 
 export type PopulateDefaultCatalogOutput =
 	| { status: "skipped"; reason: "catalog-not-empty" }
@@ -48,30 +51,32 @@ export class PopulateDefaultCatalogUseCase
 	implements IUseCase<PopulateDefaultCatalogInput, PopulateDefaultCatalogOutput>
 {
 	constructor(
+		private readonly access: AccessControlApplicationService,
 		private readonly speciesCategoryRepository: SpeciesCategoryRepositoryPort,
 		private readonly speciesRepository: SpeciesRepositoryPort,
 	) {}
 
 	public async execute(input: PopulateDefaultCatalogInput): Promise<PopulateDefaultCatalogOutput> {
-		assertUniqueCategorySlugs(input.catalog.categories);
+		assertUniqueCategorySlugs(input.dto.catalog.categories);
 
-		const existing = await this.speciesCategoryRepository.getAll(undefined);
+		await this.access.assertCanCreate(input.context, gardeningCatalogRootRef());
+
+		const existing = await this.speciesCategoryRepository.getAll();
 		if (existing.items.length > 0) {
 			return { status: "skipped", reason: "catalog-not-empty" };
 		}
 
 		const slugToCategoryId = new Map<string, SpeciesCategoryEntityId>();
 
-		for (const row of input.catalog.categories) {
+		for (const row of input.dto.catalog.categories) {
 			const { slug, ...categoryCreate } = row;
-			const created = await this.speciesCategoryRepository.create({
-				...categoryCreate,
-				isDefault: true,
-			});
+			const created = await this.speciesCategoryRepository.create(categoryCreate);
 			slugToCategoryId.set(slug, created.id);
+			const categoryRef = gardeningSpeciesCategoryRef(String(created.id));
+			await this.access.bootstrapResourceAdminForActor(input.context, categoryRef);
 		}
 
-		for (const row of input.catalog.species) {
+		for (const row of input.dto.catalog.species) {
 			const categoryId = slugToCategoryId.get(row.categorySlug);
 			if (!categoryId) {
 				throw new PopulateDefaultCatalogUseCaseUnknownCategorySlugError({
@@ -80,13 +85,18 @@ export class PopulateDefaultCatalogUseCase
 			}
 			const { categorySlug, ...speciesCreate } = row;
 			void categorySlug;
-			await this.speciesRepository.create({ categoryId, ...speciesCreate, isDefault: true });
+			const species = await this.speciesRepository.create({
+				categoryId,
+				...speciesCreate,
+			});
+			const speciesRef = gardeningSpeciesRef(String(species.id));
+			await this.access.bootstrapResourceAdminForActor(input.context, speciesRef);
 		}
 
 		return {
 			status: "populated",
-			createdCategories: input.catalog.categories.length,
-			createdSpecies: input.catalog.species.length,
+			createdCategories: input.dto.catalog.categories.length,
+			createdSpecies: input.dto.catalog.species.length,
 		};
 	}
 }

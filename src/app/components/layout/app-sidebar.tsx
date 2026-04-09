@@ -1,7 +1,6 @@
+import { UserButton } from "@daveyplate/better-auth-ui";
 import { Link, useRouterState } from "@tanstack/react-router";
-import { ChevronDownIcon } from "lucide-react";
-import * as m from "@/paraglide/messages.js";
-
+import { ChevronDownIcon, SettingsIcon } from "lucide-react";
 import { CollectionIcon } from "@/components/icon/collection-icon";
 import { SidebarLanguageMenu } from "@/components/layout/sidebar-language-menu";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -18,6 +17,7 @@ import {
 	SidebarMenuItem,
 	SidebarRail,
 } from "@/components/ui/sidebar";
+import * as m from "@/paraglide/messages.js";
 
 export function AppSidebar() {
 	const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -30,8 +30,20 @@ export function AppSidebar() {
 					<SidebarGroupContent>
 						<SidebarMenu>
 							<SidebarMenuItem>
-								<SidebarMenuButton asChild isActive={isActivePath("/")}>
-									<Link to="/">{m.components_layout_nav_home()}</Link>
+								<SidebarMenuButton asChild isActive={isActivePath("/dashboard")}>
+									<Link to="/dashboard">{m.components_layout_nav_home()}</Link>
+								</SidebarMenuButton>
+							</SidebarMenuItem>
+							<SidebarMenuItem>
+								<SidebarMenuButton asChild isActive={isActivePath("/account/settings")}>
+									<Link
+										to="/account/$accountView"
+										params={{ accountView: "settings" }}
+										className="flex w-full min-w-0 items-center gap-2"
+									>
+										<SettingsIcon className="size-4 shrink-0" />
+										Settings
+									</Link>
 								</SidebarMenuButton>
 							</SidebarMenuItem>
 						</SidebarMenu>
@@ -126,7 +138,8 @@ export function AppSidebar() {
 					</SidebarGroupContent>
 				</SidebarGroup>
 			</SidebarContent>
-			<SidebarFooter>
+			<SidebarFooter className="gap-3 border-sidebar-border border-t pt-3">
+					<UserButton className="w-full" />
 				<ThemeToggle />
 				<SidebarLanguageMenu />
 			</SidebarFooter>

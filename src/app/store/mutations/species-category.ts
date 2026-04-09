@@ -1,4 +1,4 @@
-import type { SpeciesCategoryEntity } from "@backend/core/domain/gardening/entities";
+import type { SpeciesCategoryWithSystemCatalog } from "@backend/core/application/use-cases/gardening/species-category.crud-use-cases";
 import type { ItemsContainer } from "@backend/shared/types";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -25,15 +25,15 @@ export function useSpeciesCategoryCreateMutation() {
 				await cancelQueriesByKeys(queryClient, [queryKeys.speciesCategory.all.queryKey]);
 				const snapshots = snapshotQueries(queryClient, [queryKeys.speciesCategory.all.queryKey]);
 				const pendingId = makePendingId("species-category");
-				const pending: SpeciesCategoryEntity = {
-					id: pendingId as SpeciesCategoryEntity["id"],
+				const pending: SpeciesCategoryWithSystemCatalog = {
+					id: pendingId as SpeciesCategoryWithSystemCatalog["id"],
 					title: variables.title,
-					isDefault: false,
+					systemCatalog: false,
 					presentation: variables.presentation,
 					createdAt: new Date(),
 					updatedAt: new Date(),
 				};
-				queryClient.setQueryData<ItemsContainer<SpeciesCategoryEntity>>(
+				queryClient.setQueryData<ItemsContainer<SpeciesCategoryWithSystemCatalog>>(
 					queryKeys.speciesCategory.all.queryKey,
 					(prev) => appendToItemsContainer(prev, pending),
 				);
@@ -45,7 +45,7 @@ export function useSpeciesCategoryCreateMutation() {
 				restoreQuerySnapshots(queryClient, ctx.snapshots);
 				if (ctx.pendingId) {
 					queryClient.setQueryData(
-						queryKeys.speciesCategory.detail(ctx.pendingId as SpeciesCategoryEntity["id"]).queryKey,
+						queryKeys.speciesCategory.detail(ctx.pendingId as SpeciesCategoryWithSystemCatalog["id"]).queryKey,
 						undefined,
 					);
 				}
@@ -54,17 +54,17 @@ export function useSpeciesCategoryCreateMutation() {
 			},
 			onSuccess: (entity, _vars, ctx) => {
 				if (ctx?.pendingId) {
-					queryClient.setQueryData<ItemsContainer<SpeciesCategoryEntity>>(
+					queryClient.setQueryData<ItemsContainer<SpeciesCategoryWithSystemCatalog>>(
 						queryKeys.speciesCategory.all.queryKey,
 						(prev) =>
-							replacePendingInItemsContainer(prev, ctx.pendingId as SpeciesCategoryEntity["id"], entity),
+							replacePendingInItemsContainer(prev, ctx.pendingId as SpeciesCategoryWithSystemCatalog["id"], entity),
 					);
 					queryClient.setQueryData(
-						queryKeys.speciesCategory.detail(ctx.pendingId as SpeciesCategoryEntity["id"]).queryKey,
+						queryKeys.speciesCategory.detail(ctx.pendingId as SpeciesCategoryWithSystemCatalog["id"]).queryKey,
 						undefined,
 					);
 				} else {
-					queryClient.setQueryData<ItemsContainer<SpeciesCategoryEntity>>(
+					queryClient.setQueryData<ItemsContainer<SpeciesCategoryWithSystemCatalog>>(
 						queryKeys.speciesCategory.all.queryKey,
 						(prev) => replacePendingInItemsContainer(prev, entity.id, entity),
 					);
@@ -87,20 +87,20 @@ export function useSpeciesCategoryUpdateMutation() {
 					queryKeys.speciesCategory.all.queryKey,
 					queryKeys.speciesCategory.detail(variables.id).queryKey,
 				]);
-				const previousAll = snapshots[0]?.data as ItemsContainer<SpeciesCategoryEntity> | undefined;
-				const previousDetail = snapshots[1]?.data as SpeciesCategoryEntity | undefined;
+				const previousAll = snapshots[0]?.data as ItemsContainer<SpeciesCategoryWithSystemCatalog> | undefined;
+				const previousDetail = snapshots[1]?.data as SpeciesCategoryWithSystemCatalog | undefined;
 				const base =
 					previousDetail ??
 					previousAll?.items.find((item) => String(item.id) === String(variables.id)) ??
 					null;
 				if (base) {
-					const optimistic: SpeciesCategoryEntity = {
+					const optimistic: SpeciesCategoryWithSystemCatalog = {
 						...base,
 						...variables,
 						id: base.id,
 						updatedAt: new Date(),
 					};
-					queryClient.setQueryData<ItemsContainer<SpeciesCategoryEntity>>(
+					queryClient.setQueryData<ItemsContainer<SpeciesCategoryWithSystemCatalog>>(
 						queryKeys.speciesCategory.all.queryKey,
 						(prev) => upsertInItemsContainer(prev, optimistic),
 					);
@@ -116,7 +116,7 @@ export function useSpeciesCategoryUpdateMutation() {
 				toast.error(m.collections_speciesCategory_actionError());
 			},
 			onSuccess: (entity) => {
-				queryClient.setQueryData<ItemsContainer<SpeciesCategoryEntity>>(
+				queryClient.setQueryData<ItemsContainer<SpeciesCategoryWithSystemCatalog>>(
 					queryKeys.speciesCategory.all.queryKey,
 					(prev) => upsertInItemsContainer(prev, entity),
 				);
@@ -138,7 +138,7 @@ export function useSpeciesCategoryDeleteMutation() {
 					queryKeys.speciesCategory.all.queryKey,
 					queryKeys.speciesCategory.detail(variables.id).queryKey,
 				]);
-				queryClient.setQueryData<ItemsContainer<SpeciesCategoryEntity>>(
+				queryClient.setQueryData<ItemsContainer<SpeciesCategoryWithSystemCatalog>>(
 					queryKeys.speciesCategory.all.queryKey,
 					(prev) => removeFromItemsContainer(prev, variables.id),
 				);
@@ -153,7 +153,7 @@ export function useSpeciesCategoryDeleteMutation() {
 				toast.error(m.collections_speciesCategory_actionError());
 			},
 			onSuccess: (deletedId) => {
-				queryClient.setQueryData<ItemsContainer<SpeciesCategoryEntity>>(
+				queryClient.setQueryData<ItemsContainer<SpeciesCategoryWithSystemCatalog>>(
 					queryKeys.speciesCategory.all.queryKey,
 					(prev) => dropPendingInItemsContainer(prev, deletedId),
 				);

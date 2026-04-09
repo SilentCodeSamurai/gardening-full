@@ -16,13 +16,10 @@ export type LocationEntityId = BaseEntityId<string, "Location">;
 
 /**
  * A catalog category/grouping for species (e.g., “Vegetables”, “Herbs”).
- *
- * `isDefault` — `true` when the row came from default catalog population / seed;
- * titles are then i18n keys. User-created categories use `false` and literal `title` text.
+ * Whether a row is the populate-managed shared catalog is determined from access-control metadata, not stored here.
  */
 export type SpeciesCategoryEntity = BaseEntity<SpeciesCategoryEntityId> & {
 	title: string;
-	isDefault: boolean;
 	presentation?: ItemPresentationValueObject;
 };
 
@@ -36,8 +33,6 @@ export type SpeciesCategoryEntity = BaseEntity<SpeciesCategoryEntityId> & {
 export type SpeciesEntity = BaseEntity<SpeciesEntityId> & {
 	categoryId: SpeciesCategoryEntityId;
 	characteristics: SpeciesCharacteristics;
-	/** Same semantics as {@link SpeciesCategoryEntity.isDefault}: seeded catalog vs user-authored. */
-	isDefault: boolean;
 	presentation?: ItemPresentationValueObject;
 };
 

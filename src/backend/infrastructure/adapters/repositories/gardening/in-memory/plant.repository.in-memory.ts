@@ -20,11 +20,11 @@ import type {
 } from "@backend/core/application/ports/repositories/gardening/plant.repository.port";
 import { BaseRepositoryErrors } from "@backend/core/application/ports/repositories/shared/base-repository.errors";
 import type { HydratedPlantEntity, PlantEntity, PlantEntityId } from "@backend/core/domain/gardening/entities";
-import type { InMemoryGardeningStore } from "@backend/infrastructure/integrations/in-memory-database/client";
+import type { InMemoryStore } from "@backend/infrastructure/integrations/in-memory-database/client";
 import { idKey, plantId } from "@backend/infrastructure/integrations/shared/database-ids";
 
 export class PlantInMemoryRepository extends BaseRepositoryErrors implements PlantRepositoryPort {
-	constructor(private readonly store: InMemoryGardeningStore) {
+	constructor(private readonly store: InMemoryStore) {
 		super();
 	}
 

@@ -5,7 +5,9 @@ import {
 	SpeciesCategoryGetByIdUseCase,
 	SpeciesCategoryUpdateUseCase,
 } from "@backend/core/application/use-cases/gardening/species-category.crud-use-cases";
-import { os } from "@orpc/server";
+
+import { createUseCaseContextFromOrpc } from "../../create-use-case-context";
+import { procedure } from "../../orpc-procedure";
 import { resolveAndExecute } from "../../shared/resolve-use-case";
 import {
 	CreateSpeciesCategoryInputSchema,
@@ -15,17 +17,39 @@ import {
 } from "./schemas";
 
 export const speciesCategoryRouter = {
-	create: os
+	create: procedure
 		.input(CreateSpeciesCategoryInputSchema)
-		.handler(({ input }) => resolveAndExecute(SpeciesCategoryCreateUseCase, input)),
-	getById: os
+		.handler(({ input, context }) =>
+			resolveAndExecute(SpeciesCategoryCreateUseCase, {
+				context: createUseCaseContextFromOrpc(context),
+				dto: input,
+			}),
+		),
+	getById: procedure
 		.input(GetSpeciesCategoryByIdInputSchema)
-		.handler(({ input }) => resolveAndExecute(SpeciesCategoryGetByIdUseCase, input)),
-	getAll: os.handler(() => resolveAndExecute(SpeciesCategoryGetAllUseCase)),
-	update: os
+		.handler(({ input, context }) =>
+			resolveAndExecute(SpeciesCategoryGetByIdUseCase, {
+				context: createUseCaseContextFromOrpc(context),
+				dto: input,
+			}),
+		),
+	getAll: procedure.handler(({ context }) =>
+		resolveAndExecute(SpeciesCategoryGetAllUseCase, { context: createUseCaseContextFromOrpc(context) }),
+	),
+	update: procedure
 		.input(UpdateSpeciesCategoryInputSchema)
-		.handler(({ input }) => resolveAndExecute(SpeciesCategoryUpdateUseCase, input)),
-	delete: os
+		.handler(({ input, context }) =>
+			resolveAndExecute(SpeciesCategoryUpdateUseCase, {
+				context: createUseCaseContextFromOrpc(context),
+				dto: input,
+			}),
+		),
+	delete: procedure
 		.input(DeleteSpeciesCategoryInputSchema)
-		.handler(({ input }) => resolveAndExecute(SpeciesCategoryDeleteUseCase, input)),
+		.handler(({ input, context }) =>
+			resolveAndExecute(SpeciesCategoryDeleteUseCase, {
+				context: createUseCaseContextFromOrpc(context),
+				dto: input,
+			}),
+		),
 };

@@ -6,7 +6,9 @@ import {
 	CultivarGetFullByIdUseCase,
 	CultivarUpdateUseCase,
 } from "@backend/core/application/use-cases/gardening/cultivar.use-cases";
-import { os } from "@orpc/server";
+
+import { createUseCaseContextFromOrpc } from "../../create-use-case-context";
+import { procedure } from "../../orpc-procedure";
 import { resolveAndExecute } from "../../shared/resolve-use-case";
 import {
 	CreateCultivarInputSchema,
@@ -17,14 +19,35 @@ import {
 } from "./schemas";
 
 export const cultivarRouter = {
-	create: os.input(CreateCultivarInputSchema).handler(({ input }) => resolveAndExecute(CultivarCreateUseCase, input)),
-	getById: os
+	create: procedure
+		.input(CreateCultivarInputSchema)
+		.handler(({ input, context }) =>
+			resolveAndExecute(CultivarCreateUseCase, { context: createUseCaseContextFromOrpc(context), dto: input }),
+		),
+	getById: procedure
 		.input(GetCultivarByIdInputSchema)
-		.handler(({ input }) => resolveAndExecute(CultivarGetByIdUseCase, input)),
-	getFullById: os
+		.handler(({ input, context }) =>
+			resolveAndExecute(CultivarGetByIdUseCase, { context: createUseCaseContextFromOrpc(context), dto: input }),
+		),
+	getFullById: procedure
 		.input(GetCultivarFullByIdInputSchema)
-		.handler(({ input }) => resolveAndExecute(CultivarGetFullByIdUseCase, input)),
-	getAll: os.handler(() => resolveAndExecute(CultivarGetAllUseCase)),
-	update: os.input(UpdateCultivarInputSchema).handler(({ input }) => resolveAndExecute(CultivarUpdateUseCase, input)),
-	delete: os.input(DeleteCultivarInputSchema).handler(({ input }) => resolveAndExecute(CultivarDeleteUseCase, input)),
+		.handler(({ input, context }) =>
+			resolveAndExecute(CultivarGetFullByIdUseCase, {
+				context: createUseCaseContextFromOrpc(context),
+				dto: input,
+			}),
+		),
+	getAll: procedure.handler(({ context }) =>
+		resolveAndExecute(CultivarGetAllUseCase, { context: createUseCaseContextFromOrpc(context) }),
+	),
+	update: procedure
+		.input(UpdateCultivarInputSchema)
+		.handler(({ input, context }) =>
+			resolveAndExecute(CultivarUpdateUseCase, { context: createUseCaseContextFromOrpc(context), dto: input }),
+		),
+	delete: procedure
+		.input(DeleteCultivarInputSchema)
+		.handler(({ input, context }) =>
+			resolveAndExecute(CultivarDeleteUseCase, { context: createUseCaseContextFromOrpc(context), dto: input }),
+		),
 };

@@ -18,11 +18,11 @@ import type {
 	SpatialNodeRepositoryUpdateOutputDTO,
 } from "@backend/core/application/ports/repositories/spatial/spatial-node.repository.port";
 import type { SpatialNodeEntity, SpatialNodeTreeNode } from "@backend/core/domain/spatial/entities";
-import type { InMemoryGardeningStore } from "@backend/infrastructure/integrations/in-memory-database/client";
+import type { InMemoryStore } from "@backend/infrastructure/integrations/in-memory-database/client";
 import { idKey, spatialNodeId } from "@backend/infrastructure/integrations/shared/database-ids";
 
 export class SpatialNodeInMemoryRepository extends BaseRepositoryErrors implements SpatialNodeRepositoryPort {
-	constructor(private readonly store: InMemoryGardeningStore) {
+	constructor(private readonly store: InMemoryStore) {
 		super();
 	}
 

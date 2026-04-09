@@ -1,15 +1,15 @@
-import * as m from "@/paraglide/messages.js";
+import type { SpeciesWithSystemCatalog } from "@backend/core/application/use-cases/gardening/species.crud-use-cases";
 import type {
 	CultivarEntity,
 	CultivarEntityId,
 	HydratedPlantEntity,
-	SpeciesEntity,
 	SpeciesEntityId,
 } from "@backend/core/domain/gardening/entities";
 import type { ItemsContainer } from "@backend/shared/types";
 import { type QueryClient, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { orpc } from "@/orpc/client";
+import * as m from "@/paraglide/messages.js";
 
 import { appendToItemsContainer, removeFromItemsContainer, upsertInItemsContainer } from "@/store/cache-utils";
 import { queryKeys } from "@/store/keys";
@@ -126,10 +126,11 @@ export function useCultivarUpdateMutation() {
 				queryClient.setQueryData(queryKeys.cultivar.detail(entity.id).queryKey, entity);
 				queryClient.setQueryData<ItemsContainer<HydratedPlantEntity>>(queryKeys.plant.all.queryKey, (prev) => {
 					if (!prev) return prev;
-					const speciesById = new Map<string, SpeciesEntity>(
+					const speciesById = new Map<string, SpeciesWithSystemCatalog>(
 						(
-							queryClient.getQueryData<ItemsContainer<SpeciesEntity>>(queryKeys.species.all.queryKey)
-								?.items ?? []
+							queryClient.getQueryData<ItemsContainer<SpeciesWithSystemCatalog>>(
+								queryKeys.species.all.queryKey,
+							)?.items ?? []
 						).map((species) => [String(species.id), species] as const),
 					);
 					return {

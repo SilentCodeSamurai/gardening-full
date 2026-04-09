@@ -14,11 +14,11 @@ import type {
 } from "@backend/core/application/ports/repositories/gardening/cultivar.repositort.port";
 import { BaseRepositoryErrors } from "@backend/core/application/ports/repositories/shared/base-repository.errors";
 import type { CultivarEntity } from "@backend/core/domain/gardening/entities";
-import type { InMemoryGardeningStore } from "@backend/infrastructure/integrations/in-memory-database/client";
+import type { InMemoryStore } from "@backend/infrastructure/integrations/in-memory-database/client";
 import { cultivarId, idKey } from "@backend/infrastructure/integrations/shared/database-ids";
 
 export class CultivarInMemoryRepository extends BaseRepositoryErrors implements CultivarRepositoryPort {
-	constructor(private readonly store: InMemoryGardeningStore) {
+	constructor(private readonly store: InMemoryStore) {
 		super();
 	}
 

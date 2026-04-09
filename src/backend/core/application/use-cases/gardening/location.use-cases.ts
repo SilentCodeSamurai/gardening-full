@@ -1,4 +1,5 @@
 import type { LocationEntity, LocationEntityId } from "@backend/core/domain/gardening/entities";
+import type { ItemsContainer } from "@backend/shared/types";
 import type {
 	LocationRepositoryCreateInputDTO,
 	LocationRepositoryDeleteManyInputDTO,
@@ -6,60 +7,86 @@ import type {
 	LocationRepositoryPort,
 	LocationRepositoryUpdateInputDTO,
 } from "../../ports/repositories/gardening/location.repository.port";
-import type { ItemsContainer } from "@backend/shared/types";
 import { RepositoryValidationError } from "../../ports/repositories/shared/base-repository.errors";
+import {
+	APPLICATION_RESOURCE_TYPES,
+	gardeningLocationRef,
+} from "../../resource-refs";
+import { AccessControlApplicationService } from "../../services/access-control/access-control.application-service";
+import type { SpatialOperationsService } from "../../services/spatial/spatial-operations.service";
 import { BaseUseCaseError } from "../shared/errors";
 import type { IUseCase } from "../shared/use-case.interface";
-import type { SpatialOperationsService } from "../../services/spatial/spatial-operations.service";
+import type { UseCaseRequest } from "../use-case-context";
 
-export type LocationCreateUseCaseInput = LocationRepositoryCreateInputDTO;
+export type LocationCreateUseCaseInput = UseCaseRequest<LocationRepositoryCreateInputDTO>;
 export type LocationCreateUseCaseOutput = LocationEntity;
 
 export class LocationCreateUseCase implements IUseCase<LocationCreateUseCaseInput, LocationCreateUseCaseOutput> {
-	constructor(private readonly locationRepository: LocationRepositoryPort) {}
+	constructor(
+		private readonly access: AccessControlApplicationService,
+		private readonly locationRepository: LocationRepositoryPort,
+	) {}
 
 	public async execute(input: LocationCreateUseCaseInput): Promise<LocationCreateUseCaseOutput> {
-		return this.locationRepository.create(input);
+		await this.access.assertCanCreate(input.context, input.context.workspaceRef);
+		const created = await this.locationRepository.create(input.dto);
+		await this.access.bootstrapResourceAdminForActor(input.context, gardeningLocationRef(String(created.id)));
+		return created;
 	}
 }
 
-export type LocationGetByIdUseCaseInput = {
-	id: LocationEntityId;
-};
+export type LocationGetByIdUseCaseInput = UseCaseRequest<{ id: LocationEntityId }>;
 export type LocationGetByIdUseCaseOutput = LocationEntity;
 
 export class LocationGetByIdUseCase implements IUseCase<LocationGetByIdUseCaseInput, LocationGetByIdUseCaseOutput> {
-	constructor(private readonly locationRepository: LocationRepositoryPort) {}
+	constructor(
+		private readonly access: AccessControlApplicationService,
+		private readonly locationRepository: LocationRepositoryPort,
+	) {}
 
 	public async execute(input: LocationGetByIdUseCaseInput): Promise<LocationGetByIdUseCaseOutput> {
-		return this.locationRepository.getById(input);
+		const row = await this.locationRepository.getById({ id: input.dto.id });
+		await this.access.assertCanRead(input.context, gardeningLocationRef(String(input.dto.id)));
+		return row;
 	}
 }
 
+export type LocationGetAllUseCaseInput = UseCaseRequest;
 export type LocationGetAllUseCaseOutput = ItemsContainer<LocationEntity>;
 
-export class LocationGetAllUseCase implements IUseCase<void, LocationGetAllUseCaseOutput> {
-	constructor(private readonly locationRepository: LocationRepositoryPort) {}
+export class LocationGetAllUseCase implements IUseCase<LocationGetAllUseCaseInput, LocationGetAllUseCaseOutput> {
+	constructor(
+		private readonly access: AccessControlApplicationService,
+		private readonly locationRepository: LocationRepositoryPort,
+	) {}
 
-	public async execute(): Promise<LocationGetAllUseCaseOutput> {
-		return this.locationRepository.getAll();
+	public async execute(input: LocationGetAllUseCaseInput): Promise<LocationGetAllUseCaseOutput> {
+		const mask = await this.access.getReadableResourceMask({
+			actorRef: input.context.actorRef,
+			resourceType: APPLICATION_RESOURCE_TYPES.location,
+		});
+		const all = await this.locationRepository.getAll();
+		return { items: AccessControlApplicationService.filterItemsByReadableMask(all.items, mask) };
 	}
 }
 
-export type LocationUpdateUseCaseInput = LocationRepositoryUpdateInputDTO;
+export type LocationUpdateUseCaseInput = UseCaseRequest<LocationRepositoryUpdateInputDTO>;
 export type LocationUpdateUseCaseOutput = LocationEntity;
 
 export class LocationUpdateUseCase implements IUseCase<LocationUpdateUseCaseInput, LocationUpdateUseCaseOutput> {
-	constructor(private readonly locationRepository: LocationRepositoryPort) {}
+	constructor(
+		private readonly access: AccessControlApplicationService,
+		private readonly locationRepository: LocationRepositoryPort,
+	) {}
 
 	public async execute(input: LocationUpdateUseCaseInput): Promise<LocationUpdateUseCaseOutput> {
-		return this.locationRepository.update(input);
+		await this.locationRepository.getById({ id: input.dto.id });
+		await this.access.assertCanUpdate(input.context, gardeningLocationRef(String(input.dto.id)));
+		return this.locationRepository.update(input.dto);
 	}
 }
 
-export type LocationDeleteUseCaseInput = {
-	id: LocationEntityId;
-};
+export type LocationDeleteUseCaseInput = UseCaseRequest<{ id: LocationEntityId }>;
 export type LocationDeleteUseCaseOutput = LocationEntityId;
 
 export class LocationDeleteUseCasePlacedEntityError extends BaseUseCaseError {
@@ -84,19 +111,22 @@ export class LocationDeleteManyUseCasePlacedEntityError extends BaseUseCaseError
 
 export class LocationDeleteUseCase implements IUseCase<LocationDeleteUseCaseInput, LocationDeleteUseCaseOutput> {
 	constructor(
+		private readonly access: AccessControlApplicationService,
 		private readonly locationRepository: LocationRepositoryPort,
 		private readonly spatialOperationsService: SpatialOperationsService,
 	) {}
 
 	public async execute(input: LocationDeleteUseCaseInput): Promise<LocationDeleteUseCaseOutput> {
+		await this.locationRepository.getById({ id: input.dto.id });
+		await this.access.assertCanDelete(input.context, gardeningLocationRef(String(input.dto.id)));
 		const placement = await this.spatialOperationsService.getPlacementStatusByRef({
 			entity: "location",
-			entityId: String(input.id),
+			entityId: String(input.dto.id),
 		});
 		if (placement.isPlaced) {
-			throw new LocationDeleteUseCasePlacedEntityError({ id: String(input.id) });
+			throw new LocationDeleteUseCasePlacedEntityError({ id: String(input.dto.id) });
 		}
-		const deletedId = await this.locationRepository.delete(input);
+		const deletedId = await this.locationRepository.delete({ id: input.dto.id });
 		await this.spatialOperationsService.deleteUnplacedNodeByRef({
 			entity: "location",
 			entityId: String(deletedId),
@@ -105,33 +135,34 @@ export class LocationDeleteUseCase implements IUseCase<LocationDeleteUseCaseInpu
 	}
 }
 
-export type LocationDeleteManyUseCaseInput = LocationRepositoryDeleteManyInputDTO;
+export type LocationDeleteManyUseCaseInput = UseCaseRequest<LocationRepositoryDeleteManyInputDTO>;
 export type LocationDeleteManyUseCaseOutput = LocationRepositoryDeleteManyOutputDTO;
 
-/**
- * Deletes many locations. Fails if any requested id is placed in the spatial layout.
- * Repository skips ids that have no location row; only {@link LocationDeleteManyUseCaseOutput.deletedIds} are removed.
- */
 export class LocationDeleteManyUseCase
 	implements IUseCase<LocationDeleteManyUseCaseInput, LocationDeleteManyUseCaseOutput>
 {
 	constructor(
+		private readonly access: AccessControlApplicationService,
 		private readonly locationRepository: LocationRepositoryPort,
 		private readonly spatialOperationsService: SpatialOperationsService,
 	) {}
 
 	public async execute(input: LocationDeleteManyUseCaseInput): Promise<LocationDeleteManyUseCaseOutput> {
-		if (input.ids.length < 1) {
+		if (input.dto.ids.length < 1) {
 			throw new RepositoryValidationError({
 				operation: "deleteMany",
 				validationCode: "invalid-ids",
-				context: { idCount: input.ids.length },
+				context: { idCount: input.dto.ids.length },
 				details: { minAllowed: 1 },
 				message: "deleteMany ids must be at least 1.",
 			});
 		}
+		for (const id of input.dto.ids) {
+			await this.locationRepository.getById({ id });
+			await this.access.assertCanDelete(input.context, gardeningLocationRef(String(id)));
+		}
 		const placedIdSet = new Set<string>();
-		for (const id of input.ids) {
+		for (const id of input.dto.ids) {
 			const placement = await this.spatialOperationsService.getPlacementStatusByRef({
 				entity: "location",
 				entityId: String(id),
@@ -141,7 +172,7 @@ export class LocationDeleteManyUseCase
 		if (placedIdSet.size > 0) {
 			throw new LocationDeleteManyUseCasePlacedEntityError({ ids: [...placedIdSet].sort() });
 		}
-		const { deletedIds } = await this.locationRepository.deleteMany({ ids: input.ids });
+		const { deletedIds } = await this.locationRepository.deleteMany({ ids: input.dto.ids });
 		for (const deletedId of deletedIds) {
 			await this.spatialOperationsService.deleteUnplacedNodeByRef({
 				entity: "location",

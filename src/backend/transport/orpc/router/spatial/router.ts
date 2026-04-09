@@ -1,4 +1,3 @@
-import { os } from "@orpc/server";
 import {
 	SpatialApplyOperationsUseCase,
 	SpatialNodeCreateUseCase,
@@ -7,6 +6,9 @@ import {
 	SpatialNodeGetTreeForRootIdUseCase,
 	SpatialNodeRestoreUseCase,
 } from "@backend/core/application/use-cases/spatial/spatial.use-cases";
+
+import { createUseCaseContextFromOrpc } from "../../create-use-case-context";
+import { procedure } from "../../orpc-procedure";
 import { resolveAndExecute } from "../../shared/resolve-use-case";
 import {
 	ApplySpatialOperationsInputSchema,
@@ -17,20 +19,41 @@ import {
 } from "./schemas";
 
 export const spatialRouter = {
-	createNode: os
+	createNode: procedure
 		.input(CreateSpatialNodeInputSchema)
-		.handler(({ input }) => resolveAndExecute(SpatialNodeCreateUseCase, input)),
-	deleteNode: os
+		.handler(({ input, context }) =>
+			resolveAndExecute(SpatialNodeCreateUseCase, { context: createUseCaseContextFromOrpc(context), dto: input }),
+		),
+	deleteNode: procedure
 		.input(DeleteSpatialNodeInputSchema)
-		.handler(({ input }) => resolveAndExecute(SpatialNodeDeleteUseCase, input)),
-	restoreNode: os
+		.handler(({ input, context }) =>
+			resolveAndExecute(SpatialNodeDeleteUseCase, {
+				context: createUseCaseContextFromOrpc(context),
+				dto: { id: input.id },
+			}),
+		),
+	restoreNode: procedure
 		.input(RestoreSpatialNodeInputSchema)
-		.handler(({ input }) => resolveAndExecute(SpatialNodeRestoreUseCase, input)),
-	getAllNodes: os.handler(() => resolveAndExecute(SpatialNodeGetAllUseCase)),
-	getTreeForRootId: os
+		.handler(({ input, context }) =>
+			resolveAndExecute(SpatialNodeRestoreUseCase, { context: createUseCaseContextFromOrpc(context), dto: input }),
+		),
+	getAllNodes: procedure.handler(({ context }) =>
+		resolveAndExecute(SpatialNodeGetAllUseCase, { context: createUseCaseContextFromOrpc(context) }),
+	),
+	getTreeForRootId: procedure
 		.input(GetSpatialTreeByRootIdInputSchema)
-		.handler(({ input }) => resolveAndExecute(SpatialNodeGetTreeForRootIdUseCase, input)),
-	applyOperations: os
+		.handler(({ input, context }) =>
+			resolveAndExecute(SpatialNodeGetTreeForRootIdUseCase, {
+				context: createUseCaseContextFromOrpc(context),
+				dto: { id: input.id },
+			}),
+		),
+	applyOperations: procedure
 		.input(ApplySpatialOperationsInputSchema)
-		.handler(({ input }) => resolveAndExecute(SpatialApplyOperationsUseCase, input)),
+		.handler(({ input, context }) =>
+			resolveAndExecute(SpatialApplyOperationsUseCase, {
+				context: createUseCaseContextFromOrpc(context),
+				dto: { operations: input.operations },
+			}),
+		),
 };

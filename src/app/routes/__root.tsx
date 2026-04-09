@@ -1,51 +1,23 @@
 import { TanStackDevtools } from "@tanstack/react-devtools";
 import type { QueryClient } from "@tanstack/react-query";
-import { createRootRouteWithContext, HeadContent, Outlet, Scripts, useRouterState } from "@tanstack/react-router";
+import { createRootRouteWithContext, HeadContent, Outlet, Scripts } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
-import type { ReactNode } from "react";
+import { AppAuthProvider } from "@/components/auth/app-auth-provider";
 import { buildThemeInitScript, ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
-import * as m from "@/paraglide/messages.js";
 import { getLocale } from "@/paraglide/runtime";
 import TanStackQueryDevtools from "../integrations/tanstack-query/devtools";
 import appCss from "../styles.css?url";
 
 // import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 
-import { AppSidebar } from "@/components/layout/app-sidebar";
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { cn } from "@/lib/utils";
 
 interface MyRouterContext {
 	queryClient: QueryClient;
 }
 
 const THEME_INIT_SCRIPT = buildThemeInitScript();
-
-const LIST_FULL_HEIGHT_PATHNAMES = new Set([
-	"/plants",
-	"/locations",
-	"/gardening-events",
-	"/catalog/species",
-	"/catalog/cultivars",
-	"/catalog/species-categories",
-]);
-
-function MainOutletShell({ children }: { children: ReactNode }) {
-	const pathname = useRouterState({ select: (s) => s.location.pathname });
-	const listFullHeight = LIST_FULL_HEIGHT_PATHNAMES.has(pathname);
-	return (
-		<div
-			className={cn(
-				"flex min-h-0 flex-1 flex-col",
-				listFullHeight ? "overflow-hidden" : "overflow-y-auto overflow-x-hidden",
-			)}
-		>
-			{children}
-		</div>
-	);
-}
 
 export const Route = createRootRouteWithContext<MyRouterContext>()({
 	beforeLoad: async () => {
@@ -66,7 +38,7 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 				content: "width=device-width, initial-scale=1",
 			},
 			{
-				title: "TanStack Start Starter",
+				title: "Gardening",
 			},
 		],
 		links: [
@@ -90,18 +62,10 @@ function RootDocument() {
 			<body className="wrap-anywhere font-sans antialiased selection:bg-[rgba(79,184,178,0.24)]">
 				<ThemeProvider>
 					<TooltipProvider>
-						<SidebarProvider className="h-svh max-h-svh overflow-hidden bg-background">
-							<AppSidebar />
-
-							<SidebarInset
-								id="main-content"
-								aria-label={m.components_layout_appShell_mainLabel()}
-								className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
-							>
-								<MainOutletShell>
-									<Outlet />
-								</MainOutletShell>
-							</SidebarInset>
+						<AppAuthProvider>
+							<div className="flex h-svh max-h-svh flex-col overflow-hidden bg-background">
+								<Outlet />
+							</div>
 
 							<Toaster position="top-center" richColors />
 
@@ -118,7 +82,7 @@ function RootDocument() {
 								]}
 							/>
 							<Scripts />
-						</SidebarProvider>
+						</AppAuthProvider>
 					</TooltipProvider>
 				</ThemeProvider>
 			</body>

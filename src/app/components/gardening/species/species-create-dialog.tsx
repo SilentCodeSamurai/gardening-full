@@ -42,7 +42,7 @@ export function SpeciesCreateDialog({ open, onOpenChange }: Props) {
 		const categories = catData?.items ?? [];
 		return categories.map((c) => ({
 			value: String(c.id),
-			label: translateCatalogField(c.title, c.isDefault) ?? String(c.id),
+			label: translateCatalogField(c.title, c.systemCatalog) ?? String(c.id),
 			presentation: c.presentation,
 		}));
 	}, [catData?.items]);

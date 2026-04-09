@@ -9,6 +9,7 @@ import type {
 	SpeciesCategoryEntity,
 	SpeciesEntity,
 } from "@backend/core/domain/gardening/entities";
+import type { ResoursePermissionEntity } from "@backend/core/domain/resource-access";
 import type { SpatialNodeEntity } from "@backend/core/domain/spatial/entities";
 
 import { idKey, locationId, plantId } from "../shared/database-ids";
@@ -17,7 +18,7 @@ import { idKey, locationId, plantId } from "../shared/database-ids";
  * In-memory persistence client for the gardening aggregate: entity maps plus
  * event↔plant / event↔location associations (events do not embed FK fields).
  */
-export class InMemoryGardeningStore {
+export class InMemoryStore {
 	readonly speciesCategories = new Map<string, SpeciesCategoryEntity>();
 	readonly species = new Map<string, SpeciesEntity>();
 	readonly cultivars = new Map<string, CultivarEntity>();
@@ -25,6 +26,7 @@ export class InMemoryGardeningStore {
 	readonly locations = new Map<string, LocationEntity>();
 	readonly spatialNodes = new Map<string, SpatialNodeEntity>();
 	readonly gardeningEvents = new Map<string, GardeningEventEntity>();
+	readonly resoursePermissions = new Map<string, ResoursePermissionEntity>();
 
 	private readonly eventToPlants = new Map<string, Set<string>>();
 	readonly plantToEvents = new Map<string, Set<string>>();

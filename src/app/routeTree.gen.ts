@@ -9,45 +9,33 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as PlantsRouteImport } from './routes/plants'
-import { Route as LocationsRouteImport } from './routes/locations'
-import { Route as GardeningEventsRouteImport } from './routes/gardening-events'
-import { Route as CatalogRouteRouteImport } from './routes/catalog/route'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as CatalogIndexRouteImport } from './routes/catalog/index'
-import { Route as PlantPlantIdRouteImport } from './routes/plant.$plantId'
-import { Route as LocationLocationIdRouteImport } from './routes/location.$locationId'
-import { Route as GardeningEventGardeningEventIdRouteImport } from './routes/gardening-event.$gardeningEventId'
-import { Route as CatalogSpeciesCategoriesRouteImport } from './routes/catalog/species-categories'
-import { Route as CatalogSpeciesRouteImport } from './routes/catalog/species'
-import { Route as CatalogCultivarsRouteImport } from './routes/catalog/cultivars'
+import { Route as AuthAuthViewRouteImport } from './routes/auth.$authView'
 import { Route as ApiSplatRouteImport } from './routes/api/$'
-import { Route as LocationLocationIdIndexRouteImport } from './routes/location.$locationId.index'
-import { Route as LocationLocationIdLayoutRouteImport } from './routes/location.$locationId.layout'
-import { Route as CatalogSpeciesDetailSpeciesIdRouteImport } from './routes/catalog/species-detail.$speciesId'
-import { Route as CatalogSpeciesCategorySpeciesCategoryIdRouteImport } from './routes/catalog/species-category.$speciesCategoryId'
-import { Route as CatalogCultivarCultivarIdRouteImport } from './routes/catalog/cultivar.$cultivarId'
+import { Route as AuthenticatedPlantsRouteImport } from './routes/_authenticated/plants'
+import { Route as AuthenticatedLocationsRouteImport } from './routes/_authenticated/locations'
+import { Route as AuthenticatedGardeningEventsRouteImport } from './routes/_authenticated/gardening-events'
+import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedCatalogRouteRouteImport } from './routes/_authenticated/catalog/route'
+import { Route as AuthenticatedCatalogIndexRouteImport } from './routes/_authenticated/catalog/index'
 import { Route as ApiRpcSplatRouteImport } from './routes/api/rpc.$'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as AuthenticatedPlantPlantIdRouteImport } from './routes/_authenticated/plant.$plantId'
+import { Route as AuthenticatedLocationLocationIdRouteImport } from './routes/_authenticated/location.$locationId'
+import { Route as AuthenticatedGardeningEventGardeningEventIdRouteImport } from './routes/_authenticated/gardening-event.$gardeningEventId'
+import { Route as AuthenticatedCatalogSpeciesCategoriesRouteImport } from './routes/_authenticated/catalog/species-categories'
+import { Route as AuthenticatedCatalogSpeciesRouteImport } from './routes/_authenticated/catalog/species'
+import { Route as AuthenticatedCatalogCultivarsRouteImport } from './routes/_authenticated/catalog/cultivars'
+import { Route as AuthenticatedAccountAccountViewRouteImport } from './routes/_authenticated/account.$accountView'
+import { Route as AuthenticatedLocationLocationIdIndexRouteImport } from './routes/_authenticated/location.$locationId.index'
+import { Route as AuthenticatedLocationLocationIdLayoutRouteImport } from './routes/_authenticated/location.$locationId.layout'
+import { Route as AuthenticatedCatalogSpeciesDetailSpeciesIdRouteImport } from './routes/_authenticated/catalog/species-detail.$speciesId'
+import { Route as AuthenticatedCatalogSpeciesCategorySpeciesCategoryIdRouteImport } from './routes/_authenticated/catalog/species-category.$speciesCategoryId'
+import { Route as AuthenticatedCatalogCultivarCultivarIdRouteImport } from './routes/_authenticated/catalog/cultivar.$cultivarId'
 
-const PlantsRoute = PlantsRouteImport.update({
-  id: '/plants',
-  path: '/plants',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LocationsRoute = LocationsRouteImport.update({
-  id: '/locations',
-  path: '/locations',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const GardeningEventsRoute = GardeningEventsRouteImport.update({
-  id: '/gardening-events',
-  path: '/gardening-events',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CatalogRouteRoute = CatalogRouteRouteImport.update({
-  id: '/catalog',
-  path: '/catalog',
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -55,76 +43,48 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const CatalogIndexRoute = CatalogIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => CatalogRouteRoute,
-} as any)
-const PlantPlantIdRoute = PlantPlantIdRouteImport.update({
-  id: '/plant/$plantId',
-  path: '/plant/$plantId',
+const AuthAuthViewRoute = AuthAuthViewRouteImport.update({
+  id: '/auth/$authView',
+  path: '/auth/$authView',
   getParentRoute: () => rootRouteImport,
-} as any)
-const LocationLocationIdRoute = LocationLocationIdRouteImport.update({
-  id: '/location/$locationId',
-  path: '/location/$locationId',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const GardeningEventGardeningEventIdRoute =
-  GardeningEventGardeningEventIdRouteImport.update({
-    id: '/gardening-event/$gardeningEventId',
-    path: '/gardening-event/$gardeningEventId',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const CatalogSpeciesCategoriesRoute =
-  CatalogSpeciesCategoriesRouteImport.update({
-    id: '/species-categories',
-    path: '/species-categories',
-    getParentRoute: () => CatalogRouteRoute,
-  } as any)
-const CatalogSpeciesRoute = CatalogSpeciesRouteImport.update({
-  id: '/species',
-  path: '/species',
-  getParentRoute: () => CatalogRouteRoute,
-} as any)
-const CatalogCultivarsRoute = CatalogCultivarsRouteImport.update({
-  id: '/cultivars',
-  path: '/cultivars',
-  getParentRoute: () => CatalogRouteRoute,
 } as any)
 const ApiSplatRoute = ApiSplatRouteImport.update({
   id: '/api/$',
   path: '/api/$',
   getParentRoute: () => rootRouteImport,
 } as any)
-const LocationLocationIdIndexRoute = LocationLocationIdIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => LocationLocationIdRoute,
+const AuthenticatedPlantsRoute = AuthenticatedPlantsRouteImport.update({
+  id: '/plants',
+  path: '/plants',
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const LocationLocationIdLayoutRoute =
-  LocationLocationIdLayoutRouteImport.update({
-    id: '/layout',
-    path: '/layout',
-    getParentRoute: () => LocationLocationIdRoute,
+const AuthenticatedLocationsRoute = AuthenticatedLocationsRouteImport.update({
+  id: '/locations',
+  path: '/locations',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedGardeningEventsRoute =
+  AuthenticatedGardeningEventsRouteImport.update({
+    id: '/gardening-events',
+    path: '/gardening-events',
+    getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const CatalogSpeciesDetailSpeciesIdRoute =
-  CatalogSpeciesDetailSpeciesIdRouteImport.update({
-    id: '/species-detail/$speciesId',
-    path: '/species-detail/$speciesId',
-    getParentRoute: () => CatalogRouteRoute,
+const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedCatalogRouteRoute =
+  AuthenticatedCatalogRouteRouteImport.update({
+    id: '/catalog',
+    path: '/catalog',
+    getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const CatalogSpeciesCategorySpeciesCategoryIdRoute =
-  CatalogSpeciesCategorySpeciesCategoryIdRouteImport.update({
-    id: '/species-category/$speciesCategoryId',
-    path: '/species-category/$speciesCategoryId',
-    getParentRoute: () => CatalogRouteRoute,
-  } as any)
-const CatalogCultivarCultivarIdRoute =
-  CatalogCultivarCultivarIdRouteImport.update({
-    id: '/cultivar/$cultivarId',
-    path: '/cultivar/$cultivarId',
-    getParentRoute: () => CatalogRouteRoute,
+const AuthenticatedCatalogIndexRoute =
+  AuthenticatedCatalogIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedCatalogRouteRoute,
   } as any)
 const ApiRpcSplatRoute = ApiRpcSplatRouteImport.update({
   id: '/api/rpc/$',
@@ -136,90 +96,175 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedPlantPlantIdRoute =
+  AuthenticatedPlantPlantIdRouteImport.update({
+    id: '/plant/$plantId',
+    path: '/plant/$plantId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedLocationLocationIdRoute =
+  AuthenticatedLocationLocationIdRouteImport.update({
+    id: '/location/$locationId',
+    path: '/location/$locationId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedGardeningEventGardeningEventIdRoute =
+  AuthenticatedGardeningEventGardeningEventIdRouteImport.update({
+    id: '/gardening-event/$gardeningEventId',
+    path: '/gardening-event/$gardeningEventId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedCatalogSpeciesCategoriesRoute =
+  AuthenticatedCatalogSpeciesCategoriesRouteImport.update({
+    id: '/species-categories',
+    path: '/species-categories',
+    getParentRoute: () => AuthenticatedCatalogRouteRoute,
+  } as any)
+const AuthenticatedCatalogSpeciesRoute =
+  AuthenticatedCatalogSpeciesRouteImport.update({
+    id: '/species',
+    path: '/species',
+    getParentRoute: () => AuthenticatedCatalogRouteRoute,
+  } as any)
+const AuthenticatedCatalogCultivarsRoute =
+  AuthenticatedCatalogCultivarsRouteImport.update({
+    id: '/cultivars',
+    path: '/cultivars',
+    getParentRoute: () => AuthenticatedCatalogRouteRoute,
+  } as any)
+const AuthenticatedAccountAccountViewRoute =
+  AuthenticatedAccountAccountViewRouteImport.update({
+    id: '/account/$accountView',
+    path: '/account/$accountView',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedLocationLocationIdIndexRoute =
+  AuthenticatedLocationLocationIdIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedLocationLocationIdRoute,
+  } as any)
+const AuthenticatedLocationLocationIdLayoutRoute =
+  AuthenticatedLocationLocationIdLayoutRouteImport.update({
+    id: '/layout',
+    path: '/layout',
+    getParentRoute: () => AuthenticatedLocationLocationIdRoute,
+  } as any)
+const AuthenticatedCatalogSpeciesDetailSpeciesIdRoute =
+  AuthenticatedCatalogSpeciesDetailSpeciesIdRouteImport.update({
+    id: '/species-detail/$speciesId',
+    path: '/species-detail/$speciesId',
+    getParentRoute: () => AuthenticatedCatalogRouteRoute,
+  } as any)
+const AuthenticatedCatalogSpeciesCategorySpeciesCategoryIdRoute =
+  AuthenticatedCatalogSpeciesCategorySpeciesCategoryIdRouteImport.update({
+    id: '/species-category/$speciesCategoryId',
+    path: '/species-category/$speciesCategoryId',
+    getParentRoute: () => AuthenticatedCatalogRouteRoute,
+  } as any)
+const AuthenticatedCatalogCultivarCultivarIdRoute =
+  AuthenticatedCatalogCultivarCultivarIdRouteImport.update({
+    id: '/cultivar/$cultivarId',
+    path: '/cultivar/$cultivarId',
+    getParentRoute: () => AuthenticatedCatalogRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/catalog': typeof CatalogRouteRouteWithChildren
-  '/gardening-events': typeof GardeningEventsRoute
-  '/locations': typeof LocationsRoute
-  '/plants': typeof PlantsRoute
+  '/catalog': typeof AuthenticatedCatalogRouteRouteWithChildren
+  '/dashboard': typeof AuthenticatedDashboardRoute
+  '/gardening-events': typeof AuthenticatedGardeningEventsRoute
+  '/locations': typeof AuthenticatedLocationsRoute
+  '/plants': typeof AuthenticatedPlantsRoute
   '/api/$': typeof ApiSplatRoute
-  '/catalog/cultivars': typeof CatalogCultivarsRoute
-  '/catalog/species': typeof CatalogSpeciesRoute
-  '/catalog/species-categories': typeof CatalogSpeciesCategoriesRoute
-  '/gardening-event/$gardeningEventId': typeof GardeningEventGardeningEventIdRoute
-  '/location/$locationId': typeof LocationLocationIdRouteWithChildren
-  '/plant/$plantId': typeof PlantPlantIdRoute
-  '/catalog/': typeof CatalogIndexRoute
+  '/auth/$authView': typeof AuthAuthViewRoute
+  '/account/$accountView': typeof AuthenticatedAccountAccountViewRoute
+  '/catalog/cultivars': typeof AuthenticatedCatalogCultivarsRoute
+  '/catalog/species': typeof AuthenticatedCatalogSpeciesRoute
+  '/catalog/species-categories': typeof AuthenticatedCatalogSpeciesCategoriesRoute
+  '/gardening-event/$gardeningEventId': typeof AuthenticatedGardeningEventGardeningEventIdRoute
+  '/location/$locationId': typeof AuthenticatedLocationLocationIdRouteWithChildren
+  '/plant/$plantId': typeof AuthenticatedPlantPlantIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/rpc/$': typeof ApiRpcSplatRoute
-  '/catalog/cultivar/$cultivarId': typeof CatalogCultivarCultivarIdRoute
-  '/catalog/species-category/$speciesCategoryId': typeof CatalogSpeciesCategorySpeciesCategoryIdRoute
-  '/catalog/species-detail/$speciesId': typeof CatalogSpeciesDetailSpeciesIdRoute
-  '/location/$locationId/layout': typeof LocationLocationIdLayoutRoute
-  '/location/$locationId/': typeof LocationLocationIdIndexRoute
+  '/catalog/': typeof AuthenticatedCatalogIndexRoute
+  '/catalog/cultivar/$cultivarId': typeof AuthenticatedCatalogCultivarCultivarIdRoute
+  '/catalog/species-category/$speciesCategoryId': typeof AuthenticatedCatalogSpeciesCategorySpeciesCategoryIdRoute
+  '/catalog/species-detail/$speciesId': typeof AuthenticatedCatalogSpeciesDetailSpeciesIdRoute
+  '/location/$locationId/layout': typeof AuthenticatedLocationLocationIdLayoutRoute
+  '/location/$locationId/': typeof AuthenticatedLocationLocationIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/gardening-events': typeof GardeningEventsRoute
-  '/locations': typeof LocationsRoute
-  '/plants': typeof PlantsRoute
+  '/dashboard': typeof AuthenticatedDashboardRoute
+  '/gardening-events': typeof AuthenticatedGardeningEventsRoute
+  '/locations': typeof AuthenticatedLocationsRoute
+  '/plants': typeof AuthenticatedPlantsRoute
   '/api/$': typeof ApiSplatRoute
-  '/catalog/cultivars': typeof CatalogCultivarsRoute
-  '/catalog/species': typeof CatalogSpeciesRoute
-  '/catalog/species-categories': typeof CatalogSpeciesCategoriesRoute
-  '/gardening-event/$gardeningEventId': typeof GardeningEventGardeningEventIdRoute
-  '/plant/$plantId': typeof PlantPlantIdRoute
-  '/catalog': typeof CatalogIndexRoute
+  '/auth/$authView': typeof AuthAuthViewRoute
+  '/account/$accountView': typeof AuthenticatedAccountAccountViewRoute
+  '/catalog/cultivars': typeof AuthenticatedCatalogCultivarsRoute
+  '/catalog/species': typeof AuthenticatedCatalogSpeciesRoute
+  '/catalog/species-categories': typeof AuthenticatedCatalogSpeciesCategoriesRoute
+  '/gardening-event/$gardeningEventId': typeof AuthenticatedGardeningEventGardeningEventIdRoute
+  '/plant/$plantId': typeof AuthenticatedPlantPlantIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/rpc/$': typeof ApiRpcSplatRoute
-  '/catalog/cultivar/$cultivarId': typeof CatalogCultivarCultivarIdRoute
-  '/catalog/species-category/$speciesCategoryId': typeof CatalogSpeciesCategorySpeciesCategoryIdRoute
-  '/catalog/species-detail/$speciesId': typeof CatalogSpeciesDetailSpeciesIdRoute
-  '/location/$locationId/layout': typeof LocationLocationIdLayoutRoute
-  '/location/$locationId': typeof LocationLocationIdIndexRoute
+  '/catalog': typeof AuthenticatedCatalogIndexRoute
+  '/catalog/cultivar/$cultivarId': typeof AuthenticatedCatalogCultivarCultivarIdRoute
+  '/catalog/species-category/$speciesCategoryId': typeof AuthenticatedCatalogSpeciesCategorySpeciesCategoryIdRoute
+  '/catalog/species-detail/$speciesId': typeof AuthenticatedCatalogSpeciesDetailSpeciesIdRoute
+  '/location/$locationId/layout': typeof AuthenticatedLocationLocationIdLayoutRoute
+  '/location/$locationId': typeof AuthenticatedLocationLocationIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/catalog': typeof CatalogRouteRouteWithChildren
-  '/gardening-events': typeof GardeningEventsRoute
-  '/locations': typeof LocationsRoute
-  '/plants': typeof PlantsRoute
+  '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/_authenticated/catalog': typeof AuthenticatedCatalogRouteRouteWithChildren
+  '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/gardening-events': typeof AuthenticatedGardeningEventsRoute
+  '/_authenticated/locations': typeof AuthenticatedLocationsRoute
+  '/_authenticated/plants': typeof AuthenticatedPlantsRoute
   '/api/$': typeof ApiSplatRoute
-  '/catalog/cultivars': typeof CatalogCultivarsRoute
-  '/catalog/species': typeof CatalogSpeciesRoute
-  '/catalog/species-categories': typeof CatalogSpeciesCategoriesRoute
-  '/gardening-event/$gardeningEventId': typeof GardeningEventGardeningEventIdRoute
-  '/location/$locationId': typeof LocationLocationIdRouteWithChildren
-  '/plant/$plantId': typeof PlantPlantIdRoute
-  '/catalog/': typeof CatalogIndexRoute
+  '/auth/$authView': typeof AuthAuthViewRoute
+  '/_authenticated/account/$accountView': typeof AuthenticatedAccountAccountViewRoute
+  '/_authenticated/catalog/cultivars': typeof AuthenticatedCatalogCultivarsRoute
+  '/_authenticated/catalog/species': typeof AuthenticatedCatalogSpeciesRoute
+  '/_authenticated/catalog/species-categories': typeof AuthenticatedCatalogSpeciesCategoriesRoute
+  '/_authenticated/gardening-event/$gardeningEventId': typeof AuthenticatedGardeningEventGardeningEventIdRoute
+  '/_authenticated/location/$locationId': typeof AuthenticatedLocationLocationIdRouteWithChildren
+  '/_authenticated/plant/$plantId': typeof AuthenticatedPlantPlantIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/rpc/$': typeof ApiRpcSplatRoute
-  '/catalog/cultivar/$cultivarId': typeof CatalogCultivarCultivarIdRoute
-  '/catalog/species-category/$speciesCategoryId': typeof CatalogSpeciesCategorySpeciesCategoryIdRoute
-  '/catalog/species-detail/$speciesId': typeof CatalogSpeciesDetailSpeciesIdRoute
-  '/location/$locationId/layout': typeof LocationLocationIdLayoutRoute
-  '/location/$locationId/': typeof LocationLocationIdIndexRoute
+  '/_authenticated/catalog/': typeof AuthenticatedCatalogIndexRoute
+  '/_authenticated/catalog/cultivar/$cultivarId': typeof AuthenticatedCatalogCultivarCultivarIdRoute
+  '/_authenticated/catalog/species-category/$speciesCategoryId': typeof AuthenticatedCatalogSpeciesCategorySpeciesCategoryIdRoute
+  '/_authenticated/catalog/species-detail/$speciesId': typeof AuthenticatedCatalogSpeciesDetailSpeciesIdRoute
+  '/_authenticated/location/$locationId/layout': typeof AuthenticatedLocationLocationIdLayoutRoute
+  '/_authenticated/location/$locationId/': typeof AuthenticatedLocationLocationIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/catalog'
+    | '/dashboard'
     | '/gardening-events'
     | '/locations'
     | '/plants'
     | '/api/$'
+    | '/auth/$authView'
+    | '/account/$accountView'
     | '/catalog/cultivars'
     | '/catalog/species'
     | '/catalog/species-categories'
     | '/gardening-event/$gardeningEventId'
     | '/location/$locationId'
     | '/plant/$plantId'
-    | '/catalog/'
     | '/api/auth/$'
     | '/api/rpc/$'
+    | '/catalog/'
     | '/catalog/cultivar/$cultivarId'
     | '/catalog/species-category/$speciesCategoryId'
     | '/catalog/species-detail/$speciesId'
@@ -228,18 +273,21 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/dashboard'
     | '/gardening-events'
     | '/locations'
     | '/plants'
     | '/api/$'
+    | '/auth/$authView'
+    | '/account/$accountView'
     | '/catalog/cultivars'
     | '/catalog/species'
     | '/catalog/species-categories'
     | '/gardening-event/$gardeningEventId'
     | '/plant/$plantId'
-    | '/catalog'
     | '/api/auth/$'
     | '/api/rpc/$'
+    | '/catalog'
     | '/catalog/cultivar/$cultivarId'
     | '/catalog/species-category/$speciesCategoryId'
     | '/catalog/species-detail/$speciesId'
@@ -248,69 +296,47 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
-    | '/catalog'
-    | '/gardening-events'
-    | '/locations'
-    | '/plants'
+    | '/_authenticated'
+    | '/_authenticated/catalog'
+    | '/_authenticated/dashboard'
+    | '/_authenticated/gardening-events'
+    | '/_authenticated/locations'
+    | '/_authenticated/plants'
     | '/api/$'
-    | '/catalog/cultivars'
-    | '/catalog/species'
-    | '/catalog/species-categories'
-    | '/gardening-event/$gardeningEventId'
-    | '/location/$locationId'
-    | '/plant/$plantId'
-    | '/catalog/'
+    | '/auth/$authView'
+    | '/_authenticated/account/$accountView'
+    | '/_authenticated/catalog/cultivars'
+    | '/_authenticated/catalog/species'
+    | '/_authenticated/catalog/species-categories'
+    | '/_authenticated/gardening-event/$gardeningEventId'
+    | '/_authenticated/location/$locationId'
+    | '/_authenticated/plant/$plantId'
     | '/api/auth/$'
     | '/api/rpc/$'
-    | '/catalog/cultivar/$cultivarId'
-    | '/catalog/species-category/$speciesCategoryId'
-    | '/catalog/species-detail/$speciesId'
-    | '/location/$locationId/layout'
-    | '/location/$locationId/'
+    | '/_authenticated/catalog/'
+    | '/_authenticated/catalog/cultivar/$cultivarId'
+    | '/_authenticated/catalog/species-category/$speciesCategoryId'
+    | '/_authenticated/catalog/species-detail/$speciesId'
+    | '/_authenticated/location/$locationId/layout'
+    | '/_authenticated/location/$locationId/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  CatalogRouteRoute: typeof CatalogRouteRouteWithChildren
-  GardeningEventsRoute: typeof GardeningEventsRoute
-  LocationsRoute: typeof LocationsRoute
-  PlantsRoute: typeof PlantsRoute
+  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   ApiSplatRoute: typeof ApiSplatRoute
-  GardeningEventGardeningEventIdRoute: typeof GardeningEventGardeningEventIdRoute
-  LocationLocationIdRoute: typeof LocationLocationIdRouteWithChildren
-  PlantPlantIdRoute: typeof PlantPlantIdRoute
+  AuthAuthViewRoute: typeof AuthAuthViewRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiRpcSplatRoute: typeof ApiRpcSplatRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/plants': {
-      id: '/plants'
-      path: '/plants'
-      fullPath: '/plants'
-      preLoaderRoute: typeof PlantsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/locations': {
-      id: '/locations'
-      path: '/locations'
-      fullPath: '/locations'
-      preLoaderRoute: typeof LocationsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/gardening-events': {
-      id: '/gardening-events'
-      path: '/gardening-events'
-      fullPath: '/gardening-events'
-      preLoaderRoute: typeof GardeningEventsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/catalog': {
-      id: '/catalog'
-      path: '/catalog'
-      fullPath: '/catalog'
-      preLoaderRoute: typeof CatalogRouteRouteImport
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -320,54 +346,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/catalog/': {
-      id: '/catalog/'
-      path: '/'
-      fullPath: '/catalog/'
-      preLoaderRoute: typeof CatalogIndexRouteImport
-      parentRoute: typeof CatalogRouteRoute
-    }
-    '/plant/$plantId': {
-      id: '/plant/$plantId'
-      path: '/plant/$plantId'
-      fullPath: '/plant/$plantId'
-      preLoaderRoute: typeof PlantPlantIdRouteImport
+    '/auth/$authView': {
+      id: '/auth/$authView'
+      path: '/auth/$authView'
+      fullPath: '/auth/$authView'
+      preLoaderRoute: typeof AuthAuthViewRouteImport
       parentRoute: typeof rootRouteImport
-    }
-    '/location/$locationId': {
-      id: '/location/$locationId'
-      path: '/location/$locationId'
-      fullPath: '/location/$locationId'
-      preLoaderRoute: typeof LocationLocationIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/gardening-event/$gardeningEventId': {
-      id: '/gardening-event/$gardeningEventId'
-      path: '/gardening-event/$gardeningEventId'
-      fullPath: '/gardening-event/$gardeningEventId'
-      preLoaderRoute: typeof GardeningEventGardeningEventIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/catalog/species-categories': {
-      id: '/catalog/species-categories'
-      path: '/species-categories'
-      fullPath: '/catalog/species-categories'
-      preLoaderRoute: typeof CatalogSpeciesCategoriesRouteImport
-      parentRoute: typeof CatalogRouteRoute
-    }
-    '/catalog/species': {
-      id: '/catalog/species'
-      path: '/species'
-      fullPath: '/catalog/species'
-      preLoaderRoute: typeof CatalogSpeciesRouteImport
-      parentRoute: typeof CatalogRouteRoute
-    }
-    '/catalog/cultivars': {
-      id: '/catalog/cultivars'
-      path: '/cultivars'
-      fullPath: '/catalog/cultivars'
-      preLoaderRoute: typeof CatalogCultivarsRouteImport
-      parentRoute: typeof CatalogRouteRoute
     }
     '/api/$': {
       id: '/api/$'
@@ -376,40 +360,47 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/location/$locationId/': {
-      id: '/location/$locationId/'
+    '/_authenticated/plants': {
+      id: '/_authenticated/plants'
+      path: '/plants'
+      fullPath: '/plants'
+      preLoaderRoute: typeof AuthenticatedPlantsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/locations': {
+      id: '/_authenticated/locations'
+      path: '/locations'
+      fullPath: '/locations'
+      preLoaderRoute: typeof AuthenticatedLocationsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/gardening-events': {
+      id: '/_authenticated/gardening-events'
+      path: '/gardening-events'
+      fullPath: '/gardening-events'
+      preLoaderRoute: typeof AuthenticatedGardeningEventsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/dashboard': {
+      id: '/_authenticated/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof AuthenticatedDashboardRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/catalog': {
+      id: '/_authenticated/catalog'
+      path: '/catalog'
+      fullPath: '/catalog'
+      preLoaderRoute: typeof AuthenticatedCatalogRouteRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/catalog/': {
+      id: '/_authenticated/catalog/'
       path: '/'
-      fullPath: '/location/$locationId/'
-      preLoaderRoute: typeof LocationLocationIdIndexRouteImport
-      parentRoute: typeof LocationLocationIdRoute
-    }
-    '/location/$locationId/layout': {
-      id: '/location/$locationId/layout'
-      path: '/layout'
-      fullPath: '/location/$locationId/layout'
-      preLoaderRoute: typeof LocationLocationIdLayoutRouteImport
-      parentRoute: typeof LocationLocationIdRoute
-    }
-    '/catalog/species-detail/$speciesId': {
-      id: '/catalog/species-detail/$speciesId'
-      path: '/species-detail/$speciesId'
-      fullPath: '/catalog/species-detail/$speciesId'
-      preLoaderRoute: typeof CatalogSpeciesDetailSpeciesIdRouteImport
-      parentRoute: typeof CatalogRouteRoute
-    }
-    '/catalog/species-category/$speciesCategoryId': {
-      id: '/catalog/species-category/$speciesCategoryId'
-      path: '/species-category/$speciesCategoryId'
-      fullPath: '/catalog/species-category/$speciesCategoryId'
-      preLoaderRoute: typeof CatalogSpeciesCategorySpeciesCategoryIdRouteImport
-      parentRoute: typeof CatalogRouteRoute
-    }
-    '/catalog/cultivar/$cultivarId': {
-      id: '/catalog/cultivar/$cultivarId'
-      path: '/cultivar/$cultivarId'
-      fullPath: '/catalog/cultivar/$cultivarId'
-      preLoaderRoute: typeof CatalogCultivarCultivarIdRouteImport
-      parentRoute: typeof CatalogRouteRoute
+      fullPath: '/catalog/'
+      preLoaderRoute: typeof AuthenticatedCatalogIndexRouteImport
+      parentRoute: typeof AuthenticatedCatalogRouteRoute
     }
     '/api/rpc/$': {
       id: '/api/rpc/$'
@@ -425,57 +416,175 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/plant/$plantId': {
+      id: '/_authenticated/plant/$plantId'
+      path: '/plant/$plantId'
+      fullPath: '/plant/$plantId'
+      preLoaderRoute: typeof AuthenticatedPlantPlantIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/location/$locationId': {
+      id: '/_authenticated/location/$locationId'
+      path: '/location/$locationId'
+      fullPath: '/location/$locationId'
+      preLoaderRoute: typeof AuthenticatedLocationLocationIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/gardening-event/$gardeningEventId': {
+      id: '/_authenticated/gardening-event/$gardeningEventId'
+      path: '/gardening-event/$gardeningEventId'
+      fullPath: '/gardening-event/$gardeningEventId'
+      preLoaderRoute: typeof AuthenticatedGardeningEventGardeningEventIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/catalog/species-categories': {
+      id: '/_authenticated/catalog/species-categories'
+      path: '/species-categories'
+      fullPath: '/catalog/species-categories'
+      preLoaderRoute: typeof AuthenticatedCatalogSpeciesCategoriesRouteImport
+      parentRoute: typeof AuthenticatedCatalogRouteRoute
+    }
+    '/_authenticated/catalog/species': {
+      id: '/_authenticated/catalog/species'
+      path: '/species'
+      fullPath: '/catalog/species'
+      preLoaderRoute: typeof AuthenticatedCatalogSpeciesRouteImport
+      parentRoute: typeof AuthenticatedCatalogRouteRoute
+    }
+    '/_authenticated/catalog/cultivars': {
+      id: '/_authenticated/catalog/cultivars'
+      path: '/cultivars'
+      fullPath: '/catalog/cultivars'
+      preLoaderRoute: typeof AuthenticatedCatalogCultivarsRouteImport
+      parentRoute: typeof AuthenticatedCatalogRouteRoute
+    }
+    '/_authenticated/account/$accountView': {
+      id: '/_authenticated/account/$accountView'
+      path: '/account/$accountView'
+      fullPath: '/account/$accountView'
+      preLoaderRoute: typeof AuthenticatedAccountAccountViewRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/location/$locationId/': {
+      id: '/_authenticated/location/$locationId/'
+      path: '/'
+      fullPath: '/location/$locationId/'
+      preLoaderRoute: typeof AuthenticatedLocationLocationIdIndexRouteImport
+      parentRoute: typeof AuthenticatedLocationLocationIdRoute
+    }
+    '/_authenticated/location/$locationId/layout': {
+      id: '/_authenticated/location/$locationId/layout'
+      path: '/layout'
+      fullPath: '/location/$locationId/layout'
+      preLoaderRoute: typeof AuthenticatedLocationLocationIdLayoutRouteImport
+      parentRoute: typeof AuthenticatedLocationLocationIdRoute
+    }
+    '/_authenticated/catalog/species-detail/$speciesId': {
+      id: '/_authenticated/catalog/species-detail/$speciesId'
+      path: '/species-detail/$speciesId'
+      fullPath: '/catalog/species-detail/$speciesId'
+      preLoaderRoute: typeof AuthenticatedCatalogSpeciesDetailSpeciesIdRouteImport
+      parentRoute: typeof AuthenticatedCatalogRouteRoute
+    }
+    '/_authenticated/catalog/species-category/$speciesCategoryId': {
+      id: '/_authenticated/catalog/species-category/$speciesCategoryId'
+      path: '/species-category/$speciesCategoryId'
+      fullPath: '/catalog/species-category/$speciesCategoryId'
+      preLoaderRoute: typeof AuthenticatedCatalogSpeciesCategorySpeciesCategoryIdRouteImport
+      parentRoute: typeof AuthenticatedCatalogRouteRoute
+    }
+    '/_authenticated/catalog/cultivar/$cultivarId': {
+      id: '/_authenticated/catalog/cultivar/$cultivarId'
+      path: '/cultivar/$cultivarId'
+      fullPath: '/catalog/cultivar/$cultivarId'
+      preLoaderRoute: typeof AuthenticatedCatalogCultivarCultivarIdRouteImport
+      parentRoute: typeof AuthenticatedCatalogRouteRoute
+    }
   }
 }
 
-interface CatalogRouteRouteChildren {
-  CatalogCultivarsRoute: typeof CatalogCultivarsRoute
-  CatalogSpeciesRoute: typeof CatalogSpeciesRoute
-  CatalogSpeciesCategoriesRoute: typeof CatalogSpeciesCategoriesRoute
-  CatalogIndexRoute: typeof CatalogIndexRoute
-  CatalogCultivarCultivarIdRoute: typeof CatalogCultivarCultivarIdRoute
-  CatalogSpeciesCategorySpeciesCategoryIdRoute: typeof CatalogSpeciesCategorySpeciesCategoryIdRoute
-  CatalogSpeciesDetailSpeciesIdRoute: typeof CatalogSpeciesDetailSpeciesIdRoute
+interface AuthenticatedCatalogRouteRouteChildren {
+  AuthenticatedCatalogCultivarsRoute: typeof AuthenticatedCatalogCultivarsRoute
+  AuthenticatedCatalogSpeciesRoute: typeof AuthenticatedCatalogSpeciesRoute
+  AuthenticatedCatalogSpeciesCategoriesRoute: typeof AuthenticatedCatalogSpeciesCategoriesRoute
+  AuthenticatedCatalogIndexRoute: typeof AuthenticatedCatalogIndexRoute
+  AuthenticatedCatalogCultivarCultivarIdRoute: typeof AuthenticatedCatalogCultivarCultivarIdRoute
+  AuthenticatedCatalogSpeciesCategorySpeciesCategoryIdRoute: typeof AuthenticatedCatalogSpeciesCategorySpeciesCategoryIdRoute
+  AuthenticatedCatalogSpeciesDetailSpeciesIdRoute: typeof AuthenticatedCatalogSpeciesDetailSpeciesIdRoute
 }
 
-const CatalogRouteRouteChildren: CatalogRouteRouteChildren = {
-  CatalogCultivarsRoute: CatalogCultivarsRoute,
-  CatalogSpeciesRoute: CatalogSpeciesRoute,
-  CatalogSpeciesCategoriesRoute: CatalogSpeciesCategoriesRoute,
-  CatalogIndexRoute: CatalogIndexRoute,
-  CatalogCultivarCultivarIdRoute: CatalogCultivarCultivarIdRoute,
-  CatalogSpeciesCategorySpeciesCategoryIdRoute:
-    CatalogSpeciesCategorySpeciesCategoryIdRoute,
-  CatalogSpeciesDetailSpeciesIdRoute: CatalogSpeciesDetailSpeciesIdRoute,
+const AuthenticatedCatalogRouteRouteChildren: AuthenticatedCatalogRouteRouteChildren =
+  {
+    AuthenticatedCatalogCultivarsRoute: AuthenticatedCatalogCultivarsRoute,
+    AuthenticatedCatalogSpeciesRoute: AuthenticatedCatalogSpeciesRoute,
+    AuthenticatedCatalogSpeciesCategoriesRoute:
+      AuthenticatedCatalogSpeciesCategoriesRoute,
+    AuthenticatedCatalogIndexRoute: AuthenticatedCatalogIndexRoute,
+    AuthenticatedCatalogCultivarCultivarIdRoute:
+      AuthenticatedCatalogCultivarCultivarIdRoute,
+    AuthenticatedCatalogSpeciesCategorySpeciesCategoryIdRoute:
+      AuthenticatedCatalogSpeciesCategorySpeciesCategoryIdRoute,
+    AuthenticatedCatalogSpeciesDetailSpeciesIdRoute:
+      AuthenticatedCatalogSpeciesDetailSpeciesIdRoute,
+  }
+
+const AuthenticatedCatalogRouteRouteWithChildren =
+  AuthenticatedCatalogRouteRoute._addFileChildren(
+    AuthenticatedCatalogRouteRouteChildren,
+  )
+
+interface AuthenticatedLocationLocationIdRouteChildren {
+  AuthenticatedLocationLocationIdLayoutRoute: typeof AuthenticatedLocationLocationIdLayoutRoute
+  AuthenticatedLocationLocationIdIndexRoute: typeof AuthenticatedLocationLocationIdIndexRoute
 }
 
-const CatalogRouteRouteWithChildren = CatalogRouteRoute._addFileChildren(
-  CatalogRouteRouteChildren,
-)
+const AuthenticatedLocationLocationIdRouteChildren: AuthenticatedLocationLocationIdRouteChildren =
+  {
+    AuthenticatedLocationLocationIdLayoutRoute:
+      AuthenticatedLocationLocationIdLayoutRoute,
+    AuthenticatedLocationLocationIdIndexRoute:
+      AuthenticatedLocationLocationIdIndexRoute,
+  }
 
-interface LocationLocationIdRouteChildren {
-  LocationLocationIdLayoutRoute: typeof LocationLocationIdLayoutRoute
-  LocationLocationIdIndexRoute: typeof LocationLocationIdIndexRoute
+const AuthenticatedLocationLocationIdRouteWithChildren =
+  AuthenticatedLocationLocationIdRoute._addFileChildren(
+    AuthenticatedLocationLocationIdRouteChildren,
+  )
+
+interface AuthenticatedRouteRouteChildren {
+  AuthenticatedCatalogRouteRoute: typeof AuthenticatedCatalogRouteRouteWithChildren
+  AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedGardeningEventsRoute: typeof AuthenticatedGardeningEventsRoute
+  AuthenticatedLocationsRoute: typeof AuthenticatedLocationsRoute
+  AuthenticatedPlantsRoute: typeof AuthenticatedPlantsRoute
+  AuthenticatedAccountAccountViewRoute: typeof AuthenticatedAccountAccountViewRoute
+  AuthenticatedGardeningEventGardeningEventIdRoute: typeof AuthenticatedGardeningEventGardeningEventIdRoute
+  AuthenticatedLocationLocationIdRoute: typeof AuthenticatedLocationLocationIdRouteWithChildren
+  AuthenticatedPlantPlantIdRoute: typeof AuthenticatedPlantPlantIdRoute
 }
 
-const LocationLocationIdRouteChildren: LocationLocationIdRouteChildren = {
-  LocationLocationIdLayoutRoute: LocationLocationIdLayoutRoute,
-  LocationLocationIdIndexRoute: LocationLocationIdIndexRoute,
+const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedCatalogRouteRoute: AuthenticatedCatalogRouteRouteWithChildren,
+  AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedGardeningEventsRoute: AuthenticatedGardeningEventsRoute,
+  AuthenticatedLocationsRoute: AuthenticatedLocationsRoute,
+  AuthenticatedPlantsRoute: AuthenticatedPlantsRoute,
+  AuthenticatedAccountAccountViewRoute: AuthenticatedAccountAccountViewRoute,
+  AuthenticatedGardeningEventGardeningEventIdRoute:
+    AuthenticatedGardeningEventGardeningEventIdRoute,
+  AuthenticatedLocationLocationIdRoute:
+    AuthenticatedLocationLocationIdRouteWithChildren,
+  AuthenticatedPlantPlantIdRoute: AuthenticatedPlantPlantIdRoute,
 }
 
-const LocationLocationIdRouteWithChildren =
-  LocationLocationIdRoute._addFileChildren(LocationLocationIdRouteChildren)
+const AuthenticatedRouteRouteWithChildren =
+  AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  CatalogRouteRoute: CatalogRouteRouteWithChildren,
-  GardeningEventsRoute: GardeningEventsRoute,
-  LocationsRoute: LocationsRoute,
-  PlantsRoute: PlantsRoute,
+  AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   ApiSplatRoute: ApiSplatRoute,
-  GardeningEventGardeningEventIdRoute: GardeningEventGardeningEventIdRoute,
-  LocationLocationIdRoute: LocationLocationIdRouteWithChildren,
-  PlantPlantIdRoute: PlantPlantIdRoute,
+  AuthAuthViewRoute: AuthAuthViewRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiRpcSplatRoute: ApiRpcSplatRoute,
 }
@@ -484,7 +593,7 @@ export const routeTree = rootRouteImport
   ._addFileTypes<FileRouteTypes>()
 
 import type { getRouter } from './router.tsx'
-import type { startInstance } from './server.ts'
+import type { startInstance } from './start.ts'
 declare module '@tanstack/react-start' {
   interface Register {
     ssr: true

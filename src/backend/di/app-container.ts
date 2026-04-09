@@ -4,11 +4,14 @@ import { container } from "tsyringe";
 
 import type { IUseCase } from "../core/application/use-cases/shared/use-case.interface";
 
-import { registerGardeningUseCases } from "./register-gardening-use-cases";
-import { registerInMemoryGardeningRepositories } from "./register-in-memory-gardening-repositories";
+import { registerAccessControlApplicationServices, registerAccessControlPorts } from "./register-access-control";
+import { registerInMemoryRepositories } from "./register-in-memory-repositories";
+import { registerUseCases } from "./register-use-cases";
 
-registerInMemoryGardeningRepositories(container);
-registerGardeningUseCases(container);
+registerInMemoryRepositories(container);
+registerAccessControlPorts(container);
+registerAccessControlApplicationServices(container);
+registerUseCases(container);
 
 export { container as appContainer };
 

@@ -12,13 +12,13 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
-import type { SpeciesCategoryEntity } from "@backend/core/domain/gardening/entities";
+import type { SpeciesCategoryWithSystemCatalog } from "@backend/core/application/use-cases/gardening/species-category.crud-use-cases";
 import { useAppForm } from "@/hooks/form";
 import { normalizePresentationInput } from "@/lib/item-presentation";
 import { useSpeciesCategoryUpdateMutation } from "@/store/mutations";
 
 type Props = {
-	category: SpeciesCategoryEntity;
+	category: SpeciesCategoryWithSystemCatalog;
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 };
@@ -72,7 +72,7 @@ export function SpeciesCategoryUpdateDialog({ category, open, onOpenChange }: Pr
 
 	const close = () => onOpenChange(false);
 
-	if (category.isDefault) return null;
+	if (category.systemCatalog) return null;
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>

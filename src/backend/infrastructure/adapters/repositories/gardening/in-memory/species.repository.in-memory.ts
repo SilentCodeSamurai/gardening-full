@@ -12,11 +12,11 @@ import type {
 } from "@backend/core/application/ports/repositories/gardening/species.repository.port";
 import { BaseRepositoryErrors } from "@backend/core/application/ports/repositories/shared/base-repository.errors";
 import type { SpeciesEntity } from "@backend/core/domain/gardening/entities";
-import type { InMemoryGardeningStore } from "@backend/infrastructure/integrations/in-memory-database/client";
+import type { InMemoryStore } from "@backend/infrastructure/integrations/in-memory-database/client";
 import { idKey, speciesId } from "@backend/infrastructure/integrations/shared/database-ids";
 
 export class SpeciesInMemoryRepository extends BaseRepositoryErrors implements SpeciesRepositoryPort {
-	constructor(private readonly store: InMemoryGardeningStore) {
+	constructor(private readonly store: InMemoryStore) {
 		super();
 	}
 
@@ -30,7 +30,6 @@ export class SpeciesInMemoryRepository extends BaseRepositoryErrors implements S
 			id,
 			categoryId: dto.categoryId,
 			characteristics: dto.characteristics,
-			isDefault: dto.isDefault ?? false,
 			presentation: dto.presentation,
 			createdAt: now,
 			updatedAt: now,

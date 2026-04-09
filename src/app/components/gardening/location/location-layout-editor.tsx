@@ -62,7 +62,7 @@ import { useSpatialLayoutApplyOperationsMutation, useSpatialNodeCreateMutation }
 import { flattenSpatialLayoutOperations } from "@/store/mutations/spatial-layout-flatten-ops";
 import { getSpatialPlacementStatusByRef, spatialNodeHasParent } from "@/store/spatial-placement";
 
-const locationLayoutRouteApi = getRouteApi("/location/$locationId/layout");
+const locationLayoutRouteApi = getRouteApi("/_authenticated/location/$locationId/layout");
 
 /** True when a layout apply lifts the focused location off its parent (detach) or deletes that location’s spatial node (remove). */
 function focusedLocationWasRemovedFromLayout(

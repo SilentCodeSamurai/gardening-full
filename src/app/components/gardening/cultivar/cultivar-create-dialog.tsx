@@ -42,7 +42,7 @@ export function CultivarCreateDialog({ open, onOpenChange }: Props) {
 		const speciesList = speciesData?.items ?? [];
 		return speciesList.map((s) => ({
 			value: String(s.id),
-			label: translateCatalogField(s.characteristics.name, s.isDefault) ?? String(s.id),
+			label: translateCatalogField(s.characteristics.name, s.systemCatalog) ?? String(s.id),
 			presentation: s.presentation,
 		}));
 	}, [speciesData?.items]);

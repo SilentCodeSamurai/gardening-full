@@ -1,5 +1,5 @@
-import { os } from "@orpc/server";
 import * as z from "zod";
+import { procedure } from "../orpc-procedure";
 
 const todos = [
 	{ id: 1, name: "Get groceries" },
@@ -7,9 +7,9 @@ const todos = [
 	{ id: 3, name: "Finish the project" },
 ];
 
-export const listTodos = os.handler(() => todos);
+export const listTodos = procedure.handler(() => todos);
 
-export const addTodo = os.input(z.object({ name: z.string() })).handler(({ input }) => {
+export const addTodo = procedure.input(z.object({ name: z.string() })).handler(({ input }) => {
 	const newTodo = { id: todos.length + 1, name: input.name };
 	todos.push(newTodo);
 	return newTodo;

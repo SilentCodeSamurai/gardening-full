@@ -1,5 +1,5 @@
 export const TOKENS = {
-	InMemoryGardeningStore: Symbol.for("InMemoryGardeningStore"),
+	InMemoryStore: Symbol.for("InMemoryStore"),
 	IndexedDbGardeningStore: Symbol.for("IndexedDbGardeningStore"),
 	CultivarRepositoryPort: Symbol.for("CultivarRepositoryPort"),
 	PlantRepositoryPort: Symbol.for("PlantRepositoryPort"),
@@ -8,7 +8,10 @@ export const TOKENS = {
 	LocationRepositoryPort: Symbol.for("LocationRepositoryPort"),
 	GardeningEventRepositoryPort: Symbol.for("GardeningEventRepositoryPort"),
 	SpatialNodeRepositoryPort: Symbol.for("SpatialNodeRepositoryPort"),
-	SpatialOperationsService: Symbol.for("SpatialOperationsService"),
+	ResoursePermissionRepositoryPort: Symbol.for("ResoursePermissionRepositoryPort"),
+	SubjectExpansionResolverPort: Symbol.for("SubjectExpansionResolverPort"),
+	ResourceAccessAuditPort: Symbol.for("ResourceAccessAuditPort"),
+	GlobalSharedResourcePolicyPort: Symbol.for("GlobalSharedResourcePolicyPort"),
 } as const;
 
 export type Token = (typeof TOKENS)[keyof typeof TOKENS];

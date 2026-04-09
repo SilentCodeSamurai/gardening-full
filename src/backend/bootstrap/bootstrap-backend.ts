@@ -1,16 +1,19 @@
-import {
-	DEFAULT_CATALOG,
-	type DefaultCatalogCategory,
-	type DefaultCatalogDefinition,
-} from "@backend/core/application/use-cases/gardening/default-catalog.config";
-import { PopulateDefaultCatalogUseCase } from "@backend/core/application/use-cases/gardening/populate-default-catalog.use-case";
-import { appContainer } from "@backend/di/app-container";
+import { populateData } from "./populate-data";
 
-export type BootstrapBackendOptions = {
-	catalog?: DefaultCatalogDefinition<readonly DefaultCatalogCategory[]>;
-};
+/**
+ * Full backend startup: database connection, migrations, and other infrastructure,
+ * then {@link populateData}.
+ */
+export async function bootstrap(): Promise<void> {
+	// TODO: Connect database, run migrations, wire Drizzle / connection pool, etc.
 
-export async function bootstrapBackend(options?: BootstrapBackendOptions) {
-	const useCase = appContainer.resolve(PopulateDefaultCatalogUseCase);
-	return useCase.execute({ catalog: options?.catalog ?? DEFAULT_CATALOG });
+	const result = await populateData();
+
+	if (result.status === "populated") {
+		console.info(
+			`[bootstrap] Default catalog populated (${result.createdCategories} categories, ${result.createdSpecies} species).`,
+		);
+	} else {
+		console.info("[bootstrap] Default catalog skipped (catalog already has data).");
+	}
 }

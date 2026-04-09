@@ -1,5 +1,6 @@
 import * as m from "@/paraglide/messages.js";
-import type { CultivarEntity, HydratedPlantEntity, SpeciesEntity } from "@backend/core/domain/gardening/entities";
+import type { SpeciesWithSystemCatalog } from "@backend/core/application/use-cases/gardening/species.crud-use-cases";
+import type { CultivarEntity, HydratedPlantEntity } from "@backend/core/domain/gardening/entities";
 import type { SpatialNodeEntity, SpatialNodeTreeNode } from "@backend/core/domain/spatial/entities";
 import type { ItemsContainer } from "@backend/shared/types";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -35,7 +36,7 @@ function getHydratedCultivar(
 		?.items.find((c) => String(c.id) === String(cultivarId));
 	if (!cultivar) return null;
 	const species = queryClient
-		.getQueryData<ItemsContainer<SpeciesEntity>>(queryKeys.species.all.queryKey)
+		.getQueryData<ItemsContainer<SpeciesWithSystemCatalog>>(queryKeys.species.all.queryKey)
 		?.items.find((s) => String(s.id) === String(cultivar.speciesId));
 	if (!species) return null;
 	return { ...cultivar, species };

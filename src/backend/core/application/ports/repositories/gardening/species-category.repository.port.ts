@@ -7,10 +7,7 @@ import type {
 	BaseRepositoryUpdateInputDTO,
 } from "../shared/types";
 
-export type SpeciesCategoryRepositoryCreateInputDTO = Omit<
-	BaseRepositoryCreateInputDTO<SpeciesCategoryEntity>,
-	"isDefault"
-> & { isDefault?: boolean };
+export type SpeciesCategoryRepositoryCreateInputDTO = BaseRepositoryCreateInputDTO<SpeciesCategoryEntity>;
 export type SpeciesCategoryRepositoryCreateOutputDTO = SpeciesCategoryEntity;
 
 export type SpeciesCategoryRepositoryGetByIdInputDTO = BaseRepositoryIdActionInputDTO<SpeciesCategoryEntity>;

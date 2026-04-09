@@ -1,103 +1,126 @@
+import type { SpeciesCategoryEntity } from "@backend/core/domain/gardening/entities";
 import type {
 	SpeciesCategoryRepositoryCreateInputDTO,
-	SpeciesCategoryRepositoryCreateOutputDTO,
 	SpeciesCategoryRepositoryDeleteInputDTO,
 	SpeciesCategoryRepositoryDeleteOutputDTO,
 	SpeciesCategoryRepositoryGetAllOutputDTO,
 	SpeciesCategoryRepositoryGetByIdInputDTO,
-	SpeciesCategoryRepositoryGetByIdOutputDTO,
 	SpeciesCategoryRepositoryPort,
 	SpeciesCategoryRepositoryUpdateInputDTO,
-	SpeciesCategoryRepositoryUpdateOutputDTO,
 } from "../../ports/repositories/gardening/species-category.repository.port";
-import { BaseUseCaseError } from "../shared/errors";
+import {
+	APPLICATION_RESOURCE_TYPES,
+	gardeningSpeciesCategoryRef,
+} from "../../resource-refs";
+import { AccessControlApplicationService } from "../../services/access-control/access-control.application-service";
 import type { IUseCase } from "../shared/use-case.interface";
+import type { UseCaseRequest } from "../use-case-context";
 
-export class SpeciesCategoryUpdateUseCaseDefaultUpdateError extends BaseUseCaseError {
-	constructor(params: { id: string }) {
-		super({
-			message: "Cannot update default species category.",
-			useCaseName: "SpeciesCategoryUpdateUseCase",
-			context: params,
-		});
-	}
-}
+export type SpeciesCategoryWithSystemCatalog = SpeciesCategoryEntity & { systemCatalog: boolean };
 
-export class SpeciesCategoryDeleteUseCaseDefaultDeletionError extends BaseUseCaseError {
-	constructor(params: { id: string }) {
-		super({
-			message: "Cannot delete default species category.",
-			useCaseName: "SpeciesCategoryDeleteUseCase",
-			context: params,
-		});
-	}
-}
-
-/** callers cannot set `isDefault`; repository always receives `isDefault: false`. */
-export type SpeciesCategoryCreateUseCaseInput = Omit<SpeciesCategoryRepositoryCreateInputDTO, "isDefault">;
-export type SpeciesCategoryCreateUseCaseOutput = SpeciesCategoryRepositoryCreateOutputDTO;
+export type SpeciesCategoryCreateUseCaseInput = UseCaseRequest<SpeciesCategoryRepositoryCreateInputDTO>;
+export type SpeciesCategoryCreateUseCaseOutput = SpeciesCategoryWithSystemCatalog;
 
 export class SpeciesCategoryCreateUseCase
 	implements IUseCase<SpeciesCategoryCreateUseCaseInput, SpeciesCategoryCreateUseCaseOutput>
 {
-	constructor(private readonly speciesCategoryRepository: SpeciesCategoryRepositoryPort) {}
+	constructor(
+		private readonly access: AccessControlApplicationService,
+		private readonly speciesCategoryRepository: SpeciesCategoryRepositoryPort,
+	) {}
 
 	public async execute(input: SpeciesCategoryCreateUseCaseInput): Promise<SpeciesCategoryCreateUseCaseOutput> {
-		return this.speciesCategoryRepository.create({ ...input, isDefault: false });
+		await this.access.assertCanCreate(input.context, input.context.workspaceRef);
+		const created = await this.speciesCategoryRepository.create(input.dto);
+		await this.access.bootstrapResourceAdminForActor(
+			input.context,
+			gardeningSpeciesCategoryRef(String(created.id)),
+		);
+		return { ...created, systemCatalog: false };
 	}
 }
 
-export type SpeciesCategoryGetByIdUseCaseInput = SpeciesCategoryRepositoryGetByIdInputDTO;
-export type SpeciesCategoryGetByIdUseCaseOutput = SpeciesCategoryRepositoryGetByIdOutputDTO;
+export type SpeciesCategoryGetByIdUseCaseInput = UseCaseRequest<SpeciesCategoryRepositoryGetByIdInputDTO>;
+export type SpeciesCategoryGetByIdUseCaseOutput = SpeciesCategoryWithSystemCatalog;
 
 export class SpeciesCategoryGetByIdUseCase
 	implements IUseCase<SpeciesCategoryGetByIdUseCaseInput, SpeciesCategoryGetByIdUseCaseOutput>
 {
-	constructor(private readonly speciesCategoryRepository: SpeciesCategoryRepositoryPort) {}
+	constructor(
+		private readonly access: AccessControlApplicationService,
+		private readonly speciesCategoryRepository: SpeciesCategoryRepositoryPort,
+	) {}
 
 	public async execute(input: SpeciesCategoryGetByIdUseCaseInput): Promise<SpeciesCategoryGetByIdUseCaseOutput> {
-		return this.speciesCategoryRepository.getById(input);
+		const row = await this.speciesCategoryRepository.getById(input.dto);
+		await this.access.assertCanRead(input.context, gardeningSpeciesCategoryRef(String(input.dto.id)));
+		const [systemCatalog] = await this.access.getGlobalSharedResourceFlags([
+			gardeningSpeciesCategoryRef(String(row.id)),
+		]);
+		return { ...row, systemCatalog: systemCatalog ?? false };
 	}
 }
 
-export type SpeciesCategoryGetAllUseCaseOutput = SpeciesCategoryRepositoryGetAllOutputDTO;
+export type SpeciesCategoryGetAllUseCaseInput = UseCaseRequest;
+export type SpeciesCategoryGetAllUseCaseOutput = {
+	items: SpeciesCategoryWithSystemCatalog[];
+};
 
-export class SpeciesCategoryGetAllUseCase implements IUseCase<void, SpeciesCategoryGetAllUseCaseOutput> {
-	constructor(private readonly speciesCategoryRepository: SpeciesCategoryRepositoryPort) {}
-	public async execute(): Promise<SpeciesCategoryGetAllUseCaseOutput> {
-		return this.speciesCategoryRepository.getAll();
+export class SpeciesCategoryGetAllUseCase
+	implements IUseCase<SpeciesCategoryGetAllUseCaseInput, SpeciesCategoryGetAllUseCaseOutput>
+{
+	constructor(
+		private readonly access: AccessControlApplicationService,
+		private readonly speciesCategoryRepository: SpeciesCategoryRepositoryPort,
+	) {}
+	public async execute(input: SpeciesCategoryGetAllUseCaseInput): Promise<SpeciesCategoryGetAllUseCaseOutput> {
+		const mask = await this.access.getReadableResourceMask({
+			actorRef: input.context.actorRef,
+			resourceType: APPLICATION_RESOURCE_TYPES.speciesCategory,
+		});
+		const all: SpeciesCategoryRepositoryGetAllOutputDTO = await this.speciesCategoryRepository.getAll();
+		const flags = await this.access.getGlobalSharedResourceFlags(
+			all.items.map((i) => gardeningSpeciesCategoryRef(String(i.id))),
+		);
+		const enriched = all.items.map((item, i) => ({ ...item, systemCatalog: flags[i] ?? false }));
+		return { items: AccessControlApplicationService.filterReadableOrGlobalShared(enriched, mask) };
 	}
 }
 
-/** `isDefault` is not writable via this use case (preserved by repository merge). */
-export type SpeciesCategoryUpdateUseCaseInput = Omit<SpeciesCategoryRepositoryUpdateInputDTO, "isDefault">;
-export type SpeciesCategoryUpdateUseCaseOutput = SpeciesCategoryRepositoryUpdateOutputDTO;
+export type SpeciesCategoryUpdateUseCaseInput = UseCaseRequest<SpeciesCategoryRepositoryUpdateInputDTO>;
+export type SpeciesCategoryUpdateUseCaseOutput = SpeciesCategoryWithSystemCatalog;
 
 export class SpeciesCategoryUpdateUseCase
 	implements IUseCase<SpeciesCategoryUpdateUseCaseInput, SpeciesCategoryUpdateUseCaseOutput>
 {
-	constructor(private readonly speciesCategoryRepository: SpeciesCategoryRepositoryPort) {}
+	constructor(
+		private readonly access: AccessControlApplicationService,
+		private readonly speciesCategoryRepository: SpeciesCategoryRepositoryPort,
+	) {}
 	public async execute(input: SpeciesCategoryUpdateUseCaseInput): Promise<SpeciesCategoryUpdateUseCaseOutput> {
-		const current = await this.speciesCategoryRepository.getById({ id: input.id });
-		if (current.isDefault) {
-			throw new SpeciesCategoryUpdateUseCaseDefaultUpdateError({ id: input.id });
-		}
-		return this.speciesCategoryRepository.update(input);
+		await this.speciesCategoryRepository.getById({ id: input.dto.id });
+		await this.access.assertCanUpdate(input.context, gardeningSpeciesCategoryRef(String(input.dto.id)));
+		const updated = await this.speciesCategoryRepository.update(input.dto);
+		const [systemCatalog] = await this.access.getGlobalSharedResourceFlags([
+			gardeningSpeciesCategoryRef(String(updated.id)),
+		]);
+		return { ...updated, systemCatalog: systemCatalog ?? false };
 	}
 }
 
-export type SpeciesCategoryDeleteUseCaseInput = SpeciesCategoryRepositoryDeleteInputDTO;
+export type SpeciesCategoryDeleteUseCaseInput = UseCaseRequest<SpeciesCategoryRepositoryDeleteInputDTO>;
 export type SpeciesCategoryDeleteUseCaseOutput = SpeciesCategoryRepositoryDeleteOutputDTO;
 
 export class SpeciesCategoryDeleteUseCase
 	implements IUseCase<SpeciesCategoryDeleteUseCaseInput, SpeciesCategoryDeleteUseCaseOutput>
 {
-	constructor(private readonly speciesCategoryRepository: SpeciesCategoryRepositoryPort) {}
+	constructor(
+		private readonly access: AccessControlApplicationService,
+		private readonly speciesCategoryRepository: SpeciesCategoryRepositoryPort,
+	) {}
 	public async execute(input: SpeciesCategoryDeleteUseCaseInput): Promise<SpeciesCategoryDeleteUseCaseOutput> {
-		const current = await this.speciesCategoryRepository.getById({ id: input.id });
-		if (current.isDefault) {
-			throw new SpeciesCategoryDeleteUseCaseDefaultDeletionError({ id: input.id });
-		}
-		return this.speciesCategoryRepository.delete(input);
+		await this.speciesCategoryRepository.getById({ id: input.dto.id });
+		await this.access.assertCanDelete(input.context, gardeningSpeciesCategoryRef(String(input.dto.id)));
+		return this.speciesCategoryRepository.delete(input.dto);
 	}
 }

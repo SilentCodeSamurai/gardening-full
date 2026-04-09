@@ -13,7 +13,8 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
-import type { SpeciesCategoryEntityId, SpeciesEntity } from "@backend/core/domain/gardening/entities";
+import type { SpeciesWithSystemCatalog } from "@backend/core/application/use-cases/gardening/species.crud-use-cases";
+import type { SpeciesCategoryEntityId } from "@backend/core/domain/gardening/entities";
 import { useAppForm } from "@/hooks/form";
 import { normalizePresentationInput } from "@/lib/item-presentation";
 import { translateCatalogField } from "@/lib/translate-catalog-field";
@@ -21,7 +22,7 @@ import { queryKeys } from "@/store/keys";
 import { useSpeciesUpdateMutation } from "@/store/mutations";
 
 type Props = {
-	species: SpeciesEntity;
+	species: SpeciesWithSystemCatalog;
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 };
@@ -43,7 +44,7 @@ export function SpeciesUpdateDialog({ species, open, onOpenChange }: Props) {
 		const categories = catData?.items ?? [];
 		return categories.map((c) => ({
 			value: String(c.id),
-			label: translateCatalogField(c.title, c.isDefault) ?? String(c.id),
+			label: translateCatalogField(c.title, c.systemCatalog) ?? String(c.id),
 			presentation: c.presentation,
 		}));
 	}, [catData?.items]);
@@ -94,7 +95,7 @@ export function SpeciesUpdateDialog({ species, open, onOpenChange }: Props) {
 
 	const close = () => onOpenChange(false);
 
-	if (species.isDefault) return null;
+	if (species.systemCatalog) return null;
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>

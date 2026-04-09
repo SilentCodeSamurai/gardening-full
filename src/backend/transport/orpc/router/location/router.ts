@@ -1,4 +1,3 @@
-import { os } from "@orpc/server";
 import {
 	LocationCreateUseCase,
 	LocationDeleteManyUseCase,
@@ -7,6 +6,9 @@ import {
 	LocationGetByIdUseCase,
 	LocationUpdateUseCase,
 } from "@backend/core/application/use-cases/gardening/location.use-cases";
+
+import { createUseCaseContextFromOrpc } from "../../create-use-case-context";
+import { procedure } from "../../orpc-procedure";
 import { resolveAndExecute } from "../../shared/resolve-use-case";
 import {
 	CreateLocationInputSchema,
@@ -17,14 +19,38 @@ import {
 } from "./schemas";
 
 export const locationRouter = {
-	create: os.input(CreateLocationInputSchema).handler(({ input }) => resolveAndExecute(LocationCreateUseCase, input)),
-	getById: os
+	create: procedure
+		.input(CreateLocationInputSchema)
+		.handler(({ input, context }) =>
+			resolveAndExecute(LocationCreateUseCase, { context: createUseCaseContextFromOrpc(context), dto: input }),
+		),
+	getById: procedure
 		.input(GetLocationByIdInputSchema)
-		.handler(({ input }) => resolveAndExecute(LocationGetByIdUseCase, input)),
-	getAll: os.handler(() => resolveAndExecute(LocationGetAllUseCase)),
-	update: os.input(UpdateLocationInputSchema).handler(({ input }) => resolveAndExecute(LocationUpdateUseCase, input)),
-	delete: os.input(DeleteLocationInputSchema).handler(({ input }) => resolveAndExecute(LocationDeleteUseCase, input)),
-	deleteMany: os
+		.handler(({ input, context }) =>
+			resolveAndExecute(LocationGetByIdUseCase, {
+				context: createUseCaseContextFromOrpc(context),
+				dto: { id: input.id },
+			}),
+		),
+	getAll: procedure.handler(({ context }) =>
+		resolveAndExecute(LocationGetAllUseCase, { context: createUseCaseContextFromOrpc(context) }),
+	),
+	update: procedure
+		.input(UpdateLocationInputSchema)
+		.handler(({ input, context }) =>
+			resolveAndExecute(LocationUpdateUseCase, { context: createUseCaseContextFromOrpc(context), dto: input }),
+		),
+	delete: procedure
+		.input(DeleteLocationInputSchema)
+		.handler(({ input, context }) =>
+			resolveAndExecute(LocationDeleteUseCase, {
+				context: createUseCaseContextFromOrpc(context),
+				dto: { id: input.id },
+			}),
+		),
+	deleteMany: procedure
 		.input(DeleteManyLocationInputSchema)
-		.handler(({ input }) => resolveAndExecute(LocationDeleteManyUseCase, input)),
+		.handler(({ input, context }) =>
+			resolveAndExecute(LocationDeleteManyUseCase, { context: createUseCaseContextFromOrpc(context), dto: input }),
+		),
 };

@@ -1,7 +1,7 @@
-import type { SpeciesCategoryRepositoryCreateInputDTO } from "../../ports/repositories/gardening/species-category.repository.port";
-import type { SpeciesRepositoryCreateInputDTO } from "../../ports/repositories/gardening/species.repository.port";
-import type { ItemPresentationValueObject } from "@backend/core/domain/gardening/value-objects";
 import { ItemPresentationIconKey } from "@backend/core/domain/gardening/enums";
+import type { ItemPresentationValueObject } from "@backend/core/domain/gardening/value-objects";
+import type { SpeciesRepositoryCreateInputDTO } from "../../ports/repositories/gardening/species.repository.port";
+import type { SpeciesCategoryRepositoryCreateInputDTO } from "../../ports/repositories/gardening/species-category.repository.port";
 
 import { CATALOG_I18N_KEYS } from "./catalog-i18n-keys";
 

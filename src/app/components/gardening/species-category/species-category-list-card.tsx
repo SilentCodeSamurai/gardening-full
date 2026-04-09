@@ -1,4 +1,4 @@
-import type { SpeciesCategoryEntity } from "@backend/core/domain/gardening/entities";
+import type { SpeciesCategoryWithSystemCatalog } from "@backend/core/application/use-cases/gardening/species-category.crud-use-cases";
 import { Link } from "@tanstack/react-router";
 import { ExternalLinkIcon, PencilIcon, PencilOffIcon, Trash2Icon } from "lucide-react";
 import { useState } from "react";
@@ -20,14 +20,14 @@ import * as m from "@/paraglide/messages.js";
 import { useSpeciesCategoryDeleteMutation } from "@/store/mutations";
 
 type Props = {
-	category: SpeciesCategoryEntity;
+	category: SpeciesCategoryWithSystemCatalog;
 };
 
 export function SpeciesCategoryListCard({ category }: Props) {
 	const [editOpen, setEditOpen] = useState(false);
 	const [deleteOpen, setDeleteOpen] = useState(false);
 	const del = useSpeciesCategoryDeleteMutation();
-	const label = translateCatalogField(category.title, category.isDefault);
+	const label = translateCatalogField(category.title, category.systemCatalog);
 
 	return (
 		<Card type="item" className="relative transition-colors hover:bg-card/80">
@@ -44,37 +44,37 @@ export function SpeciesCategoryListCard({ category }: Props) {
 				</div>
 				<CardAction className="relative z-20 flex h-full shrink-0 items-center gap-1">
 					<ButtonTooltip
-						disabled={category.isDefault}
-						label={category.isDefault ? m.common_editDisabledDefaultCatalog() : m.common_edit()}
+						disabled={category.systemCatalog}
+						label={category.systemCatalog ? m.common_editDisabledDefaultCatalog() : m.common_edit()}
 					>
 						<Button
 							type="button"
 							variant="outline"
 							size="icon-sm"
-							disabled={category.isDefault}
-							aria-label={category.isDefault ? m.common_editDisabledDefaultCatalog() : m.common_edit()}
+							disabled={category.systemCatalog}
+							aria-label={category.systemCatalog ? m.common_editDisabledDefaultCatalog() : m.common_edit()}
 							onClick={() => setEditOpen(true)}
 						>
-							{category.isDefault ? (
+							{category.systemCatalog ? (
 								<PencilOffIcon className="size-4" />
 							) : (
 								<PencilIcon className="size-4" />
 							)}
 						</Button>
 					</ButtonTooltip>
-					{!category.isDefault ? (
+					{!category.systemCatalog ? (
 						<SpeciesCategoryUpdateDialog category={category} open={editOpen} onOpenChange={setEditOpen} />
 					) : null}
 					<ButtonTooltip
-						disabled={category.isDefault}
-						label={category.isDefault ? m.common_editDisabledDefaultCatalog() : m.common_delete()}
+						disabled={category.systemCatalog}
+						label={category.systemCatalog ? m.common_editDisabledDefaultCatalog() : m.common_delete()}
 					>
 						<Button
 							type="button"
 							variant="outline"
 							size="icon-sm"
-							disabled={category.isDefault}
-							aria-label={category.isDefault ? m.common_editDisabledDefaultCatalog() : m.common_delete()}
+							disabled={category.systemCatalog}
+							aria-label={category.systemCatalog ? m.common_editDisabledDefaultCatalog() : m.common_delete()}
 							onClick={() => setDeleteOpen(true)}
 						>
 							<Trash2Icon className="size-4" />

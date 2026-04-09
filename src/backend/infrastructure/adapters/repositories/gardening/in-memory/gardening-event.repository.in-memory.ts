@@ -22,11 +22,11 @@ import type {
 } from "@backend/core/application/ports/repositories/gardening/gardening-event.repository.port";
 import { BaseRepositoryErrors } from "@backend/core/application/ports/repositories/shared/base-repository.errors";
 import type { GardeningEventEntity } from "@backend/core/domain/gardening/entities";
-import type { InMemoryGardeningStore } from "@backend/infrastructure/integrations/in-memory-database/client";
+import type { InMemoryStore } from "@backend/infrastructure/integrations/in-memory-database/client";
 import { gardeningEventId, idKey } from "@backend/infrastructure/integrations/shared/database-ids";
 
 export class GardeningEventInMemoryRepository extends BaseRepositoryErrors implements GardeningEventRepositoryPort {
-	constructor(private readonly store: InMemoryGardeningStore) {
+	constructor(private readonly store: InMemoryStore) {
 		super();
 	}
 

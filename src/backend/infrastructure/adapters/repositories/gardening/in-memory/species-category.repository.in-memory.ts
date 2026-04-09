@@ -12,11 +12,11 @@ import type {
 } from "@backend/core/application/ports/repositories/gardening/species-category.repository.port";
 import { BaseRepositoryErrors } from "@backend/core/application/ports/repositories/shared/base-repository.errors";
 import type { SpeciesCategoryEntity } from "@backend/core/domain/gardening/entities";
-import type { InMemoryGardeningStore } from "@backend/infrastructure/integrations/in-memory-database/client";
+import type { InMemoryStore } from "@backend/infrastructure/integrations/in-memory-database/client";
 import { idKey, speciesCategoryId } from "@backend/infrastructure/integrations/shared/database-ids";
 
 export class SpeciesCategoryInMemoryRepository extends BaseRepositoryErrors implements SpeciesCategoryRepositoryPort {
-	constructor(private readonly store: InMemoryGardeningStore) {
+	constructor(private readonly store: InMemoryStore) {
 		super();
 	}
 
@@ -26,7 +26,6 @@ export class SpeciesCategoryInMemoryRepository extends BaseRepositoryErrors impl
 		const row: SpeciesCategoryEntity = {
 			id,
 			title: dto.title,
-			isDefault: dto.isDefault ?? false,
 			presentation: dto.presentation,
 			createdAt: now,
 			updatedAt: now,
