@@ -1,6 +1,6 @@
-import { IdentityRef } from "@backend/core/domain/resource-access";
+import { SubjectVO } from "@backend/core/domain/access/subject.vo";
 
-const catalogPopulateServiceAccountId = "catalog-populate";
+const bootstrapPopulateServiceAccountId = "bootstrap-populate";
 
-/** Built-in identity for bootstrap, default catalog population, and steward-based shared-read policy. */
-export const catalogPopulateServiceAccount = IdentityRef.serviceAccount(catalogPopulateServiceAccountId);
+/** Built-in subject for bootstrap - default data population */
+export const bootstrapPopulateServiceAccount = SubjectVO.serviceAccount(bootstrapPopulateServiceAccountId);

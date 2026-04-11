@@ -14,6 +14,7 @@ export class RepositoryNotFoundError extends BaseRepositoryError {
 
 	constructor(params: { resource: string; context?: Record<string, unknown> }) {
 		super({
+			code: "NOT_FOUND",
 			message: `Not found: ${params.resource} ${JSON.stringify(params.context ?? {})}`,
 			context: params.context,
 		});
@@ -35,6 +36,7 @@ export class RepositoryConflictError extends BaseRepositoryError {
 		cause?: unknown;
 	}) {
 		super({
+			code: "CONFLICT",
 			message:
 				params.message ??
 				`Conflict: ${params.operation} ${params.reason} ${JSON.stringify(params.context ?? {})}`,
@@ -61,6 +63,7 @@ export class RepositoryValidationError extends BaseRepositoryError {
 		cause?: unknown;
 	}) {
 		super({
+			code: "VALIDATION",
 			message:
 				params.message ??
 				`Validation failed: ${params.operation} ${params.validationCode} ${JSON.stringify(

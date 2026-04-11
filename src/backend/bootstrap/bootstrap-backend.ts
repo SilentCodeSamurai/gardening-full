@@ -1,3 +1,4 @@
+import { bootstrapPopulateServiceAccount } from "../core/application/service-accounts";
 import { populateData } from "./populate-data";
 
 /**
@@ -7,7 +8,9 @@ import { populateData } from "./populate-data";
 export async function bootstrap(): Promise<void> {
 	// TODO: Connect database, run migrations, wire Drizzle / connection pool, etc.
 
-	const result = await populateData();
+	const result = await populateData({
+		actorSubject: bootstrapPopulateServiceAccount,
+	});
 
 	if (result.status === "populated") {
 		console.info(

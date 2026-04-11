@@ -5,8 +5,15 @@ import type {
 	SpatialNodeTreeNode,
 } from "@backend/core/domain/spatial/entities";
 import type { ItemsContainer } from "@backend/shared/types";
+import type {
+	BaseScopedCRUDRepositoryPort,
+	NoScopedInnerRepositoryDto,
+	RepositoryMultiScopedInput,
+	RepositorySingleScopedInput,
+} from "../shared/base.scoped-crud-repository-port";
 
 export type SpatialNodeRepositoryCreateInputDTO = {
+	workspaceKey: SpatialNodeEntity["workspaceKey"];
 	parentId: SpatialNodeEntityId | null;
 	rect: SpatialNodeEntity["rect"];
 	kind: SpatialNodeEntity["kind"];
@@ -34,7 +41,7 @@ export type SpatialNodeRepositoryUpdateOutputDTO = SpatialNodeEntity;
 export type SpatialNodeRepositoryDeleteInputDTO = { id: SpatialNodeEntityId };
 export type SpatialNodeRepositoryDeleteOutputDTO = SpatialNodeEntityId;
 
-export type SpatialNodeRepositoryRestoreInputDTO = {
+export type SpatialNodeRepositoryRestoreInnerDTO = {
 	id: SpatialNodeEntityId;
 	parentId: SpatialNodeEntityId | null;
 	rect: SpatialNodeEntity["rect"];
@@ -46,15 +53,26 @@ export type SpatialNodeRepositoryRestoreOutputDTO = SpatialNodeEntity;
 export type SpatialNodeRepositoryGetTreeForRootIdInputDTO = { id: SpatialNodeEntityId };
 export type SpatialNodeRepositoryGetTreeForRootIdOutputDTO = SpatialNodeTreeNode;
 
-export interface SpatialNodeRepositoryPort {
-	create(dto: SpatialNodeRepositoryCreateInputDTO): Promise<SpatialNodeRepositoryCreateOutputDTO>;
-	getById(dto: SpatialNodeRepositoryGetByIdInputDTO): Promise<SpatialNodeRepositoryGetByIdOutputDTO>;
-	getByRef(dto: SpatialNodeRepositoryGetByRefInputDTO): Promise<SpatialNodeRepositoryGetByRefOutputDTO>;
-	getAll(): Promise<SpatialNodeRepositoryGetAllOutputDTO>;
-	update(dto: SpatialNodeRepositoryUpdateInputDTO): Promise<SpatialNodeRepositoryUpdateOutputDTO>;
-	delete(dto: SpatialNodeRepositoryDeleteInputDTO): Promise<SpatialNodeRepositoryDeleteOutputDTO>;
-	restore(dto: SpatialNodeRepositoryRestoreInputDTO): Promise<SpatialNodeRepositoryRestoreOutputDTO>;
-	getTreeForRootId(
-		dto: SpatialNodeRepositoryGetTreeForRootIdInputDTO,
+export interface SpatialNodeRepositoryPort
+	extends BaseScopedCRUDRepositoryPort<
+		SpatialNodeRepositoryCreateInputDTO,
+		SpatialNodeRepositoryCreateOutputDTO,
+		NoScopedInnerRepositoryDto,
+		SpatialNodeRepositoryGetAllOutputDTO,
+		SpatialNodeRepositoryGetByIdInputDTO,
+		SpatialNodeRepositoryGetByIdOutputDTO,
+		SpatialNodeRepositoryUpdateInputDTO,
+		SpatialNodeRepositoryUpdateOutputDTO,
+		SpatialNodeRepositoryDeleteInputDTO,
+		SpatialNodeRepositoryDeleteOutputDTO
+	> {
+	getByRefScoped(
+		input: RepositoryMultiScopedInput<SpatialNodeRepositoryGetByRefInputDTO>,
+	): Promise<SpatialNodeRepositoryGetByRefOutputDTO>;
+	restoreScoped(
+		input: RepositorySingleScopedInput<SpatialNodeRepositoryRestoreInnerDTO>,
+	): Promise<SpatialNodeRepositoryRestoreOutputDTO>;
+	getTreeForRootIdScoped(
+		input: RepositorySingleScopedInput<SpatialNodeRepositoryGetTreeForRootIdInputDTO>,
 	): Promise<SpatialNodeRepositoryGetTreeForRootIdOutputDTO>;
 }

@@ -22,7 +22,7 @@ export class CultivarInMemoryRepository extends BaseRepositoryErrors implements 
 		super();
 	}
 
-	async create(dto: CultivarRepositoryCreateInputDTO): Promise<CultivarRepositoryCreateOutputDTO> {
+	private insertRow(dto: CultivarRepositoryCreateInputDTO): CultivarRepositoryCreateOutputDTO {
 		if (!this.store.species.has(idKey(dto.speciesId))) {
 			this.throwNotFoundError("Species", dto.speciesId);
 		}
@@ -30,6 +30,7 @@ export class CultivarInMemoryRepository extends BaseRepositoryErrors implements 
 		const id = cultivarId();
 		const row: CultivarEntity = {
 			id,
+			workspaceKey: dto.workspaceKey,
 			speciesId: dto.speciesId,
 			characteristics: dto.characteristics,
 			presentation: dto.presentation,
@@ -40,13 +41,13 @@ export class CultivarInMemoryRepository extends BaseRepositoryErrors implements 
 		return row;
 	}
 
-	async getById(dto: CultivarRepositoryGetByIdInputDTO): Promise<CultivarRepositoryGetByIdOutputDTO> {
+	private loadById(dto: CultivarRepositoryGetByIdInputDTO): CultivarRepositoryGetByIdOutputDTO {
 		const row = this.store.cultivars.get(idKey(dto.id));
 		if (!row) this.throwNotFoundError("Cultivar", dto.id);
 		return row;
 	}
 
-	async getFullById(dto: CultivarRepositoryGetFullByIdInputDTO): Promise<CultivarRepositoryGetFullByIdOutputDTO> {
+	private loadFull(dto: CultivarRepositoryGetFullByIdInputDTO): CultivarRepositoryGetFullByIdOutputDTO {
 		const cultivar = this.store.cultivars.get(idKey(dto.id));
 		if (!cultivar) this.throwNotFoundError("Cultivar", dto.id);
 		const species = this.store.species.get(idKey(cultivar.speciesId));
@@ -54,11 +55,14 @@ export class CultivarInMemoryRepository extends BaseRepositoryErrors implements 
 		return { ...cultivar, species };
 	}
 
-	async getAll(): Promise<CultivarRepositoryGetAllOutputDTO> {
-		return { items: [...this.store.cultivars.values()] };
+	private listInWorkspaces(
+		workspaceKeys: readonly CultivarEntity["workspaceKey"][],
+	): CultivarRepositoryGetAllOutputDTO {
+		const allowed = new Set(workspaceKeys.map((key) => String(key)));
+		return { items: [...this.store.cultivars.values()].filter((x) => allowed.has(String(x.workspaceKey))) };
 	}
 
-	async update(dto: CultivarRepositoryUpdateInputDTO): Promise<CultivarRepositoryUpdateOutputDTO> {
+	private patchRow(dto: CultivarRepositoryUpdateInputDTO): CultivarRepositoryUpdateOutputDTO {
 		const key = idKey(dto.id);
 		const existing = this.store.cultivars.get(key);
 		if (!existing) this.throwNotFoundError("Cultivar", dto.id);
@@ -76,7 +80,7 @@ export class CultivarInMemoryRepository extends BaseRepositoryErrors implements 
 		return updated;
 	}
 
-	async delete(dto: CultivarRepositoryDeleteInputDTO): Promise<CultivarRepositoryDeleteOutputDTO> {
+	private removeRow(dto: CultivarRepositoryDeleteInputDTO): CultivarRepositoryDeleteOutputDTO {
 		const key = idKey(dto.id);
 		if (!this.store.cultivars.has(key)) this.throwNotFoundError("Cultivar", dto.id);
 		for (const plant of this.store.plants.values()) {
@@ -95,5 +99,53 @@ export class CultivarInMemoryRepository extends BaseRepositoryErrors implements 
 		}
 		this.store.cultivars.delete(key);
 		return dto.id;
+	}
+
+	async getFullByIdScoped(input: {
+		workspaceKey: CultivarEntity["workspaceKey"];
+		dto: CultivarRepositoryGetFullByIdInputDTO;
+	}): Promise<CultivarRepositoryGetFullByIdOutputDTO> {
+		const full = this.loadFull(input.dto);
+		if (String(full.workspaceKey) !== String(input.workspaceKey)) {
+			this.throwNotFoundError("Cultivar", input.dto.id);
+		}
+		return full;
+	}
+
+	async createScoped(input: { dto: CultivarRepositoryCreateInputDTO }): Promise<CultivarRepositoryCreateOutputDTO> {
+		return this.insertRow(input.dto);
+	}
+
+	async getAllScoped(input: {
+		workspaceKeys: readonly CultivarEntity["workspaceKey"][];
+	}): Promise<CultivarRepositoryGetAllOutputDTO> {
+		return this.listInWorkspaces(input.workspaceKeys);
+	}
+
+	async getByIdScoped(input: {
+		workspaceKey: CultivarEntity["workspaceKey"];
+		dto: CultivarRepositoryGetByIdInputDTO;
+	}): Promise<CultivarRepositoryGetByIdOutputDTO> {
+		const row = this.loadById(input.dto);
+		if (String(row.workspaceKey) !== String(input.workspaceKey)) {
+			this.throwNotFoundError("Cultivar", input.dto.id);
+		}
+		return row;
+	}
+
+	async updateByIdScoped(input: {
+		workspaceKey: CultivarEntity["workspaceKey"];
+		dto: CultivarRepositoryUpdateInputDTO;
+	}): Promise<CultivarRepositoryUpdateOutputDTO> {
+		await this.getByIdScoped({ workspaceKey: input.workspaceKey, dto: { id: input.dto.id } });
+		return this.patchRow(input.dto);
+	}
+
+	async deleteByIdScoped(input: {
+		workspaceKey: CultivarEntity["workspaceKey"];
+		dto: CultivarRepositoryDeleteInputDTO;
+	}): Promise<CultivarRepositoryDeleteOutputDTO> {
+		await this.getByIdScoped({ workspaceKey: input.workspaceKey, dto: input.dto });
+		return this.removeRow(input.dto);
 	}
 }

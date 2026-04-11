@@ -1,5 +1,6 @@
+import { RepositoryNotFoundError } from "@backend/core/application/ports/repositories/shared/base-repository.errors";
 import type { SpatialNodeRepositoryPort } from "@backend/core/application/ports/repositories/spatial/spatial-node.repository.port";
-import { AccessControlApplicationService } from "@backend/core/application/services/access-control/access-control.application-service";
+import type { AccessControlApplicationService } from "@backend/core/application/services/access-control/access-control.application-service";
 import type { SpatialOperationsService } from "@backend/core/application/services/spatial/spatial-operations.service";
 import type { IUseCase } from "@backend/core/application/use-cases/shared/use-case.interface";
 import type {
@@ -9,11 +10,20 @@ import type {
 	SpatialNodeTreeNode,
 } from "@backend/core/domain/spatial/entities";
 import type { ItemsContainer } from "@backend/shared/types";
-import {
-	APPLICATION_RESOURCE_TYPES,
-	spatialSpatialNodeRef,
-} from "#/backend/core/application/resource-refs";
 import type { UseCaseRequest } from "#/backend/core/application/use-cases/use-case-context";
+
+async function getSpatialNodeOrNull(
+	repo: SpatialNodeRepositoryPort,
+	workspaceKey: SpatialNodeEntity["workspaceKey"],
+	id: SpatialNodeEntityId,
+): Promise<SpatialNodeEntity | null> {
+	try {
+		return await repo.getByIdScoped({ workspaceKey, dto: { id } });
+	} catch (e) {
+		if (e instanceof RepositoryNotFoundError) return null;
+		throw e;
+	}
+}
 
 export type SpatialNodeCreateUseCaseInput = UseCaseRequest<{
 	parentId: SpatialNodeEntityId | null;
@@ -31,14 +41,16 @@ export class SpatialNodeCreateUseCase
 		private readonly repo: SpatialNodeRepositoryPort,
 	) {}
 	public async execute(input: SpatialNodeCreateUseCaseInput): Promise<SpatialNodeCreateUseCaseOutput> {
-		await this.access.assertCanCreate(input.context, input.context.workspaceRef);
-		const created = await this.repo.create({
-			parentId: input.dto.parentId,
-			rect: input.dto.rect,
-			kind: input.dto.kind,
-			ref: input.dto.ref,
+		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "create" });
+		const created = await this.repo.createScoped({
+			dto: {
+				workspaceKey: input.context.activeWorkspaceScope.toKey(),
+				parentId: input.dto.parentId,
+				rect: input.dto.rect,
+				kind: input.dto.kind,
+				ref: input.dto.ref,
+			},
 		});
-		await this.access.bootstrapResourceAdminForActor(input.context, spatialSpatialNodeRef(String(created.id)));
 		return created;
 	}
 }
@@ -54,12 +66,9 @@ export class SpatialNodeGetAllUseCase
 		private readonly repo: SpatialNodeRepositoryPort,
 	) {}
 	public async execute(input: SpatialNodeGetAllUseCaseInput): Promise<SpatialNodeGetAllUseCaseOutput> {
-		const mask = await this.access.getReadableResourceMask({
-			actorRef: input.context.actorRef,
-			resourceType: APPLICATION_RESOURCE_TYPES.spatialNode,
-		});
-		const all = await this.repo.getAll();
-		return { items: AccessControlApplicationService.filterItemsByReadableMask(all.items, mask) };
+		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "read" });
+		const all = await this.repo.getAllScoped({ workspaceKeys: [input.context.activeWorkspaceScope.toKey()] });
+		return { items: all.items };
 	}
 }
 
@@ -76,9 +85,13 @@ export class SpatialNodeGetTreeForRootIdUseCase
 	public async execute(
 		input: SpatialNodeGetTreeForRootIdUseCaseInput,
 	): Promise<SpatialNodeGetTreeForRootIdUseCaseOutput> {
-		const tree = await this.repo.getTreeForRootId({ id: input.dto.id });
-		await this.access.assertCanRead(input.context, spatialSpatialNodeRef(String(input.dto.id)));
-		return tree;
+		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "read" });
+		const wk = input.context.activeWorkspaceScope.toKey();
+		await this.repo.getByIdScoped({ workspaceKey: wk, dto: { id: input.dto.id } });
+		return this.repo.getTreeForRootIdScoped({
+			workspaceKey: wk,
+			dto: { id: input.dto.id },
+		});
 	}
 }
 
@@ -93,9 +106,12 @@ export class SpatialNodeDeleteUseCase
 		private readonly repo: SpatialNodeRepositoryPort,
 	) {}
 	public async execute(input: SpatialNodeDeleteUseCaseInput): Promise<SpatialNodeDeleteUseCaseOutput> {
-		await this.repo.getById({ id: input.dto.id });
-		await this.access.assertCanDelete(input.context, spatialSpatialNodeRef(String(input.dto.id)));
-		return this.repo.delete({ id: input.dto.id });
+		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "delete" });
+		const wk = input.context.activeWorkspaceScope.toKey();
+		return this.repo.deleteByIdScoped({
+			workspaceKey: wk,
+			dto: { id: input.dto.id },
+		});
 	}
 }
 
@@ -116,13 +132,22 @@ export class SpatialNodeRestoreUseCase
 		private readonly repo: SpatialNodeRepositoryPort,
 	) {}
 	public async execute(input: SpatialNodeRestoreUseCaseInput): Promise<SpatialNodeRestoreUseCaseOutput> {
-		await this.access.assertCanUpdate(input.context, spatialSpatialNodeRef(String(input.dto.id)));
-		return this.repo.restore({
-			id: input.dto.id,
-			parentId: input.dto.parentId,
-			rect: input.dto.rect,
-			kind: input.dto.kind,
-			ref: input.dto.ref,
+		const wk = input.context.activeWorkspaceScope.toKey();
+		const existing = await getSpatialNodeOrNull(this.repo, wk, input.dto.id);
+		if (existing === null) {
+			await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "create" });
+		} else {
+			await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "update" });
+		}
+		return this.repo.restoreScoped({
+			workspaceKey: wk,
+			dto: {
+				id: input.dto.id,
+				parentId: input.dto.parentId,
+				rect: input.dto.rect,
+				kind: input.dto.kind,
+				ref: input.dto.ref,
+			},
 		});
 	}
 }
@@ -145,15 +170,15 @@ export class SpatialApplyOperationsUseCase
 	constructor(
 		private readonly access: AccessControlApplicationService,
 		private readonly opsService: SpatialOperationsService,
-		private readonly repo: SpatialNodeRepositoryPort,
 	) {}
 	public async execute(input: SpatialApplyOperationsUseCaseInput): Promise<SpatialApplyOperationsUseCaseOutput> {
+		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "update" });
 		const results: SpatialNodeEntity[] = [];
+		const wk = input.context.activeWorkspaceScope.toKey();
 		for (const op of input.dto.operations) {
-			await this.repo.getById({ id: op.id });
-			await this.access.assertCanUpdate(input.context, spatialSpatialNodeRef(String(op.id)));
 			results.push(
 				await this.opsService.placeNode({
+					workspaceKey: wk,
 					id: op.id,
 					parentId: op.parentId,
 					rect: op.rect,

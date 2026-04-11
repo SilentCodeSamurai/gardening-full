@@ -8,7 +8,7 @@ import {
 } from "@backend/core/application/use-cases/gardening/location.use-cases";
 
 import { createUseCaseContextFromOrpc } from "../../create-use-case-context";
-import { procedure } from "../../orpc-procedure";
+import { authenticatedProcedure } from "../../orpc-procedure";
 import { resolveAndExecute } from "../../shared/resolve-use-case";
 import {
 	CreateLocationInputSchema,
@@ -19,12 +19,12 @@ import {
 } from "./schemas";
 
 export const locationRouter = {
-	create: procedure
+	create: authenticatedProcedure
 		.input(CreateLocationInputSchema)
 		.handler(({ input, context }) =>
 			resolveAndExecute(LocationCreateUseCase, { context: createUseCaseContextFromOrpc(context), dto: input }),
 		),
-	getById: procedure
+	getById: authenticatedProcedure
 		.input(GetLocationByIdInputSchema)
 		.handler(({ input, context }) =>
 			resolveAndExecute(LocationGetByIdUseCase, {
@@ -32,15 +32,15 @@ export const locationRouter = {
 				dto: { id: input.id },
 			}),
 		),
-	getAll: procedure.handler(({ context }) =>
+	getAll: authenticatedProcedure.handler(({ context }) =>
 		resolveAndExecute(LocationGetAllUseCase, { context: createUseCaseContextFromOrpc(context) }),
 	),
-	update: procedure
+	update: authenticatedProcedure
 		.input(UpdateLocationInputSchema)
 		.handler(({ input, context }) =>
 			resolveAndExecute(LocationUpdateUseCase, { context: createUseCaseContextFromOrpc(context), dto: input }),
 		),
-	delete: procedure
+	delete: authenticatedProcedure
 		.input(DeleteLocationInputSchema)
 		.handler(({ input, context }) =>
 			resolveAndExecute(LocationDeleteUseCase, {
@@ -48,7 +48,7 @@ export const locationRouter = {
 				dto: { id: input.id },
 			}),
 		),
-	deleteMany: procedure
+	deleteMany: authenticatedProcedure
 		.input(DeleteManyLocationInputSchema)
 		.handler(({ input, context }) =>
 			resolveAndExecute(LocationDeleteManyUseCase, { context: createUseCaseContextFromOrpc(context), dto: input }),

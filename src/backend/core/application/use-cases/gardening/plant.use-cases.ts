@@ -1,7 +1,10 @@
-import type { HydratedCultivarEntity, HydratedPlantEntity } from "@backend/core/domain/gardening/entities";
+import { WorkspaceVO } from "@backend/core/domain/access/workspace.vo";
+import type {
+	HydratedCultivarEntity,
+	HydratedPlantEntity,
+} from "@backend/core/domain/gardening/entities";
 import type {
 	PlantRepositoryCreateInputDTO,
-	PlantRepositoryCreateManyInputDTO,
 	PlantRepositoryDeleteInputDTO,
 	PlantRepositoryDeleteManyInputDTO,
 	PlantRepositoryDeleteManyOutputDTO,
@@ -11,11 +14,6 @@ import type {
 	PlantRepositoryUpdateInputDTO,
 } from "../../ports/repositories/gardening/plant.repository.port";
 import { RepositoryValidationError } from "../../ports/repositories/shared/base-repository.errors";
-import {
-	APPLICATION_RESOURCE_TYPES,
-	gardeningPlantRef,
-	gardeningSpeciesRef,
-} from "../../resource-refs";
 import type { AccessControlApplicationService } from "../../services/access-control/access-control.application-service";
 import type { SpatialOperationsService } from "../../services/spatial/spatial-operations.service";
 import { BaseUseCaseError } from "../shared/errors";
@@ -29,25 +27,19 @@ export type PlantHydratedWithCatalogSpecies = HydratedPlantEntity & {
 	cultivar: HydratedCultivarEntity & { species: SpeciesWithSystemCatalog };
 };
 
-async function enrichPlantsSpeciesCatalogFlags(
-	access: AccessControlApplicationService,
-	items: HydratedPlantEntity[],
-): Promise<PlantHydratedWithCatalogSpecies[]> {
-	if (items.length < 1) return [];
-	const flags = await access.getGlobalSharedResourceFlags(
-		items.map((p) => gardeningSpeciesRef(String(p.cultivar.species.id))),
-	);
-	return items.map((row, i) => ({
-		...row,
-		cultivar: {
-			...row.cultivar,
-			species: { ...row.cultivar.species, systemCatalog: flags[i] ?? false },
-		},
-	}));
-}
-
-export type PlantCreateUseCaseInput = UseCaseRequest<PlantRepositoryCreateInputDTO>;
+type PlantCreatePayload = Omit<PlantRepositoryCreateInputDTO, "workspaceKey">;
+export type PlantCreateUseCaseInput = UseCaseRequest<PlantCreatePayload>;
 export type PlantCreateUseCaseOutput = PlantHydratedWithCatalogSpecies;
+
+function enrichPlantSpeciesCatalogFlags(plant: HydratedPlantEntity): PlantHydratedWithCatalogSpecies {
+	return {
+		...plant,
+		cultivar: {
+			...plant.cultivar,
+			species: { ...plant.cultivar.species, systemCatalog: WorkspaceVO.isGlobalSharedKey(plant.cultivar.species.workspaceKey) },
+		},
+	};
+}
 
 /**
  * Creates a single plant using persisted write fields.
@@ -59,15 +51,20 @@ export class PlantCreateUseCase implements IUseCase<PlantCreateUseCaseInput, Pla
 	) {}
 
 	public async execute(input: PlantCreateUseCaseInput): Promise<PlantCreateUseCaseOutput> {
-		await this.access.assertCanCreate(input.context, input.context.workspaceRef);
-		const created = await this.plantRepository.create(input.dto);
-		await this.access.bootstrapResourceAdminForActor(input.context, gardeningPlantRef(String(created.id)));
-		const [enriched] = await enrichPlantsSpeciesCatalogFlags(this.access, [created]);
-		return enriched;
+		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "create" });
+		const created = await this.plantRepository.createScoped({
+			dto: {
+				...input.dto,
+				workspaceKey: input.context.activeWorkspaceScope.toKey(),
+			},
+		});
+		return enrichPlantSpeciesCatalogFlags(created);
 	}
 }
 
-export type PlantCreateManyUseCaseInput = UseCaseRequest<{ rows: PlantRepositoryCreateManyInputDTO }>;
+export type PlantCreateManyUseCaseInput = UseCaseRequest<{
+	rows: PlantCreatePayload[];
+}>;
 export type PlantCreateManyUseCaseOutput = { items: PlantHydratedWithCatalogSpecies[] };
 
 export class PlantCreateManyUseCase implements IUseCase<PlantCreateManyUseCaseInput, PlantCreateManyUseCaseOutput> {
@@ -77,6 +74,7 @@ export class PlantCreateManyUseCase implements IUseCase<PlantCreateManyUseCaseIn
 	) {}
 
 	public async execute(input: PlantCreateManyUseCaseInput): Promise<PlantCreateManyUseCaseOutput> {
+		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "create" });
 		if (input.dto.rows.length < 1) {
 			throw new RepositoryValidationError({
 				operation: "createMany",
@@ -86,13 +84,15 @@ export class PlantCreateManyUseCase implements IUseCase<PlantCreateManyUseCaseIn
 				message: "createMany rows must be at least 1.",
 			});
 		}
-		await this.access.assertCanCreate(input.context, input.context.workspaceRef);
-		const created = await this.plantRepository.createMany(input.dto.rows);
-		for (const p of created.items) {
-			await this.access.bootstrapResourceAdminForActor(input.context, gardeningPlantRef(String(p.id)));
-		}
-		const items = await enrichPlantsSpeciesCatalogFlags(this.access, created.items);
-		return { items };
+		const created = await this.plantRepository.createManyScoped({
+			dto: {
+				rows: input.dto.rows.map((row) => ({
+					...row,
+					workspaceKey: input.context.activeWorkspaceScope.toKey(),
+				})),
+			},
+		});
+		return { items: created.items.map(enrichPlantSpeciesCatalogFlags) };
 	}
 }
 
@@ -105,19 +105,13 @@ export class PlantGetAllUseCase implements IUseCase<PlantGetAllUseCaseInput, Pla
 		private readonly plantRepository: PlantRepositoryPort,
 	) {}
 	public async execute(input: PlantGetAllUseCaseInput): Promise<PlantGetAllUseCaseOutput> {
-		const mask = await this.access.getReadableResourceMask({
-			actorRef: input.context.actorRef,
-			resourceType: APPLICATION_RESOURCE_TYPES.plant,
+		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "read" });
+		const all = await this.plantRepository.getAllScoped({
+			workspaceKeys: [input.context.activeWorkspaceScope.toKey()],
 		});
-		if (mask.includesAllOfType) {
-			const all = await this.plantRepository.getAll();
-			return { items: await enrichPlantsSpeciesCatalogFlags(this.access, all.items) };
-		}
-		if (mask.exactIds.length < 1) return { items: [] };
-		const listed = await this.plantRepository.getListByIds({
-			ids: mask.exactIds as Parameters<PlantRepositoryPort["getListByIds"]>[0]["ids"],
-		});
-		return { items: await enrichPlantsSpeciesCatalogFlags(this.access, listed.items) };
+		return {
+			items: all.items.map(enrichPlantSpeciesCatalogFlags),
+		};
 	}
 }
 
@@ -130,10 +124,10 @@ export class PlantGetByIdUseCase implements IUseCase<PlantGetByIdUseCaseInput, P
 		private readonly plantRepository: PlantRepositoryPort,
 	) {}
 	public async execute(input: PlantGetByIdUseCaseInput): Promise<PlantGetByIdUseCaseOutput> {
-		const row = await this.plantRepository.getById(input.dto);
-		await this.access.assertCanRead(input.context, gardeningPlantRef(String(input.dto.id)));
-		const [enriched] = await enrichPlantsSpeciesCatalogFlags(this.access, [row]);
-		return enriched;
+		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "read" });
+		const wk = input.context.activeWorkspaceScope.toKey();
+		const row = await this.plantRepository.getByIdScoped({ workspaceKey: wk, dto: input.dto });
+		return enrichPlantSpeciesCatalogFlags(row);
 	}
 }
 
@@ -146,11 +140,13 @@ export class PlantUpdateUseCase implements IUseCase<PlantUpdateUseCaseInput, Pla
 		private readonly plantRepository: PlantRepositoryPort,
 	) {}
 	public async execute(input: PlantUpdateUseCaseInput): Promise<PlantUpdateUseCaseOutput> {
-		await this.plantRepository.getById({ id: input.dto.id });
-		await this.access.assertCanUpdate(input.context, gardeningPlantRef(String(input.dto.id)));
-		const updated = await this.plantRepository.update(input.dto);
-		const [enriched] = await enrichPlantsSpeciesCatalogFlags(this.access, [updated]);
-		return enriched;
+		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "update" });
+		const wk = input.context.activeWorkspaceScope.toKey();
+		const updated = await this.plantRepository.updateByIdScoped({
+			workspaceKey: wk,
+			dto: input.dto,
+		});
+		return enrichPlantSpeciesCatalogFlags(updated);
 	}
 }
 
@@ -184,19 +180,22 @@ export class PlantDeleteUseCase implements IUseCase<PlantDeleteUseCaseInput, Pla
 		private readonly spatialOperationsService: SpatialOperationsService,
 	) {}
 	public async execute(input: PlantDeleteUseCaseInput): Promise<PlantDeleteUseCaseOutput> {
-		await this.plantRepository.getById({ id: input.dto.id });
-		await this.access.assertCanDelete(input.context, gardeningPlantRef(String(input.dto.id)));
+		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "delete" });
+		const wk = input.context.activeWorkspaceScope.toKey();
 		const placement = await this.spatialOperationsService.getPlacementStatusByRef({
-			entity: "plant",
-			entityId: String(input.dto.id),
+			ref: { entity: "plant", entityId: String(input.dto.id) },
+			workspaceKeys: [wk],
 		});
 		if (placement.isPlaced) {
 			throw new PlantDeleteUseCasePlacedEntityError({ id: String(input.dto.id) });
 		}
-		const deletedId = await this.plantRepository.delete(input.dto);
+		const deletedId = await this.plantRepository.deleteByIdScoped({
+			workspaceKey: wk,
+			dto: input.dto,
+		});
 		await this.spatialOperationsService.deleteUnplacedNodeByRef({
-			entity: "plant",
-			entityId: String(deletedId),
+			ref: { entity: "plant", entityId: String(deletedId) },
+			workspaceKeys: [wk],
 		});
 		return deletedId;
 	}
@@ -213,6 +212,7 @@ export class PlantDeleteManyUseCase implements IUseCase<PlantDeleteManyUseCaseIn
 	) {}
 
 	public async execute(input: PlantDeleteManyUseCaseInput): Promise<PlantDeleteManyUseCaseOutput> {
+		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "delete" });
 		if (input.dto.ids.length < 1) {
 			throw new RepositoryValidationError({
 				operation: "deleteMany",
@@ -222,26 +222,26 @@ export class PlantDeleteManyUseCase implements IUseCase<PlantDeleteManyUseCaseIn
 				message: "deleteMany ids must be at least 1.",
 			});
 		}
-		for (const id of input.dto.ids) {
-			await this.plantRepository.getById({ id });
-			await this.access.assertCanDelete(input.context, gardeningPlantRef(String(id)));
-		}
+		const wk = input.context.activeWorkspaceScope.toKey();
 		const placedIdSet = new Set<string>();
 		for (const id of input.dto.ids) {
 			const placement = await this.spatialOperationsService.getPlacementStatusByRef({
-				entity: "plant",
-				entityId: String(id),
+				ref: { entity: "plant", entityId: String(id) },
+				workspaceKeys: [wk],
 			});
 			if (placement.isPlaced) placedIdSet.add(String(id));
 		}
 		if (placedIdSet.size > 0) {
 			throw new PlantDeleteManyUseCasePlacedEntityError({ ids: [...placedIdSet].sort() });
 		}
-		const { deletedIds } = await this.plantRepository.deleteMany({ ids: input.dto.ids });
+		const { deletedIds } = await this.plantRepository.deleteManyScoped({
+			workspaceKeys: [wk],
+			dto: { ids: input.dto.ids },
+		});
 		for (const deletedId of deletedIds) {
 			await this.spatialOperationsService.deleteUnplacedNodeByRef({
-				entity: "plant",
-				entityId: String(deletedId),
+				ref: { entity: "plant", entityId: String(deletedId) },
+				workspaceKeys: [wk],
 			});
 		}
 		return { deletedIds };

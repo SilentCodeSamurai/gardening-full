@@ -1,12 +1,8 @@
 import type { DependencyContainer } from "tsyringe";
-import { registerResoursePermissionRepositoryContract } from "./resourse-permission.repository.contract";
 
 export function registerResourceAccessRepositoryContracts(
-  adapterLabel: string,
-  createContainer: () => DependencyContainer,
+	_adapterLabel: string,
+	_createContainer: () => DependencyContainer,
 ): void {
-  registerResoursePermissionRepositoryContract(adapterLabel, createContainer);
+	// Resource-based assignment repository contracts were removed.
 }
-
-export { resolveResourceAccessRepositoryPorts } from "./resolve-resource-access-repository-ports";
-export type { ResourceAccessRepositoryPorts } from "./resolve-resource-access-repository-ports";

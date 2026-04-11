@@ -7,7 +7,7 @@ import {
 } from "@backend/core/application/use-cases/gardening/species-category.crud-use-cases";
 
 import { createUseCaseContextFromOrpc } from "../../create-use-case-context";
-import { procedure } from "../../orpc-procedure";
+import { authenticatedProcedure } from "../../orpc-procedure";
 import { resolveAndExecute } from "../../shared/resolve-use-case";
 import {
 	CreateSpeciesCategoryInputSchema,
@@ -17,7 +17,7 @@ import {
 } from "./schemas";
 
 export const speciesCategoryRouter = {
-	create: procedure
+	create: authenticatedProcedure
 		.input(CreateSpeciesCategoryInputSchema)
 		.handler(({ input, context }) =>
 			resolveAndExecute(SpeciesCategoryCreateUseCase, {
@@ -25,7 +25,7 @@ export const speciesCategoryRouter = {
 				dto: input,
 			}),
 		),
-	getById: procedure
+	getById: authenticatedProcedure
 		.input(GetSpeciesCategoryByIdInputSchema)
 		.handler(({ input, context }) =>
 			resolveAndExecute(SpeciesCategoryGetByIdUseCase, {
@@ -33,10 +33,10 @@ export const speciesCategoryRouter = {
 				dto: input,
 			}),
 		),
-	getAll: procedure.handler(({ context }) =>
+	getAll: authenticatedProcedure.handler(({ context }) =>
 		resolveAndExecute(SpeciesCategoryGetAllUseCase, { context: createUseCaseContextFromOrpc(context) }),
 	),
-	update: procedure
+	update: authenticatedProcedure
 		.input(UpdateSpeciesCategoryInputSchema)
 		.handler(({ input, context }) =>
 			resolveAndExecute(SpeciesCategoryUpdateUseCase, {
@@ -44,7 +44,7 @@ export const speciesCategoryRouter = {
 				dto: input,
 			}),
 		),
-	delete: procedure
+	delete: authenticatedProcedure
 		.input(DeleteSpeciesCategoryInputSchema)
 		.handler(({ input, context }) =>
 			resolveAndExecute(SpeciesCategoryDeleteUseCase, {

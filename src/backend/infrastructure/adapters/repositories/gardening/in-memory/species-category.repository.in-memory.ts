@@ -20,11 +20,12 @@ export class SpeciesCategoryInMemoryRepository extends BaseRepositoryErrors impl
 		super();
 	}
 
-	async create(dto: SpeciesCategoryRepositoryCreateInputDTO): Promise<SpeciesCategoryRepositoryCreateOutputDTO> {
+	private insertRow(dto: SpeciesCategoryRepositoryCreateInputDTO): SpeciesCategoryRepositoryCreateOutputDTO {
 		const now = new Date();
 		const id = speciesCategoryId();
 		const row: SpeciesCategoryEntity = {
 			id,
+			workspaceKey: dto.workspaceKey,
 			title: dto.title,
 			presentation: dto.presentation,
 			createdAt: now,
@@ -34,17 +35,20 @@ export class SpeciesCategoryInMemoryRepository extends BaseRepositoryErrors impl
 		return row;
 	}
 
-	async getById(dto: SpeciesCategoryRepositoryGetByIdInputDTO): Promise<SpeciesCategoryRepositoryGetByIdOutputDTO> {
+	private loadById(dto: SpeciesCategoryRepositoryGetByIdInputDTO): SpeciesCategoryRepositoryGetByIdOutputDTO {
 		const row = this.store.speciesCategories.get(idKey(dto.id));
 		if (!row) this.throwNotFoundError("SpeciesCategory", dto.id);
 		return row;
 	}
 
-	async getAll(): Promise<SpeciesCategoryRepositoryGetAllOutputDTO> {
-		return { items: [...this.store.speciesCategories.values()] };
+	private listInWorkspaces(
+		workspaceKeys: readonly SpeciesCategoryEntity["workspaceKey"][],
+	): SpeciesCategoryRepositoryGetAllOutputDTO {
+		const allowed = new Set(workspaceKeys.map((key) => String(key)));
+		return { items: [...this.store.speciesCategories.values()].filter((x) => allowed.has(String(x.workspaceKey))) };
 	}
 
-	async update(dto: SpeciesCategoryRepositoryUpdateInputDTO): Promise<SpeciesCategoryRepositoryUpdateOutputDTO> {
+	private patchRow(dto: SpeciesCategoryRepositoryUpdateInputDTO): SpeciesCategoryRepositoryUpdateOutputDTO {
 		const key = idKey(dto.id);
 		const existing = this.store.speciesCategories.get(key);
 		if (!existing) this.throwNotFoundError("SpeciesCategory", dto.id);
@@ -59,7 +63,7 @@ export class SpeciesCategoryInMemoryRepository extends BaseRepositoryErrors impl
 		return updated;
 	}
 
-	async delete(dto: SpeciesCategoryRepositoryDeleteInputDTO): Promise<SpeciesCategoryRepositoryDeleteOutputDTO> {
+	private removeRow(dto: SpeciesCategoryRepositoryDeleteInputDTO): SpeciesCategoryRepositoryDeleteOutputDTO {
 		const key = idKey(dto.id);
 		const existing = this.store.speciesCategories.get(key);
 		if (!existing) this.throwNotFoundError("SpeciesCategory", dto.id);
@@ -79,5 +83,44 @@ export class SpeciesCategoryInMemoryRepository extends BaseRepositoryErrors impl
 		}
 		this.store.speciesCategories.delete(key);
 		return dto.id;
+	}
+
+	async createScoped(
+		input: { dto: SpeciesCategoryRepositoryCreateInputDTO },
+	): Promise<SpeciesCategoryRepositoryCreateOutputDTO> {
+		return this.insertRow(input.dto);
+	}
+
+	async getAllScoped(input: {
+		workspaceKeys: readonly SpeciesCategoryEntity["workspaceKey"][];
+	}): Promise<SpeciesCategoryRepositoryGetAllOutputDTO> {
+		return this.listInWorkspaces(input.workspaceKeys);
+	}
+
+	async getByIdScoped(input: {
+		workspaceKey: SpeciesCategoryEntity["workspaceKey"];
+		dto: SpeciesCategoryRepositoryGetByIdInputDTO;
+	}): Promise<SpeciesCategoryRepositoryGetByIdOutputDTO> {
+		const row = this.loadById(input.dto);
+		if (String(row.workspaceKey) !== String(input.workspaceKey)) {
+			this.throwNotFoundError("SpeciesCategory", input.dto.id);
+		}
+		return row;
+	}
+
+	async updateByIdScoped(input: {
+		workspaceKey: SpeciesCategoryEntity["workspaceKey"];
+		dto: SpeciesCategoryRepositoryUpdateInputDTO;
+	}): Promise<SpeciesCategoryRepositoryUpdateOutputDTO> {
+		await this.getByIdScoped({ workspaceKey: input.workspaceKey, dto: { id: input.dto.id } });
+		return this.patchRow(input.dto);
+	}
+
+	async deleteByIdScoped(input: {
+		workspaceKey: SpeciesCategoryEntity["workspaceKey"];
+		dto: SpeciesCategoryRepositoryDeleteInputDTO;
+	}): Promise<SpeciesCategoryRepositoryDeleteOutputDTO> {
+		await this.getByIdScoped({ workspaceKey: input.workspaceKey, dto: input.dto });
+		return this.removeRow(input.dto);
 	}
 }

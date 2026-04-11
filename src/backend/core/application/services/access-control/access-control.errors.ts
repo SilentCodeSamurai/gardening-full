@@ -1,13 +1,13 @@
 import { BaseUseCaseError } from "../../use-cases/shared/errors";
 
-export type AccessErrorCode = "ACCESS_FORBIDDEN" | "ACCESS_SCOPE_MISMATCH" | "ACCESS_SUBJECT_NOT_RESOLVED";
+export type AccessErrorCode = "ACCESS_DENIED" | "BAD_REQUEST";
 
 export class AccessForbiddenApplicationError extends BaseUseCaseError {
-	public readonly code: AccessErrorCode = "ACCESS_FORBIDDEN";
 	public readonly accessReason?: string;
 
 	constructor(params: { message?: string; reason?: string; context?: Record<string, unknown> }) {
 		super({
+			code: "ACCESS_DENIED",
 			message: params.message ?? "Access denied",
 			useCaseName: "AccessControlApplicationService",
 			context: { ...params.context, reason: params.reason },
@@ -17,10 +17,9 @@ export class AccessForbiddenApplicationError extends BaseUseCaseError {
 }
 
 export class AccessScopeMismatchApplicationError extends BaseUseCaseError {
-	public readonly code: AccessErrorCode = "ACCESS_SCOPE_MISMATCH";
-
 	constructor(params: { context?: Record<string, unknown> }) {
 		super({
+			code: "BAD_REQUEST",
 			message: "Tenant or scope mismatch",
 			useCaseName: "AccessControlApplicationService",
 			context: params.context,
@@ -29,10 +28,9 @@ export class AccessScopeMismatchApplicationError extends BaseUseCaseError {
 }
 
 export class AccessSubjectNotResolvedApplicationError extends BaseUseCaseError {
-	public readonly code: AccessErrorCode = "ACCESS_SUBJECT_NOT_RESOLVED";
-
 	constructor(params: { context?: Record<string, unknown> }) {
 		super({
+			code: "BAD_REQUEST",
 			message: "Subject expansion could not be resolved",
 			useCaseName: "AccessControlApplicationService",
 			context: params.context,

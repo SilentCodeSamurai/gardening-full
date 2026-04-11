@@ -1,4 +1,11 @@
 import type { DependencyContainer } from "tsyringe";
+import type { CultivarRepositoryPort } from "../core/application/ports/repositories/gardening/cultivar.repositort.port";
+import type { GardeningEventRepositoryPort } from "../core/application/ports/repositories/gardening/gardening-event.repository.port";
+import type { LocationRepositoryPort } from "../core/application/ports/repositories/gardening/location.repository.port";
+import type { PlantRepositoryPort } from "../core/application/ports/repositories/gardening/plant.repository.port";
+import type { SpeciesRepositoryPort } from "../core/application/ports/repositories/gardening/species.repository.port";
+import type { SpeciesCategoryRepositoryPort } from "../core/application/ports/repositories/gardening/species-category.repository.port";
+import type { SpatialNodeRepositoryPort } from "../core/application/ports/repositories/spatial/spatial-node.repository.port";
 import { AccessControlApplicationService } from "../core/application/services/access-control/access-control.application-service";
 import { SpatialOperationsService } from "../core/application/services/spatial/spatial-operations.service";
 import {
@@ -73,35 +80,35 @@ export function registerUseCases(c: DependencyContainer): void {
 		useFactory: (cx) =>
 			new SpatialNodeCreateUseCase(
 				cx.resolve(AccessControlApplicationService),
-				cx.resolve(TOKENS.SpatialNodeRepositoryPort),
+				cx.resolve<SpatialNodeRepositoryPort>(TOKENS.SpatialNodeRepositoryPort),
 			),
 	});
 	c.register(SpatialNodeGetAllUseCase, {
 		useFactory: (cx) =>
 			new SpatialNodeGetAllUseCase(
 				cx.resolve(AccessControlApplicationService),
-				cx.resolve(TOKENS.SpatialNodeRepositoryPort),
+				cx.resolve<SpatialNodeRepositoryPort>(TOKENS.SpatialNodeRepositoryPort),
 			),
 	});
 	c.register(SpatialNodeGetTreeForRootIdUseCase, {
 		useFactory: (cx) =>
 			new SpatialNodeGetTreeForRootIdUseCase(
 				cx.resolve(AccessControlApplicationService),
-				cx.resolve(TOKENS.SpatialNodeRepositoryPort),
+				cx.resolve<SpatialNodeRepositoryPort>(TOKENS.SpatialNodeRepositoryPort),
 			),
 	});
 	c.register(SpatialNodeDeleteUseCase, {
 		useFactory: (cx) =>
 			new SpatialNodeDeleteUseCase(
 				cx.resolve(AccessControlApplicationService),
-				cx.resolve(TOKENS.SpatialNodeRepositoryPort),
+				cx.resolve<SpatialNodeRepositoryPort>(TOKENS.SpatialNodeRepositoryPort),
 			),
 	});
 	c.register(SpatialNodeRestoreUseCase, {
 		useFactory: (cx) =>
 			new SpatialNodeRestoreUseCase(
 				cx.resolve(AccessControlApplicationService),
-				cx.resolve(TOKENS.SpatialNodeRepositoryPort),
+				cx.resolve<SpatialNodeRepositoryPort>(TOKENS.SpatialNodeRepositoryPort),
 			),
 	});
 	c.register(SpatialApplyOperationsUseCase, {
@@ -109,7 +116,6 @@ export function registerUseCases(c: DependencyContainer): void {
 			new SpatialApplyOperationsUseCase(
 				cx.resolve(AccessControlApplicationService),
 				cx.resolve(SpatialOperationsService),
-				cx.resolve(TOKENS.SpatialNodeRepositoryPort),
 			),
 	});
 
@@ -117,76 +123,76 @@ export function registerUseCases(c: DependencyContainer): void {
 		useFactory: (cx) =>
 			new GardeningEventGetAllUseCase(
 				cx.resolve(AccessControlApplicationService),
-				cx.resolve(TOKENS.GardeningEventRepositoryPort),
+				cx.resolve<GardeningEventRepositoryPort>(TOKENS.GardeningEventRepositoryPort),
 			),
 	});
 	c.register(GardeningEventGetByIdUseCase, {
 		useFactory: (cx) =>
 			new GardeningEventGetByIdUseCase(
 				cx.resolve(AccessControlApplicationService),
-				cx.resolve(TOKENS.GardeningEventRepositoryPort),
+				cx.resolve<GardeningEventRepositoryPort>(TOKENS.GardeningEventRepositoryPort),
 			),
 	});
 	c.register(GardeningEventUpdateUseCase, {
 		useFactory: (cx) =>
 			new GardeningEventUpdateUseCase(
 				cx.resolve(AccessControlApplicationService),
-				cx.resolve(TOKENS.GardeningEventRepositoryPort),
+				cx.resolve<GardeningEventRepositoryPort>(TOKENS.GardeningEventRepositoryPort),
 			),
 	});
 	c.register(GardeningEventDeleteUseCase, {
 		useFactory: (cx) =>
 			new GardeningEventDeleteUseCase(
 				cx.resolve(AccessControlApplicationService),
-				cx.resolve(TOKENS.GardeningEventRepositoryPort),
+				cx.resolve<GardeningEventRepositoryPort>(TOKENS.GardeningEventRepositoryPort),
 			),
 	});
 	c.register(GardeningEventCreateUseCase, {
 		useFactory: (cx) =>
 			new GardeningEventCreateUseCase(
 				cx.resolve(AccessControlApplicationService),
-				cx.resolve(TOKENS.GardeningEventRepositoryPort),
+				cx.resolve<GardeningEventRepositoryPort>(TOKENS.GardeningEventRepositoryPort),
 			),
 	});
 	c.register(GardeningEventCreateForLocationUseCase, {
 		useFactory: (cx) =>
 			new GardeningEventCreateForLocationUseCase(
 				cx.resolve(AccessControlApplicationService),
-				cx.resolve(TOKENS.GardeningEventRepositoryPort),
-				cx.resolve(TOKENS.PlantRepositoryPort),
-				cx.resolve(TOKENS.SpatialNodeRepositoryPort),
-				cx.resolve(TOKENS.LocationRepositoryPort),
+				cx.resolve<GardeningEventRepositoryPort>(TOKENS.GardeningEventRepositoryPort),
+				cx.resolve<PlantRepositoryPort>(TOKENS.PlantRepositoryPort),
+				cx.resolve<SpatialNodeRepositoryPort>(TOKENS.SpatialNodeRepositoryPort),
+				cx.resolve<LocationRepositoryPort>(TOKENS.LocationRepositoryPort),
 			),
 	});
 	c.register(GardeningEventCreateForPlantListUseCase, {
 		useFactory: (cx) =>
 			new GardeningEventCreateForPlantListUseCase(
 				cx.resolve(AccessControlApplicationService),
-				cx.resolve(TOKENS.GardeningEventRepositoryPort),
-				cx.resolve(TOKENS.PlantRepositoryPort),
+				cx.resolve<GardeningEventRepositoryPort>(TOKENS.GardeningEventRepositoryPort),
+				cx.resolve<PlantRepositoryPort>(TOKENS.PlantRepositoryPort),
 			),
 	});
 	c.register(GardeningEventGetForPlantUseCase, {
 		useFactory: (cx) =>
 			new GardeningEventGetForPlantUseCase(
 				cx.resolve(AccessControlApplicationService),
-				cx.resolve(TOKENS.GardeningEventRepositoryPort),
-				cx.resolve(TOKENS.PlantRepositoryPort),
+				cx.resolve<GardeningEventRepositoryPort>(TOKENS.GardeningEventRepositoryPort),
+				cx.resolve<PlantRepositoryPort>(TOKENS.PlantRepositoryPort),
 			),
 	});
 	c.register(GardeningEventGetForLocationUseCase, {
 		useFactory: (cx) =>
 			new GardeningEventGetForLocationUseCase(
 				cx.resolve(AccessControlApplicationService),
-				cx.resolve(TOKENS.GardeningEventRepositoryPort),
-				cx.resolve(TOKENS.LocationRepositoryPort),
+				cx.resolve<GardeningEventRepositoryPort>(TOKENS.GardeningEventRepositoryPort),
+				cx.resolve<LocationRepositoryPort>(TOKENS.LocationRepositoryPort),
 			),
 	});
 	c.register(GardeningEventGetBindingsForEventUseCase, {
 		useFactory: (cx) =>
 			new GardeningEventGetBindingsForEventUseCase(
 				cx.resolve(AccessControlApplicationService),
-				cx.resolve(TOKENS.GardeningEventRepositoryPort),
+				cx.resolve<GardeningEventRepositoryPort>(TOKENS.GardeningEventRepositoryPort),
 			),
 	});
 
@@ -194,35 +200,35 @@ export function registerUseCases(c: DependencyContainer): void {
 		useFactory: (cx) =>
 			new LocationCreateUseCase(
 				cx.resolve(AccessControlApplicationService),
-				cx.resolve(TOKENS.LocationRepositoryPort),
+				cx.resolve<LocationRepositoryPort>(TOKENS.LocationRepositoryPort),
 			),
 	});
 	c.register(LocationGetByIdUseCase, {
 		useFactory: (cx) =>
 			new LocationGetByIdUseCase(
 				cx.resolve(AccessControlApplicationService),
-				cx.resolve(TOKENS.LocationRepositoryPort),
+				cx.resolve<LocationRepositoryPort>(TOKENS.LocationRepositoryPort),
 			),
 	});
 	c.register(LocationGetAllUseCase, {
 		useFactory: (cx) =>
 			new LocationGetAllUseCase(
 				cx.resolve(AccessControlApplicationService),
-				cx.resolve(TOKENS.LocationRepositoryPort),
+				cx.resolve<LocationRepositoryPort>(TOKENS.LocationRepositoryPort),
 			),
 	});
 	c.register(LocationUpdateUseCase, {
 		useFactory: (cx) =>
 			new LocationUpdateUseCase(
 				cx.resolve(AccessControlApplicationService),
-				cx.resolve(TOKENS.LocationRepositoryPort),
+				cx.resolve<LocationRepositoryPort>(TOKENS.LocationRepositoryPort),
 			),
 	});
 	c.register(LocationDeleteUseCase, {
 		useFactory: (cx) =>
 			new LocationDeleteUseCase(
 				cx.resolve(AccessControlApplicationService),
-				cx.resolve(TOKENS.LocationRepositoryPort),
+				cx.resolve<LocationRepositoryPort>(TOKENS.LocationRepositoryPort),
 				cx.resolve(SpatialOperationsService),
 			),
 	});
@@ -230,42 +236,51 @@ export function registerUseCases(c: DependencyContainer): void {
 		useFactory: (cx) =>
 			new LocationDeleteManyUseCase(
 				cx.resolve(AccessControlApplicationService),
-				cx.resolve(TOKENS.LocationRepositoryPort),
+				cx.resolve<LocationRepositoryPort>(TOKENS.LocationRepositoryPort),
 				cx.resolve(SpatialOperationsService),
 			),
 	});
 
 	c.register(PlantCreateUseCase, {
 		useFactory: (cx) =>
-			new PlantCreateUseCase(cx.resolve(AccessControlApplicationService), cx.resolve(TOKENS.PlantRepositoryPort)),
+			new PlantCreateUseCase(
+				cx.resolve(AccessControlApplicationService),
+				cx.resolve<PlantRepositoryPort>(TOKENS.PlantRepositoryPort),
+			),
 	});
 	c.register(PlantCreateManyUseCase, {
 		useFactory: (cx) =>
 			new PlantCreateManyUseCase(
 				cx.resolve(AccessControlApplicationService),
-				cx.resolve(TOKENS.PlantRepositoryPort),
+				cx.resolve<PlantRepositoryPort>(TOKENS.PlantRepositoryPort),
 			),
 	});
 	c.register(PlantGetAllUseCase, {
 		useFactory: (cx) =>
-			new PlantGetAllUseCase(cx.resolve(AccessControlApplicationService), cx.resolve(TOKENS.PlantRepositoryPort)),
+			new PlantGetAllUseCase(
+				cx.resolve(AccessControlApplicationService),
+				cx.resolve<PlantRepositoryPort>(TOKENS.PlantRepositoryPort),
+			),
 	});
 	c.register(PlantGetByIdUseCase, {
 		useFactory: (cx) =>
 			new PlantGetByIdUseCase(
 				cx.resolve(AccessControlApplicationService),
-				cx.resolve(TOKENS.PlantRepositoryPort),
+				cx.resolve<PlantRepositoryPort>(TOKENS.PlantRepositoryPort),
 			),
 	});
 	c.register(PlantUpdateUseCase, {
 		useFactory: (cx) =>
-			new PlantUpdateUseCase(cx.resolve(AccessControlApplicationService), cx.resolve(TOKENS.PlantRepositoryPort)),
+			new PlantUpdateUseCase(
+				cx.resolve(AccessControlApplicationService),
+				cx.resolve<PlantRepositoryPort>(TOKENS.PlantRepositoryPort),
+			),
 	});
 	c.register(PlantDeleteUseCase, {
 		useFactory: (cx) =>
 			new PlantDeleteUseCase(
 				cx.resolve(AccessControlApplicationService),
-				cx.resolve(TOKENS.PlantRepositoryPort),
+				cx.resolve<PlantRepositoryPort>(TOKENS.PlantRepositoryPort),
 				cx.resolve(SpatialOperationsService),
 			),
 	});
@@ -273,7 +288,7 @@ export function registerUseCases(c: DependencyContainer): void {
 		useFactory: (cx) =>
 			new PlantDeleteManyUseCase(
 				cx.resolve(AccessControlApplicationService),
-				cx.resolve(TOKENS.PlantRepositoryPort),
+				cx.resolve<PlantRepositoryPort>(TOKENS.PlantRepositoryPort),
 				cx.resolve(SpatialOperationsService),
 			),
 	});
@@ -282,44 +297,42 @@ export function registerUseCases(c: DependencyContainer): void {
 		useFactory: (cx) =>
 			new CultivarCreateUseCase(
 				cx.resolve(AccessControlApplicationService),
-				cx.resolve(TOKENS.CultivarRepositoryPort),
+				cx.resolve<CultivarRepositoryPort>(TOKENS.CultivarRepositoryPort),
 			),
 	});
 	c.register(CultivarGetByIdUseCase, {
 		useFactory: (cx) =>
 			new CultivarGetByIdUseCase(
 				cx.resolve(AccessControlApplicationService),
-				cx.resolve(TOKENS.CultivarRepositoryPort),
-				cx.resolve(TOKENS.SpeciesRepositoryPort),
+				cx.resolve<CultivarRepositoryPort>(TOKENS.CultivarRepositoryPort),
 			),
 	});
 	c.register(CultivarGetFullByIdUseCase, {
 		useFactory: (cx) =>
 			new CultivarGetFullByIdUseCase(
 				cx.resolve(AccessControlApplicationService),
-				cx.resolve(TOKENS.CultivarRepositoryPort),
+				cx.resolve<CultivarRepositoryPort>(TOKENS.CultivarRepositoryPort),
 			),
 	});
 	c.register(CultivarGetAllUseCase, {
 		useFactory: (cx) =>
 			new CultivarGetAllUseCase(
 				cx.resolve(AccessControlApplicationService),
-				cx.resolve(TOKENS.CultivarRepositoryPort),
-				cx.resolve(TOKENS.SpeciesRepositoryPort),
+				cx.resolve<CultivarRepositoryPort>(TOKENS.CultivarRepositoryPort),
 			),
 	});
 	c.register(CultivarUpdateUseCase, {
 		useFactory: (cx) =>
 			new CultivarUpdateUseCase(
 				cx.resolve(AccessControlApplicationService),
-				cx.resolve(TOKENS.CultivarRepositoryPort),
+				cx.resolve<CultivarRepositoryPort>(TOKENS.CultivarRepositoryPort),
 			),
 	});
 	c.register(CultivarDeleteUseCase, {
 		useFactory: (cx) =>
 			new CultivarDeleteUseCase(
 				cx.resolve(AccessControlApplicationService),
-				cx.resolve(TOKENS.CultivarRepositoryPort),
+				cx.resolve<CultivarRepositoryPort>(TOKENS.CultivarRepositoryPort),
 			),
 	});
 
@@ -327,35 +340,35 @@ export function registerUseCases(c: DependencyContainer): void {
 		useFactory: (cx) =>
 			new SpeciesCategoryCreateUseCase(
 				cx.resolve(AccessControlApplicationService),
-				cx.resolve(TOKENS.SpeciesCategoryRepositoryPort),
+				cx.resolve<SpeciesCategoryRepositoryPort>(TOKENS.SpeciesCategoryRepositoryPort),
 			),
 	});
 	c.register(SpeciesCategoryGetByIdUseCase, {
 		useFactory: (cx) =>
 			new SpeciesCategoryGetByIdUseCase(
 				cx.resolve(AccessControlApplicationService),
-				cx.resolve(TOKENS.SpeciesCategoryRepositoryPort),
+				cx.resolve<SpeciesCategoryRepositoryPort>(TOKENS.SpeciesCategoryRepositoryPort),
 			),
 	});
 	c.register(SpeciesCategoryGetAllUseCase, {
 		useFactory: (cx) =>
 			new SpeciesCategoryGetAllUseCase(
 				cx.resolve(AccessControlApplicationService),
-				cx.resolve(TOKENS.SpeciesCategoryRepositoryPort),
+				cx.resolve<SpeciesCategoryRepositoryPort>(TOKENS.SpeciesCategoryRepositoryPort),
 			),
 	});
 	c.register(SpeciesCategoryUpdateUseCase, {
 		useFactory: (cx) =>
 			new SpeciesCategoryUpdateUseCase(
 				cx.resolve(AccessControlApplicationService),
-				cx.resolve(TOKENS.SpeciesCategoryRepositoryPort),
+				cx.resolve<SpeciesCategoryRepositoryPort>(TOKENS.SpeciesCategoryRepositoryPort),
 			),
 	});
 	c.register(SpeciesCategoryDeleteUseCase, {
 		useFactory: (cx) =>
 			new SpeciesCategoryDeleteUseCase(
 				cx.resolve(AccessControlApplicationService),
-				cx.resolve(TOKENS.SpeciesCategoryRepositoryPort),
+				cx.resolve<SpeciesCategoryRepositoryPort>(TOKENS.SpeciesCategoryRepositoryPort),
 			),
 	});
 
@@ -363,35 +376,35 @@ export function registerUseCases(c: DependencyContainer): void {
 		useFactory: (cx) =>
 			new SpeciesCreateUseCase(
 				cx.resolve(AccessControlApplicationService),
-				cx.resolve(TOKENS.SpeciesRepositoryPort),
+				cx.resolve<SpeciesRepositoryPort>(TOKENS.SpeciesRepositoryPort),
 			),
 	});
 	c.register(SpeciesGetByIdUseCase, {
 		useFactory: (cx) =>
 			new SpeciesGetByIdUseCase(
 				cx.resolve(AccessControlApplicationService),
-				cx.resolve(TOKENS.SpeciesRepositoryPort),
+				cx.resolve<SpeciesRepositoryPort>(TOKENS.SpeciesRepositoryPort),
 			),
 	});
 	c.register(SpeciesGetAllUseCase, {
 		useFactory: (cx) =>
 			new SpeciesGetAllUseCase(
 				cx.resolve(AccessControlApplicationService),
-				cx.resolve(TOKENS.SpeciesRepositoryPort),
+				cx.resolve<SpeciesRepositoryPort>(TOKENS.SpeciesRepositoryPort),
 			),
 	});
 	c.register(SpeciesUpdateUseCase, {
 		useFactory: (cx) =>
 			new SpeciesUpdateUseCase(
 				cx.resolve(AccessControlApplicationService),
-				cx.resolve(TOKENS.SpeciesRepositoryPort),
+				cx.resolve<SpeciesRepositoryPort>(TOKENS.SpeciesRepositoryPort),
 			),
 	});
 	c.register(SpeciesDeleteUseCase, {
 		useFactory: (cx) =>
 			new SpeciesDeleteUseCase(
 				cx.resolve(AccessControlApplicationService),
-				cx.resolve(TOKENS.SpeciesRepositoryPort),
+				cx.resolve<SpeciesRepositoryPort>(TOKENS.SpeciesRepositoryPort),
 			),
 	});
 
@@ -399,8 +412,8 @@ export function registerUseCases(c: DependencyContainer): void {
 		useFactory: (cx) =>
 			new PopulateDefaultCatalogUseCase(
 				cx.resolve(AccessControlApplicationService),
-				cx.resolve(TOKENS.SpeciesCategoryRepositoryPort),
-				cx.resolve(TOKENS.SpeciesRepositoryPort),
+				cx.resolve<SpeciesCategoryRepositoryPort>(TOKENS.SpeciesCategoryRepositoryPort),
+				cx.resolve<SpeciesRepositoryPort>(TOKENS.SpeciesRepositoryPort),
 			),
 	});
 }

@@ -2,13 +2,7 @@ import type { GardeningEventRepositoryPort } from "@backend/core/application/por
 import type { LocationRepositoryPort } from "@backend/core/application/ports/repositories/gardening/location.repository.port";
 import type { PlantRepositoryPort } from "@backend/core/application/ports/repositories/gardening/plant.repository.port";
 import type { SpatialNodeRepositoryPort } from "@backend/core/application/ports/repositories/spatial/spatial-node.repository.port";
-import {
-	APPLICATION_RESOURCE_TYPES,
-	gardeningEventRef,
-	gardeningLocationRef,
-	gardeningPlantRef,
-} from "@backend/core/application/resource-refs";
-import { AccessControlApplicationService } from "@backend/core/application/services/access-control/access-control.application-service";
+import type { AccessControlApplicationService } from "@backend/core/application/services/access-control/access-control.application-service";
 import type { IUseCase } from "@backend/core/application/use-cases/shared/use-case.interface";
 import type { UseCaseRequest } from "@backend/core/application/use-cases/use-case-context";
 import type {
@@ -32,12 +26,10 @@ export class GardeningEventGetAllUseCase
 	) {}
 
 	public async execute(input: GardeningEventGetAllUseCaseInput): Promise<GardeningEventGetAllUseCaseOutput> {
-		const mask = await this.access.getReadableResourceMask({
-			actorRef: input.context.actorRef,
-			resourceType: APPLICATION_RESOURCE_TYPES.event,
+		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "read" });
+		return await this.gardeningEventRepository.getAllScoped({
+			workspaceKeys: [input.context.activeWorkspaceScope.toKey()],
 		});
-		const all = await this.gardeningEventRepository.getAll();
-		return { items: AccessControlApplicationService.filterItemsByReadableMask(all.items, mask) };
 	}
 }
 
@@ -53,9 +45,9 @@ export class GardeningEventGetByIdUseCase
 	) {}
 
 	public async execute(input: GardeningEventGetByIdUseCaseInput): Promise<GardeningEventGetByIdUseCaseOutput> {
-		const row = await this.gardeningEventRepository.getById({ id: input.dto.id });
-		await this.access.assertCanRead(input.context, gardeningEventRef(String(input.dto.id)));
-		return row;
+		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "read" });
+		const wk = input.context.activeWorkspaceScope.toKey();
+		return this.gardeningEventRepository.getByIdScoped({ workspaceKey: wk, dto: { id: input.dto.id } });
 	}
 }
 
@@ -74,9 +66,12 @@ export class GardeningEventUpdateUseCase
 	) {}
 
 	public async execute(input: GardeningEventUpdateUseCaseInput): Promise<GardeningEventUpdateUseCaseOutput> {
-		await this.gardeningEventRepository.getById({ id: input.dto.id });
-		await this.access.assertCanUpdate(input.context, gardeningEventRef(String(input.dto.id)));
-		return this.gardeningEventRepository.update(input.dto);
+		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "update" });
+		const wk = input.context.activeWorkspaceScope.toKey();
+		return this.gardeningEventRepository.updateByIdScoped({
+			workspaceKey: wk,
+			dto: input.dto,
+		});
 	}
 }
 
@@ -92,9 +87,12 @@ export class GardeningEventDeleteUseCase
 	) {}
 
 	public async execute(input: GardeningEventDeleteUseCaseInput): Promise<GardeningEventDeleteUseCaseOutput> {
-		await this.gardeningEventRepository.getById({ id: input.dto.id });
-		await this.access.assertCanDelete(input.context, gardeningEventRef(String(input.dto.id)));
-		return this.gardeningEventRepository.delete({ id: input.dto.id });
+		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "delete" });
+		const wk = input.context.activeWorkspaceScope.toKey();
+		return this.gardeningEventRepository.deleteByIdScoped({
+			workspaceKey: wk,
+			dto: { id: input.dto.id },
+		});
 	}
 }
 
@@ -112,11 +110,13 @@ export class GardeningEventCreateUseCase
 	) {}
 
 	public async execute(input: GardeningEventCreateUseCaseInput): Promise<GardeningEventCreateUseCaseOutput> {
-		await this.access.assertCanCreate(input.context, input.context.workspaceRef);
-		const gardeningEvent = await this.gardeningEventRepository.create({
-			action: input.dto.action,
+		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "create" });
+		const gardeningEvent = await this.gardeningEventRepository.createScoped({
+			dto: {
+				action: input.dto.action,
+				workspaceKey: input.context.activeWorkspaceScope.toKey(),
+			},
 		});
-		await this.access.bootstrapResourceAdminForActor(input.context, gardeningEventRef(String(gardeningEvent.id)));
 		return gardeningEvent;
 	}
 }
@@ -141,18 +141,25 @@ export class GardeningEventCreateForLocationUseCase
 	public async execute(
 		input: GardeningEventCreateForLocationUseCaseInput,
 	): Promise<GardeningEventCreateForLocationUseCaseOutput> {
-		await this.locationRepository.getById({ id: input.dto.locationId });
-		await this.access.assertCanRead(input.context, gardeningLocationRef(String(input.dto.locationId)));
-		await this.access.assertCanCreate(input.context, input.context.workspaceRef);
-		const gardeningEvent = await this.gardeningEventRepository.create({
-			action: input.dto.action,
+		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "create" });
+		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "read" });
+		const wk = input.context.activeWorkspaceScope.toKey();
+		await this.locationRepository.getByIdScoped({ workspaceKey: wk, dto: { id: input.dto.locationId } });
+		const gardeningEvent = await this.gardeningEventRepository.createScoped({
+			dto: {
+				action: input.dto.action,
+				workspaceKey: input.context.activeWorkspaceScope.toKey(),
+			},
 		});
-		await this.access.bootstrapResourceAdminForActor(input.context, gardeningEventRef(String(gardeningEvent.id)));
+		const activeKey = input.context.activeWorkspaceScope.toKey();
 		try {
-			const locationNode = await this.spatialNodeRepository.getByRef({
-				ref: { entity: "location", entityId: String(input.dto.locationId) },
+			const locationNode = await this.spatialNodeRepository.getByRefScoped({
+				workspaceKeys: [activeKey],
+				dto: { ref: { entity: "location", entityId: String(input.dto.locationId) } },
 			});
-			const allNodes = await this.spatialNodeRepository.getAll();
+			const allNodes = await this.spatialNodeRepository.getAllScoped({
+				workspaceKeys: [activeKey],
+			});
 			const directPlantIds = allNodes.items
 				.filter(
 					(n) =>
@@ -161,21 +168,30 @@ export class GardeningEventCreateForLocationUseCase
 						String(n.parentId) === String(locationNode.id),
 				)
 				.map((n) => n.ref.entityId as PlantEntityId);
-			const plants = await this.plantRepository.getListByIds({ ids: directPlantIds });
+			const plants = await this.plantRepository.getListByIdsScoped({
+				workspaceKeys: [activeKey],
+				dto: { ids: directPlantIds },
+			});
 			await Promise.all(
 				plants.items.map((plant) =>
-					this.gardeningEventRepository.bindToPlant({
-						id: gardeningEvent.id,
-						plantId: plant.id,
+					this.gardeningEventRepository.bindToPlantScoped({
+						workspaceKey: gardeningEvent.workspaceKey,
+						dto: {
+							id: gardeningEvent.id,
+							plantId: plant.id,
+						},
 					}),
 				),
 			);
 		} catch {
 			// Spatial mapping is optional during bootstrap/reset states.
 		}
-		await this.gardeningEventRepository.bindToLocation({
-			id: gardeningEvent.id,
-			locationId: input.dto.locationId,
+		await this.gardeningEventRepository.bindToLocationScoped({
+			workspaceKey: gardeningEvent.workspaceKey,
+			dto: {
+				id: gardeningEvent.id,
+				locationId: input.dto.locationId,
+			},
 		});
 		return gardeningEvent;
 	}
@@ -199,22 +215,28 @@ export class GardeningEventCreateForPlantListUseCase
 	public async execute(
 		input: GardeningEventCreateForPlantListUseCaseInput,
 	): Promise<GardeningEventCreateForPlantListUseCaseOutput> {
-		for (const pid of input.dto.plantIds) {
-			await this.plantRepository.getById({ id: pid });
-			await this.access.assertCanRead(input.context, gardeningPlantRef(String(pid)));
-		}
-		await this.access.assertCanCreate(input.context, input.context.workspaceRef);
-		const gardeningEvent = await this.gardeningEventRepository.create({
-			action: input.dto.action,
+		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "create" });
+		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "read" });
+		const gardeningEvent = await this.gardeningEventRepository.createScoped({
+			dto: {
+				action: input.dto.action,
+				workspaceKey: input.context.activeWorkspaceScope.toKey(),
+			},
 		});
-		await this.access.bootstrapResourceAdminForActor(input.context, gardeningEventRef(String(gardeningEvent.id)));
-		const plants = await this.plantRepository.getListByIds({ ids: input.dto.plantIds });
+		const activeKeys = [input.context.activeWorkspaceScope.toKey()] as const;
+		const plants = await this.plantRepository.getListByIdsScoped({
+			workspaceKeys: activeKeys,
+			dto: { ids: input.dto.plantIds },
+		});
 		const promises = [];
 		for (const plant of plants.items) {
 			promises.push(
-				this.gardeningEventRepository.bindToPlant({
-					id: gardeningEvent.id,
-					plantId: plant.id,
+				this.gardeningEventRepository.bindToPlantScoped({
+					workspaceKey: gardeningEvent.workspaceKey,
+					dto: {
+						id: gardeningEvent.id,
+						plantId: plant.id,
+					},
 				}),
 			);
 		}
@@ -238,14 +260,17 @@ export class GardeningEventGetForPlantUseCase
 	public async execute(
 		input: GardeningEventGetForPlantUseCaseInput,
 	): Promise<GardeningEventGetForPlantUseCaseOutput> {
-		await this.plantRepository.getById({ id: input.dto.plantId });
-		await this.access.assertCanRead(input.context, gardeningPlantRef(String(input.dto.plantId)));
-		const raw = await this.gardeningEventRepository.getForPlant({ plantId: input.dto.plantId });
-		const mask = await this.access.getReadableResourceMask({
-			actorRef: input.context.actorRef,
-			resourceType: APPLICATION_RESOURCE_TYPES.event,
+		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "read" });
+		const activeKeys = [input.context.activeWorkspaceScope.toKey()] as const;
+		await this.plantRepository.getByIdScoped({
+			workspaceKey: activeKeys[0],
+			dto: { id: input.dto.plantId },
 		});
-		return { items: AccessControlApplicationService.filterItemsByReadableMask(raw.items, mask) };
+		const raw = await this.gardeningEventRepository.getForPlantScoped({
+			workspaceKeys: activeKeys,
+			dto: { plantId: input.dto.plantId },
+		});
+		return { items: raw.items };
 	}
 }
 
@@ -264,14 +289,17 @@ export class GardeningEventGetForLocationUseCase
 	public async execute(
 		input: GardeningEventGetForLocationUseCaseInput,
 	): Promise<GardeningEventGetForLocationUseCaseOutput> {
-		await this.locationRepository.getById({ id: input.dto.locationId });
-		await this.access.assertCanRead(input.context, gardeningLocationRef(String(input.dto.locationId)));
-		const raw = await this.gardeningEventRepository.getForLocation({ locationId: input.dto.locationId });
-		const mask = await this.access.getReadableResourceMask({
-			actorRef: input.context.actorRef,
-			resourceType: APPLICATION_RESOURCE_TYPES.event,
+		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "read" });
+		const activeKeys = [input.context.activeWorkspaceScope.toKey()] as const;
+		await this.locationRepository.getByIdScoped({
+			workspaceKey: activeKeys[0],
+			dto: { id: input.dto.locationId },
 		});
-		return { items: AccessControlApplicationService.filterItemsByReadableMask(raw.items, mask) };
+		const raw = await this.gardeningEventRepository.getForLocationScoped({
+			workspaceKeys: activeKeys,
+			dto: { locationId: input.dto.locationId },
+		});
+		return { items: raw.items };
 	}
 }
 
@@ -292,8 +320,12 @@ export class GardeningEventGetBindingsForEventUseCase
 	public async execute(
 		input: GardeningEventGetBindingsForEventUseCaseInput,
 	): Promise<GardeningEventGetBindingsForEventUseCaseOutput> {
-		await this.gardeningEventRepository.getById({ id: input.dto.id });
-		await this.access.assertCanRead(input.context, gardeningEventRef(String(input.dto.id)));
-		return this.gardeningEventRepository.getBindingsForEvent({ id: input.dto.id });
+		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "read" });
+		const wk = input.context.activeWorkspaceScope.toKey();
+		await this.gardeningEventRepository.getByIdScoped({ workspaceKey: wk, dto: { id: input.dto.id } });
+		return this.gardeningEventRepository.getBindingsForEventScoped({
+			workspaceKey: wk,
+			dto: { id: input.dto.id },
+		});
 	}
 }

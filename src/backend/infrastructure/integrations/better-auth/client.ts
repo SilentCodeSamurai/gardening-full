@@ -3,7 +3,7 @@ import { betterAuth } from "better-auth";
 // import { db } from "#/backend/infrastructure/integrations/drizzle";
 // import * as schema from "#/backend/infrastructure/integrations/drizzle/schema";
 
-import { grantDefaultWorkspaceOnUserCreated } from "./grant-default-workspace-on-user-created";
+import { grantDefaultPermissionsOnUserCreated } from "./grant-default-permissions-on-user-created";
 
 export const betterAuthBackendClient = betterAuth({
 	/**
@@ -20,7 +20,7 @@ export const betterAuthBackendClient = betterAuth({
 		user: {
 			create: {
 				after: async (user) => {
-					await grantDefaultWorkspaceOnUserCreated({ id: user.id });
+					await grantDefaultPermissionsOnUserCreated(user);
 				},
 			},
 		},

@@ -1,6 +1,10 @@
 import type { CultivarEntity, CultivarEntityId, SpeciesEntity } from "@backend/core/domain/gardening/entities";
 import type { ItemsContainer } from "@backend/shared/types";
-import type { BaseCRUDRepositoryPort } from "../shared/base.crud-repository.port";
+import type {
+	BaseScopedCRUDRepositoryPort,
+	NoScopedInnerRepositoryDto,
+	RepositorySingleScopedInput,
+} from "../shared/base.scoped-crud-repository-port";
 import type {
 	BaseRepositoryCreateInputDTO,
 	BaseRepositoryIdActionInputDTO,
@@ -13,8 +17,6 @@ export type CultivarRepositoryCreateOutputDTO = CultivarEntity;
 export type CultivarRepositoryGetByIdInputDTO = BaseRepositoryIdActionInputDTO<CultivarEntity>;
 export type CultivarRepositoryGetByIdOutputDTO = CultivarEntity;
 
-// biome-ignore lint/suspicious/noConfusingVoidType: <This dto is a type parameter used as generic parameter for the BaseCRUDRepositoryPort so it's declared separately for better readability>
-export type CultivarRepositoryGetAllInputDTO = void;
 export type CultivarRepositoryGetAllOutputDTO = ItemsContainer<CultivarEntity>;
 
 export type CultivarRepositoryUpdateInputDTO = BaseRepositoryUpdateInputDTO<CultivarEntity>;
@@ -29,19 +31,21 @@ export type CultivarRepositoryGetFullByIdOutputDTO = CultivarEntity & {
 };
 
 export interface CultivarRepositoryPort
-	extends BaseCRUDRepositoryPort<
+	extends BaseScopedCRUDRepositoryPort<
 		CultivarRepositoryCreateInputDTO,
 		CultivarRepositoryCreateOutputDTO,
+		NoScopedInnerRepositoryDto,
+		CultivarRepositoryGetAllOutputDTO,
 		CultivarRepositoryGetByIdInputDTO,
 		CultivarRepositoryGetByIdOutputDTO,
-		CultivarRepositoryGetAllInputDTO,
-		CultivarRepositoryGetAllOutputDTO,
 		CultivarRepositoryUpdateInputDTO,
 		CultivarRepositoryUpdateOutputDTO,
 		CultivarRepositoryDeleteInputDTO,
 		CultivarRepositoryDeleteOutputDTO
 	> {
-	getFullById(dto: CultivarRepositoryGetFullByIdInputDTO): Promise<CultivarRepositoryGetFullByIdOutputDTO>;
+	getFullByIdScoped(
+		input: RepositorySingleScopedInput<CultivarRepositoryGetFullByIdInputDTO>,
+	): Promise<CultivarRepositoryGetFullByIdOutputDTO>;
 }
 
 export const CultivarRepositoryToken = Symbol("CultivarRepositoryToken");

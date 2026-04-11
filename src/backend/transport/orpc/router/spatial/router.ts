@@ -8,7 +8,7 @@ import {
 } from "@backend/core/application/use-cases/spatial/spatial.use-cases";
 
 import { createUseCaseContextFromOrpc } from "../../create-use-case-context";
-import { procedure } from "../../orpc-procedure";
+import { authenticatedProcedure } from "../../orpc-procedure";
 import { resolveAndExecute } from "../../shared/resolve-use-case";
 import {
 	ApplySpatialOperationsInputSchema,
@@ -19,12 +19,12 @@ import {
 } from "./schemas";
 
 export const spatialRouter = {
-	createNode: procedure
+	createNode: authenticatedProcedure
 		.input(CreateSpatialNodeInputSchema)
 		.handler(({ input, context }) =>
 			resolveAndExecute(SpatialNodeCreateUseCase, { context: createUseCaseContextFromOrpc(context), dto: input }),
 		),
-	deleteNode: procedure
+	deleteNode: authenticatedProcedure
 		.input(DeleteSpatialNodeInputSchema)
 		.handler(({ input, context }) =>
 			resolveAndExecute(SpatialNodeDeleteUseCase, {
@@ -32,15 +32,15 @@ export const spatialRouter = {
 				dto: { id: input.id },
 			}),
 		),
-	restoreNode: procedure
+	restoreNode: authenticatedProcedure
 		.input(RestoreSpatialNodeInputSchema)
 		.handler(({ input, context }) =>
 			resolveAndExecute(SpatialNodeRestoreUseCase, { context: createUseCaseContextFromOrpc(context), dto: input }),
 		),
-	getAllNodes: procedure.handler(({ context }) =>
+	getAllNodes: authenticatedProcedure.handler(({ context }) =>
 		resolveAndExecute(SpatialNodeGetAllUseCase, { context: createUseCaseContextFromOrpc(context) }),
 	),
-	getTreeForRootId: procedure
+	getTreeForRootId: authenticatedProcedure
 		.input(GetSpatialTreeByRootIdInputSchema)
 		.handler(({ input, context }) =>
 			resolveAndExecute(SpatialNodeGetTreeForRootIdUseCase, {
@@ -48,7 +48,7 @@ export const spatialRouter = {
 				dto: { id: input.id },
 			}),
 		),
-	applyOperations: procedure
+	applyOperations: authenticatedProcedure
 		.input(ApplySpatialOperationsInputSchema)
 		.handler(({ input, context }) =>
 			resolveAndExecute(SpatialApplyOperationsUseCase, {

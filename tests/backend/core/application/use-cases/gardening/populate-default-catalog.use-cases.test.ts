@@ -3,7 +3,8 @@ import {
   PopulateDefaultCatalogUseCase,
   PopulateDefaultCatalogUseCaseDuplicateCategorySlugError,
 } from "@backend/core/application/use-cases/gardening/populate-default-catalog.use-case";
-import { createCatalogPopulateUseCaseContext } from "#/backend/core/application/use-cases/use-case-context.defaults";
+import { bootstrapPopulateServiceAccount } from "#/backend/core/application/service-accounts";
+import { WorkspaceVO } from "@backend/core/domain/access/workspace.vo";
 import { createTestUseCaseContext } from "../create-test-use-case-context";
 import {
   SpeciesCategoryCreateUseCase,
@@ -28,7 +29,10 @@ const tinyCatalog = defineDefaultCatalog({
 describe("PopulateDefaultCatalogUseCase", () => {
   it("creates categories and species from catalog when store is empty", async () => {
     const c = createUseCaseTestContainer();
-    const context = createCatalogPopulateUseCaseContext();
+    const context = {
+      actorSubject: bootstrapPopulateServiceAccount,
+      activeWorkspaceScope: WorkspaceVO.globalShared(),
+    };
     const populate = c.resolve(PopulateDefaultCatalogUseCase);
     const getSpeciesAll = c.resolve(SpeciesGetAllUseCase);
     const getCategoriesAll = c.resolve(SpeciesCategoryGetAllUseCase);
@@ -62,7 +66,10 @@ describe("PopulateDefaultCatalogUseCase", () => {
 
     const populate = c.resolve(PopulateDefaultCatalogUseCase);
     const result = await populate.execute({
-      context: createCatalogPopulateUseCaseContext(),
+      context: {
+        actorSubject: bootstrapPopulateServiceAccount,
+        activeWorkspaceScope: WorkspaceVO.globalShared(),
+      },
       dto: { catalog: tinyCatalog },
     });
 
@@ -74,7 +81,10 @@ describe("PopulateDefaultCatalogUseCase", () => {
 
   it("second run on same populated store skips", async () => {
     const c = createUseCaseTestContainer();
-    const context = createCatalogPopulateUseCaseContext();
+    const context = {
+      actorSubject: bootstrapPopulateServiceAccount,
+      activeWorkspaceScope: WorkspaceVO.globalShared(),
+    };
     const populate = c.resolve(PopulateDefaultCatalogUseCase);
 
     const first = await populate.execute({
@@ -89,7 +99,10 @@ describe("PopulateDefaultCatalogUseCase", () => {
 
   it("throws on duplicate category slugs in config", async () => {
     const c = createUseCaseTestContainer();
-    const context = createCatalogPopulateUseCaseContext();
+    const context = {
+      actorSubject: bootstrapPopulateServiceAccount,
+      activeWorkspaceScope: WorkspaceVO.globalShared(),
+    };
     const populate = c.resolve(PopulateDefaultCatalogUseCase);
 
     const bad = defineDefaultCatalog({

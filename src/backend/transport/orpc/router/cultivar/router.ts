@@ -8,7 +8,7 @@ import {
 } from "@backend/core/application/use-cases/gardening/cultivar.use-cases";
 
 import { createUseCaseContextFromOrpc } from "../../create-use-case-context";
-import { procedure } from "../../orpc-procedure";
+import { authenticatedProcedure } from "../../orpc-procedure";
 import { resolveAndExecute } from "../../shared/resolve-use-case";
 import {
 	CreateCultivarInputSchema,
@@ -19,17 +19,17 @@ import {
 } from "./schemas";
 
 export const cultivarRouter = {
-	create: procedure
+	create: authenticatedProcedure
 		.input(CreateCultivarInputSchema)
 		.handler(({ input, context }) =>
 			resolveAndExecute(CultivarCreateUseCase, { context: createUseCaseContextFromOrpc(context), dto: input }),
 		),
-	getById: procedure
+	getById: authenticatedProcedure
 		.input(GetCultivarByIdInputSchema)
 		.handler(({ input, context }) =>
 			resolveAndExecute(CultivarGetByIdUseCase, { context: createUseCaseContextFromOrpc(context), dto: input }),
 		),
-	getFullById: procedure
+	getFullById: authenticatedProcedure
 		.input(GetCultivarFullByIdInputSchema)
 		.handler(({ input, context }) =>
 			resolveAndExecute(CultivarGetFullByIdUseCase, {
@@ -37,15 +37,15 @@ export const cultivarRouter = {
 				dto: input,
 			}),
 		),
-	getAll: procedure.handler(({ context }) =>
+	getAll: authenticatedProcedure.handler(({ context }) =>
 		resolveAndExecute(CultivarGetAllUseCase, { context: createUseCaseContextFromOrpc(context) }),
 	),
-	update: procedure
+	update: authenticatedProcedure
 		.input(UpdateCultivarInputSchema)
 		.handler(({ input, context }) =>
 			resolveAndExecute(CultivarUpdateUseCase, { context: createUseCaseContextFromOrpc(context), dto: input }),
 		),
-	delete: procedure
+	delete: authenticatedProcedure
 		.input(DeleteCultivarInputSchema)
 		.handler(({ input, context }) =>
 			resolveAndExecute(CultivarDeleteUseCase, { context: createUseCaseContextFromOrpc(context), dto: input }),

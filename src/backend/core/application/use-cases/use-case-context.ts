@@ -1,12 +1,14 @@
-import type { IdentityRef, ResourceRef } from "@backend/core/domain/resource-access";
+import type { SubjectVO } from "@backend/core/domain/access/subject.vo";
+import type { WorkspaceVO } from "@backend/core/domain/access/workspace.vo";
 
 /**
- * Per use-case invocation: who is acting and which workspace (or equivalent scope) the request targets.
- * Use cases pass `workspaceRef` into `assertCanCreate` for creates under that scope.
+ * Per use-case invocation: acting subject and active workspace scope.
  */
 export type UseCaseContext = {
-	readonly actorRef: IdentityRef;
-	readonly workspaceRef: ResourceRef;
+	/** Authenticated principal actor (user or service account). */
+	readonly actorSubject: SubjectVO;
+	/** Current active workspace scope. */
+	readonly activeWorkspaceScope: WorkspaceVO;
 };
 
 /**

@@ -1,28 +1,40 @@
-import { os } from "@orpc/server";
+import { ORPCError, os } from "@orpc/server";
 import { betterAuthBackendClient } from "#/backend/infrastructure/integrations/better-auth/client";
 
-/**
- * Initial context for every ORPC/Fetch handler (see {@link https://orpc.unnoq.com/docs/context}).
- * Pass `headers: request.headers` from `RPCHandler` / `OpenAPIHandler`.
- */
 export type OrpcInitialContext = {
 	readonly headers: Headers;
 };
 
+type BetterAuthSession = Awaited<ReturnType<(typeof betterAuthBackendClient)["api"]["getSession"]>>;
+
 export type OrpcContext = OrpcInitialContext & {
-	readonly authSession: Awaited<ReturnType<(typeof betterAuthBackendClient)["api"]["getSession"]>>;
+	readonly authSession: BetterAuthSession;
+};
+
+export type AuthenticatedOrpcContext = OrpcContext & {
+	readonly authSession: NonNullable<BetterAuthSession>;
 };
 
 const base = os.$context<OrpcInitialContext>();
 
-const withBetterAuthSession = base.middleware(async ({ context, next }) => {
+// Middleware 1: Inject authSession. Declared on base (initial context).
+export const withBetterAuthSession = base.middleware(async ({ context, next }) => {
 	const authSession = await betterAuthBackendClient.api.getSession({
 		headers: context.headers,
 	});
 	return next({ context: { authSession } });
 });
 
-/**
- * Standard procedure: resolves Better Auth session via {@link betterAuthBackendClient.api.getSession} (see {@link https://www.better-auth.com/docs/concepts/api}).
- */
-export const procedure = base.use(withBetterAuthSession);
+// Middleware 2: Guard authSession. Declared on base.$context<OrpcContext>() (expects authSession).
+const authContext = base.$context<OrpcContext>();
+export const authenticatedMiddleware = authContext.middleware(async ({ context, next }) => {
+	if (!context.authSession) {
+		throw new ORPCError("UNAUTHORIZED", {
+			defined: true,
+			message: "Unauthorized",
+		});
+	}
+	return next({ context: { authSession: context.authSession } });
+});
+
+export const authenticatedProcedure = base.use(withBetterAuthSession).use(authenticatedMiddleware);

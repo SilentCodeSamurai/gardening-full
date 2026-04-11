@@ -42,7 +42,7 @@ export class PlantInMemoryRepository extends BaseRepositoryErrors implements Pla
 		};
 	}
 
-	async create(dto: PlantRepositoryCreateInputDTO): Promise<PlantRepositoryCreateOutputDTO> {
+	private insertRow(dto: PlantRepositoryCreateInputDTO): PlantRepositoryCreateOutputDTO {
 		if (!this.store.cultivars.has(idKey(dto.cultivarId))) {
 			this.throwNotFoundError("Cultivar", dto.cultivarId);
 		}
@@ -50,6 +50,7 @@ export class PlantInMemoryRepository extends BaseRepositoryErrors implements Pla
 		const id = plantId();
 		const row: PlantEntity = {
 			id,
+			workspaceKey: dto.workspaceKey,
 			title: dto.title,
 			description: dto.description,
 			cultivarId: dto.cultivarId,
@@ -60,7 +61,7 @@ export class PlantInMemoryRepository extends BaseRepositoryErrors implements Pla
 		return this.hydratePlant(row);
 	}
 
-	async createMany(rows: PlantRepositoryCreateManyInputDTO): Promise<PlantRepositoryCreateManyOutputDTO> {
+	private insertManyRows(rows: PlantRepositoryCreateManyInputDTO): PlantRepositoryCreateManyOutputDTO {
 		const items: HydratedPlantEntity[] = [];
 		for (const dto of rows) {
 			if (!this.store.cultivars.has(idKey(dto.cultivarId))) {
@@ -70,6 +71,7 @@ export class PlantInMemoryRepository extends BaseRepositoryErrors implements Pla
 			const id = plantId();
 			const row: PlantEntity = {
 				id,
+				workspaceKey: dto.workspaceKey,
 				title: dto.title,
 				description: dto.description,
 				cultivarId: dto.cultivarId,
@@ -82,26 +84,32 @@ export class PlantInMemoryRepository extends BaseRepositoryErrors implements Pla
 		return { items };
 	}
 
-	async getById(dto: PlantRepositoryGetByIdInputDTO): Promise<PlantRepositoryGetByIdOutputDTO> {
+	private loadById(dto: PlantRepositoryGetByIdInputDTO): PlantRepositoryGetByIdOutputDTO {
 		const row = this.store.plants.get(idKey(dto.id));
 		if (!row) this.throwNotFoundError("Plant", dto.id);
 		return this.hydratePlant(row);
 	}
 
-	async getListByIds(dto: PlantRepositoryGetListByIdsInputDTO): Promise<PlantRepositoryGetListByIdsOutputDTO> {
+	private listByIdsInWorkspaces(
+		workspaceKeys: readonly PlantEntity["workspaceKey"][],
+		dto: PlantRepositoryGetListByIdsInputDTO,
+	): PlantRepositoryGetListByIdsOutputDTO {
+		const allowed = new Set(workspaceKeys.map((key) => String(key)));
 		const items: HydratedPlantEntity[] = [];
 		for (const pid of dto.ids) {
 			const p = this.store.plants.get(idKey(pid));
-			if (p) items.push(this.hydratePlant(p));
+			if (p && allowed.has(String(p.workspaceKey))) items.push(this.hydratePlant(p));
 		}
 		return { items };
 	}
 
-	async getAll(): Promise<PlantRepositoryGetAllOutputDTO> {
-		return { items: [...this.store.plants.values()].map((row) => this.hydratePlant(row)) };
+	private listInWorkspaces(workspaceKeys: readonly PlantEntity["workspaceKey"][]): PlantRepositoryGetAllOutputDTO {
+		const allowed = new Set(workspaceKeys.map((key) => String(key)));
+		const rows = [...this.store.plants.values()].filter((x) => allowed.has(String(x.workspaceKey)));
+		return { items: rows.map((row) => this.hydratePlant(row)) };
 	}
 
-	async update(dto: PlantRepositoryUpdateInputDTO): Promise<PlantRepositoryUpdateOutputDTO> {
+	private patchRow(dto: PlantRepositoryUpdateInputDTO): PlantRepositoryUpdateOutputDTO {
 		const key = idKey(dto.id);
 		const existing = this.store.plants.get(key);
 		if (!existing) this.throwNotFoundError("Plant", dto.id);
@@ -122,19 +130,19 @@ export class PlantInMemoryRepository extends BaseRepositoryErrors implements Pla
 		return this.hydratePlant(updated);
 	}
 
-	async getByCultivarId(
+	private listByCultivarInWorkspaces(
+		workspaceKeys: readonly PlantEntity["workspaceKey"][],
 		dto: PlantRepositoryGetByCultivarIdInputDTO,
-	): Promise<PlantRepositoryGetByCultivarIdOutputDTO> {
+	): PlantRepositoryGetByCultivarIdOutputDTO {
+		const allowed = new Set(workspaceKeys.map((key) => String(key)));
 		const ck = idKey(dto.cultivarId);
 		const items = [...this.store.plants.values()]
-			.filter((p) => idKey(p.cultivarId) === ck)
+			.filter((p) => idKey(p.cultivarId) === ck && allowed.has(String(p.workspaceKey)))
 			.map((row) => this.hydratePlant(row));
 		return { items };
 	}
 
-	// Spatial separation: placement and tree structure are owned by Spatial nodes.
-
-	async delete(dto: PlantRepositoryDeleteInputDTO): Promise<PlantRepositoryDeleteOutputDTO> {
+	private removeRow(dto: PlantRepositoryDeleteInputDTO): PlantRepositoryDeleteOutputDTO {
 		const key = idKey(dto.id);
 		if (!this.store.plants.has(key)) this.throwNotFoundError("Plant", dto.id);
 		this.store.unlinkAllEventsFromPlant(dto.id);
@@ -142,15 +150,84 @@ export class PlantInMemoryRepository extends BaseRepositoryErrors implements Pla
 		return dto.id;
 	}
 
-	async deleteMany(dto: PlantRepositoryDeleteManyInputDTO): Promise<PlantRepositoryDeleteManyOutputDTO> {
+	private removeManyInWorkspaces(
+		workspaceKeys: readonly PlantEntity["workspaceKey"][],
+		dto: PlantRepositoryDeleteManyInputDTO,
+	): PlantRepositoryDeleteManyOutputDTO {
+		const allowed = new Set(workspaceKeys.map((key) => String(key)));
 		const deletedIds: PlantEntityId[] = [];
 		for (const id of dto.ids) {
 			const key = idKey(id);
-			if (!this.store.plants.has(key)) continue;
+			const row = this.store.plants.get(key);
+			if (!row || !allowed.has(String(row.workspaceKey))) continue;
 			this.store.unlinkAllEventsFromPlant(id);
 			this.store.plants.delete(key);
 			deletedIds.push(id);
 		}
 		return { deletedIds };
+	}
+
+	async createManyScoped(input: {
+		dto: { rows: PlantRepositoryCreateManyInputDTO };
+	}): Promise<PlantRepositoryCreateManyOutputDTO> {
+		return this.insertManyRows(input.dto.rows);
+	}
+
+	async getByCultivarIdScoped(input: {
+		workspaceKeys: readonly PlantEntity["workspaceKey"][];
+		dto: PlantRepositoryGetByCultivarIdInputDTO;
+	}): Promise<PlantRepositoryGetByCultivarIdOutputDTO> {
+		return this.listByCultivarInWorkspaces(input.workspaceKeys, input.dto);
+	}
+
+	async getListByIdsScoped(input: {
+		workspaceKeys: readonly PlantEntity["workspaceKey"][];
+		dto: PlantRepositoryGetListByIdsInputDTO;
+	}): Promise<PlantRepositoryGetListByIdsOutputDTO> {
+		return this.listByIdsInWorkspaces(input.workspaceKeys, input.dto);
+	}
+
+	async deleteManyScoped(input: {
+		workspaceKeys: readonly PlantEntity["workspaceKey"][];
+		dto: PlantRepositoryDeleteManyInputDTO;
+	}): Promise<PlantRepositoryDeleteManyOutputDTO> {
+		return this.removeManyInWorkspaces(input.workspaceKeys, input.dto);
+	}
+
+	async createScoped(input: { dto: PlantRepositoryCreateInputDTO }): Promise<PlantRepositoryCreateOutputDTO> {
+		return this.insertRow(input.dto);
+	}
+
+	async getAllScoped(input: {
+		workspaceKeys: readonly PlantEntity["workspaceKey"][];
+	}): Promise<PlantRepositoryGetAllOutputDTO> {
+		return this.listInWorkspaces(input.workspaceKeys);
+	}
+
+	async getByIdScoped(input: {
+		workspaceKey: PlantEntity["workspaceKey"];
+		dto: PlantRepositoryGetByIdInputDTO;
+	}): Promise<PlantRepositoryGetByIdOutputDTO> {
+		const row = this.loadById(input.dto);
+		if (String(row.workspaceKey) !== String(input.workspaceKey)) {
+			this.throwNotFoundError("Plant", input.dto.id);
+		}
+		return row;
+	}
+
+	async updateByIdScoped(input: {
+		workspaceKey: PlantEntity["workspaceKey"];
+		dto: PlantRepositoryUpdateInputDTO;
+	}): Promise<PlantRepositoryUpdateOutputDTO> {
+		await this.getByIdScoped({ workspaceKey: input.workspaceKey, dto: { id: input.dto.id } });
+		return this.patchRow(input.dto);
+	}
+
+	async deleteByIdScoped(input: {
+		workspaceKey: PlantEntity["workspaceKey"];
+		dto: PlantRepositoryDeleteInputDTO;
+	}): Promise<PlantRepositoryDeleteOutputDTO> {
+		await this.getByIdScoped({ workspaceKey: input.workspaceKey, dto: input.dto });
+		return this.removeRow(input.dto);
 	}
 }

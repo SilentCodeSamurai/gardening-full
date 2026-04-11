@@ -1,14 +1,10 @@
-import { defaultWorkspaceRef } from "#/backend/core/application/resource-refs";
-import type { UseCaseContext } from "#/backend/core/application/use-cases/use-case-context";
-import { catalogPopulateServiceAccount } from "#/backend/core/application/service-accounts";
 import { AccessControlApplicationService } from "@backend/core/application/services/access-control/access-control.application-service";
 import {
 	AccessForbiddenApplicationError,
-	AccessScopeMismatchApplicationError,
-	AccessSubjectNotResolvedApplicationError,
 } from "@backend/core/application/services/access-control/access-control.errors";
-import type { ResoursePermissionRepositoryPort } from "@backend/core/application/ports/repositories/resource-access/resourse-permission.repository.port";
-import { IdentityRef, ResourceRef, TenantRef } from "@backend/core/domain/resource-access";
+import type { WorkspaceRoleAssignmentRepositoryPort } from "#/backend/core/application/ports/repositories/access/workspace-role-assignment.repository.port";
+import { SubjectVO } from "@backend/core/domain/access/subject.vo";
+import { WorkspaceVO } from "@backend/core/domain/access/workspace.vo";
 import { TOKENS } from "@backend/di/tokens";
 import { describe, expect, it } from "vitest";
 
@@ -17,347 +13,191 @@ import { createAccessControlTestContainer } from "./create-access-control-test-c
 function makeService() {
 	const c = createAccessControlTestContainer();
 	const svc = c.resolve(AccessControlApplicationService);
-	const repo = c.resolve<ResoursePermissionRepositoryPort>(TOKENS.ResoursePermissionRepositoryPort);
+	const repo = c.resolve<WorkspaceRoleAssignmentRepositoryPort>(TOKENS.WorkspaceRoleAssignmentRepositoryPort);
 	return { svc, repo };
 }
 
 describe("AccessControlApplicationService", () => {
-	describe("evaluateAccess — roles and actions", () => {
-		it("viewer: read allowed; update/delete/grant denied with DENY_ROLE_MISSING_ACTION when assignment covers", async () => {
+	describe("assertCanPerformActionOnWorkspace", () => {
+		it("allows update when assignment matches workspace exactly (positive)", async () => {
 			const { svc, repo } = makeService();
-			const actor = IdentityRef.user("u1");
-			const res = ResourceRef.create({ type: "gardening.plant", id: "p1" });
-			await repo.upsertRoleAssignment({ subjectRef: actor, resourceRef: res, role: "viewer" });
-
-			expect((await svc.evaluateAccess({ actorRef: actor, action: "read", resourceRef: res })).allowed).toBe(
-				true,
-			);
-			for (const action of ["update", "delete", "grantPermission"] as const) {
-				const d = await svc.evaluateAccess({ actorRef: actor, action, resourceRef: res });
-				expect(d.allowed).toBe(false);
-				expect(d.reasonCode).toBe("DENY_ROLE_MISSING_ACTION");
-			}
-			const createOther = await svc.evaluateAccess({
-				actorRef: actor,
-				action: "create",
-				resourceRef: res,
+			const actor = SubjectVO.user("u1");
+			const scope = WorkspaceVO.org("acme");
+			await repo.upsertWorkspaceRoleAssignment({
+				subjectKey: actor.toKey(),
+				workspaceKey: scope.toKey(),
+				role: "editor",
 			});
-			expect(createOther.allowed).toBe(false);
-			expect(createOther.reasonCode).toBe("DENY_ROLE_MISSING_ACTION");
+			const d = await svc.assertCanPerformActionOnWorkspace({
+				actorSubject: actor,
+				activeWorkspaceScope: scope,
+				action: "update",
+			});
+			expect(d.allowed).toBe(true);
+			expect(d.matchedRole).toBe("editor");
 		});
 
-		it("editor: read/create/update allowed on covered ref; delete and grant denied", async () => {
+		it("denies delete when viewer role lacks action (negative)", async () => {
 			const { svc, repo } = makeService();
-			const actor = IdentityRef.user("u1");
-			const res = ResourceRef.create({ type: "gardening.plant", id: "p1" });
-			await repo.upsertRoleAssignment({ subjectRef: actor, resourceRef: res, role: "editor" });
-
-			for (const action of ["read", "update"] as const) {
-				expect(
-					(await svc.evaluateAccess({ actorRef: actor, action, resourceRef: res })).allowed,
-				).toBe(true);
-			}
-			for (const action of ["delete", "grantPermission"] as const) {
-				const d = await svc.evaluateAccess({ actorRef: actor, action, resourceRef: res });
-				expect(d.allowed).toBe(false);
-				expect(d.reasonCode).toBe("DENY_ROLE_MISSING_ACTION");
-			}
+			const actor = SubjectVO.user("u1");
+			const scope = WorkspaceVO.user("u1");
+			await repo.upsertWorkspaceRoleAssignment({
+				subjectKey: actor.toKey(),
+				workspaceKey: scope.toKey(),
+				role: "viewer",
+			});
+			await expect(
+				svc.assertCanPerformActionOnWorkspace({
+					actorSubject: actor,
+					activeWorkspaceScope: scope,
+					action: "delete",
+				}),
+			).rejects.toBeInstanceOf(AccessForbiddenApplicationError);
 		});
 
-		it("admin: all actions including grantPermission", async () => {
+		it("denies update when viewer role lacks action (negative)", async () => {
 			const { svc, repo } = makeService();
-			const actor = IdentityRef.user("u1");
-			const res = ResourceRef.create({ type: "gardening.plant", id: "p1" });
-			await repo.upsertRoleAssignment({ subjectRef: actor, resourceRef: res, role: "admin" });
-
-			for (const action of ["read", "create", "update", "delete", "grantPermission"] as const) {
-				expect(
-					(await svc.evaluateAccess({ actorRef: actor, action, resourceRef: res })).allowed,
-				).toBe(true);
-			}
+			const actor = SubjectVO.user("u-view");
+			const scope = WorkspaceVO.user("u-view");
+			await repo.upsertWorkspaceRoleAssignment({
+				subjectKey: actor.toKey(),
+				workspaceKey: scope.toKey(),
+				role: "viewer",
+			});
+			await expect(
+				svc.assertCanPerformActionOnWorkspace({
+					actorSubject: actor,
+					activeWorkspaceScope: scope,
+					action: "update",
+				}),
+			).rejects.toBeInstanceOf(AccessForbiddenApplicationError);
 		});
 
-		it("picks strongest role when multiple assignments cover the same resource", async () => {
+		it("denies create when viewer role lacks action (negative)", async () => {
 			const { svc, repo } = makeService();
-			const actor = IdentityRef.user("u1");
-			const res = ResourceRef.create({ type: "gardening.plant", id: "p1" });
-			await repo.upsertRoleAssignment({ subjectRef: actor, resourceRef: res, role: "viewer" });
-			await repo.upsertRoleAssignment({ subjectRef: actor, resourceRef: res, role: "admin" });
+			const actor = SubjectVO.user("u-c");
+			const scope = WorkspaceVO.user("u-c");
+			await repo.upsertWorkspaceRoleAssignment({
+				subjectKey: actor.toKey(),
+				workspaceKey: scope.toKey(),
+				role: "viewer",
+			});
+			await expect(
+				svc.assertCanPerformActionOnWorkspace({
+					actorSubject: actor,
+					activeWorkspaceScope: scope,
+					action: "create",
+				}),
+			).rejects.toBeInstanceOf(AccessForbiddenApplicationError);
+		});
 
-			const d = await svc.evaluateAccess({ actorRef: actor, action: "delete", resourceRef: res });
+		it("denies read when there is no matching assignment (negative edge)", async () => {
+			const { svc } = makeService();
+			await expect(
+				svc.assertCanPerformActionOnWorkspace({
+					actorSubject: SubjectVO.user("u1"),
+					activeWorkspaceScope: WorkspaceVO.user("u1"),
+					action: "read",
+				}),
+			).rejects.toBeInstanceOf(AccessForbiddenApplicationError);
+		});
+
+		it("allows signed-in user to read global shared workspace (positive edge)", async () => {
+			const { svc } = makeService();
+			const d = await svc.assertCanPerformActionOnWorkspace({
+				actorSubject: SubjectVO.user("alice"),
+				activeWorkspaceScope: WorkspaceVO.globalShared(),
+				action: "read",
+			});
+			expect(d.allowed).toBe(true);
+			expect(d.matchedRole).toBe("viewer");
+		});
+
+		it("allows any service account full access on global shared workspace (positive edge)", async () => {
+			const { svc } = makeService();
+			const d = await svc.assertCanPerformActionOnWorkspace({
+				actorSubject: SubjectVO.serviceAccount("worker"),
+				activeWorkspaceScope: WorkspaceVO.globalShared(),
+				action: "update",
+			});
 			expect(d.allowed).toBe(true);
 			expect(d.matchedRole).toBe("admin");
 		});
+	});
 
-		it("wildcard assignment covers concrete id of same type and tenant", async () => {
+	describe("assignWorkspaceRole / revokeWorkspaceRole", () => {
+		it("assignWorkspaceRole grants workspace role when granter has admin", async () => {
 			const { svc, repo } = makeService();
-			const actor = IdentityRef.user("u1");
-			await repo.upsertRoleAssignment({
-				subjectRef: actor,
-				resourceRef: ResourceRef.wildcard("gardening.plant"),
+			const adminUser = SubjectVO.user("admin");
+			const other = SubjectVO.user("other");
+			const scope = WorkspaceVO.user("admin");
+			await repo.upsertWorkspaceRoleAssignment({
+				subjectKey: adminUser.toKey(),
+				workspaceKey: scope.toKey(),
+				role: "admin",
+			});
+			await svc.assignWorkspaceRole({
+				actorSubject: adminUser,
+				targetSubject: other,
+				activeWorkspaceScope: scope,
 				role: "viewer",
 			});
-			const concrete = ResourceRef.create({ type: "gardening.plant", id: "any-id" });
-			const d = await svc.evaluateAccess({ actorRef: actor, action: "read", resourceRef: concrete });
-			expect(d.allowed).toBe(true);
-			expect(d.reasonCode).toBe("ALLOW_ROLE");
-		});
-	});
-
-	describe("evaluateAccess — tenant alignment", () => {
-		it("throws AccessScopeMismatchApplicationError when actor tenant differs from resource tenant", async () => {
-			const { svc, repo } = makeService();
-			const actor = IdentityRef.user("u1", TenantRef.of("tenant-a"));
-			const res = ResourceRef.create({
-				type: "gardening.plant",
-				id: "p1",
-				tenantRef: TenantRef.of("tenant-b"),
-			});
-			await repo.upsertRoleAssignment({ subjectRef: actor, resourceRef: res, role: "admin" });
-
-			await expect(
-				svc.evaluateAccess({ actorRef: actor, action: "read", resourceRef: res }),
-			).rejects.toBeInstanceOf(AccessScopeMismatchApplicationError);
-		});
-	});
-
-	describe("global shared read policy", () => {
-		it("allows read for any actor when catalog-populate holds admin on resource", async () => {
-			const { svc, repo } = makeService();
-			const stranger = IdentityRef.user("stranger");
-			const res = ResourceRef.create({ type: "gardening.species", id: "seeded-1" });
-			await repo.upsertRoleAssignment({
-				subjectRef: catalogPopulateServiceAccount,
-				resourceRef: res,
-				role: "admin",
-			});
-			const d = await svc.evaluateAccess({ actorRef: stranger, action: "read", resourceRef: res });
-			expect(d.allowed).toBe(true);
-			expect(d.reasonCode).toBe("ALLOW_GLOBAL_SHARED_READ");
-		});
-
-		it("does not allow update via global shared path for strangers", async () => {
-			const { svc, repo } = makeService();
-			const stranger = IdentityRef.user("stranger");
-			const res = ResourceRef.create({ type: "gardening.species", id: "seeded-1" });
-			await repo.upsertRoleAssignment({
-				subjectRef: catalogPopulateServiceAccount,
-				resourceRef: res,
-				role: "admin",
-			});
-			const d = await svc.evaluateAccess({ actorRef: stranger, action: "update", resourceRef: res });
-			expect(d.allowed).toBe(false);
-			expect(d.reasonCode).toBe("DENY_NO_MATCHING_ASSIGNMENT");
-		});
-	});
-
-	describe("denials", () => {
-		it("denies when no assignment exists", async () => {
-			const { svc } = makeService();
-			const actor = IdentityRef.user("u1");
-			const d = await svc.evaluateAccess({
-				actorRef: actor,
+			const d = await svc.assertCanPerformActionOnWorkspace({
+				actorSubject: other,
+				activeWorkspaceScope: scope,
 				action: "read",
-				resourceRef: ResourceRef.create({ type: "gardening.plant", id: "p1" }),
 			});
-			expect(d.allowed).toBe(false);
-			expect(d.reasonCode).toBe("DENY_NO_MATCHING_ASSIGNMENT");
+			expect(d.allowed).toBe(true);
 		});
-	});
 
-	describe("assertCan*", () => {
-		it("assertCanCreate checks workspace scope", async () => {
+		it("assignWorkspaceRole rejects editor without grantPermission", async () => {
 			const { svc, repo } = makeService();
-			const actor = IdentityRef.user("u1");
-			const ws = defaultWorkspaceRef();
-			await repo.upsertRoleAssignment({ subjectRef: actor, resourceRef: ws, role: "editor" });
-			const ctx: UseCaseContext = { actorRef: actor, workspaceRef: ws };
-			await expect(svc.assertCanCreate(ctx, ws)).resolves.toBeDefined();
-		});
-
-		it("assertCanRead throws AccessForbiddenApplicationError when denied", async () => {
-			const { svc } = makeService();
-			const ctx: UseCaseContext = {
-				actorRef: IdentityRef.user("u1"),
-				workspaceRef: defaultWorkspaceRef(),
-			};
-			await expect(
-				svc.assertCanRead(ctx, ResourceRef.create({ type: "gardening.plant", id: "missing" })),
-			).rejects.toBeInstanceOf(AccessForbiddenApplicationError);
-		});
-	});
-
-	describe("getReadableResourceMask", () => {
-		it("respects wildcard id", async () => {
-			const { svc, repo } = makeService();
-			const actor = IdentityRef.user("u1");
-			await repo.upsertRoleAssignment({
-				subjectRef: actor,
-				resourceRef: ResourceRef.wildcard("gardening.species"),
-				role: "viewer",
-			});
-			const mask = await svc.getReadableResourceMask({
-				actorRef: actor,
-				resourceType: "gardening.species",
-			});
-			expect(mask.includesAllOfType).toBe(true);
-		});
-
-		it("aggregates exact ids and ignores other resource types", async () => {
-			const { svc, repo } = makeService();
-			const actor = IdentityRef.user("u1");
-			await repo.upsertRoleAssignment({
-				subjectRef: actor,
-				resourceRef: ResourceRef.create({ type: "gardening.plant", id: "a" }),
-				role: "viewer",
-			});
-			await repo.upsertRoleAssignment({
-				subjectRef: actor,
-				resourceRef: ResourceRef.create({ type: "gardening.plant", id: "b" }),
+			const editor = SubjectVO.user("editor");
+			const other = SubjectVO.user("other");
+			const scope = WorkspaceVO.user("editor");
+			await repo.upsertWorkspaceRoleAssignment({
+				subjectKey: editor.toKey(),
+				workspaceKey: scope.toKey(),
 				role: "editor",
 			});
-			await repo.upsertRoleAssignment({
-				subjectRef: actor,
-				resourceRef: ResourceRef.create({ type: "gardening.location", id: "loc-1" }),
-				role: "viewer",
-			});
-
-			const mask = await svc.getReadableResourceMask({
-				actorRef: actor,
-				resourceType: "gardening.plant",
-			});
-			expect(mask.includesAllOfType).toBe(false);
-			expect(new Set(mask.exactIds)).toEqual(new Set(["a", "b"]));
-		});
-
-		it("skips assignments whose resource tenant does not match actor tenant", async () => {
-			const { svc, repo } = makeService();
-			const actor = IdentityRef.user("u1", TenantRef.of("tenant-a"));
-			await repo.upsertRoleAssignment({
-				subjectRef: actor,
-				resourceRef: ResourceRef.create({
-					type: "gardening.plant",
-					id: "x",
-					tenantRef: TenantRef.of("tenant-b"),
-				}),
-				role: "viewer",
-			});
-			const mask = await svc.getReadableResourceMask({
-				actorRef: actor,
-				resourceType: "gardening.plant",
-			});
-			expect(mask.exactIds).toHaveLength(0);
-			expect(mask.includesAllOfType).toBe(false);
-		});
-	});
-
-	describe("assignRole / revokeRole", () => {
-		it("assignRole grants read to subject when granter has admin", async () => {
-			const { svc, repo } = makeService();
-			const adminUser = IdentityRef.user("admin");
-			const other = IdentityRef.user("other");
-			const res = ResourceRef.create({ type: "gardening.plant", id: "p1" });
-			await repo.upsertRoleAssignment({ subjectRef: adminUser, resourceRef: res, role: "admin" });
-			const ctx: UseCaseContext = {
-				actorRef: adminUser,
-				workspaceRef: defaultWorkspaceRef(),
-			};
-			await svc.assignRole(ctx, { subjectRef: other, resourceRef: res, role: "viewer" });
-			const d = await svc.evaluateAccess({ actorRef: other, action: "read", resourceRef: res });
-			expect(d.allowed).toBe(true);
-		});
-
-		it("assignRole rejects when granter lacks grantPermission (editor)", async () => {
-			const { svc, repo } = makeService();
-			const editor = IdentityRef.user("editor");
-			const other = IdentityRef.user("other");
-			const res = ResourceRef.create({ type: "gardening.plant", id: "p1" });
-			await repo.upsertRoleAssignment({ subjectRef: editor, resourceRef: res, role: "editor" });
-			const ctx: UseCaseContext = {
-				actorRef: editor,
-				workspaceRef: defaultWorkspaceRef(),
-			};
 			await expect(
-				svc.assignRole(ctx, { subjectRef: other, resourceRef: res, role: "viewer" }),
+				svc.assignWorkspaceRole({
+					actorSubject: editor,
+					targetSubject: other,
+					activeWorkspaceScope: scope,
+					role: "viewer",
+				}),
 			).rejects.toBeInstanceOf(AccessForbiddenApplicationError);
 		});
 
-		it("revokeRole removes assignment", async () => {
+		it("revokeWorkspaceRole removes target workspace assignment", async () => {
 			const { svc, repo } = makeService();
-			const adminUser = IdentityRef.user("admin");
-			const other = IdentityRef.user("other");
-			const res = ResourceRef.create({ type: "gardening.plant", id: "p1" });
-			await repo.upsertRoleAssignment({ subjectRef: adminUser, resourceRef: res, role: "admin" });
-			await repo.upsertRoleAssignment({ subjectRef: other, resourceRef: res, role: "viewer" });
-			const ctx: UseCaseContext = {
-				actorRef: adminUser,
-				workspaceRef: defaultWorkspaceRef(),
-			};
-			await svc.revokeRole(ctx, { subjectRef: other, resourceRef: res, role: "viewer" });
-			const d = await svc.evaluateAccess({ actorRef: other, action: "read", resourceRef: res });
-			expect(d.allowed).toBe(false);
-		});
-	});
-
-	describe("bootstrapResourceAdminForActor", () => {
-		it("is idempotent via upsert", async () => {
-			const { svc, repo } = makeService();
-			const actor = IdentityRef.user("u1");
-			const ctx: UseCaseContext = {
-				actorRef: actor,
-				workspaceRef: defaultWorkspaceRef(),
-			};
-			const res = ResourceRef.create({ type: "gardening.plant", id: "p1" });
-			await svc.bootstrapResourceAdminForActor(ctx, res);
-			await svc.bootstrapResourceAdminForActor(ctx, res);
-			const rows = await repo.listAssignmentsForSubject({ subjectRef: actor });
-			expect(rows.items.filter((r) => r.resourceRef.id === "p1" && r.role === "admin")).toHaveLength(1);
-		});
-	});
-
-	describe("subject expansion", () => {
-		it("throws AccessSubjectNotResolvedApplicationError when expansion returns no subjects", async () => {
-			const c = createAccessControlTestContainer({
-				subjectExpansion: { expandSubjects: async () => [] },
+			const adminUser = SubjectVO.user("admin");
+			const other = SubjectVO.user("other");
+			const scope = WorkspaceVO.user("admin");
+			await repo.upsertWorkspaceRoleAssignment({
+				subjectKey: adminUser.toKey(),
+				workspaceKey: scope.toKey(),
+				role: "admin",
 			});
-			const svc = c.resolve(AccessControlApplicationService);
+			await repo.upsertWorkspaceRoleAssignment({
+				subjectKey: other.toKey(),
+				workspaceKey: scope.toKey(),
+				role: "viewer",
+			});
+			await svc.revokeWorkspaceRole({
+				actorSubject: adminUser,
+				targetSubject: other,
+				activeWorkspaceScope: scope,
+				role: "viewer",
+			});
 			await expect(
-				svc.evaluateAccess({
-					actorRef: IdentityRef.user("u1"),
+				svc.assertCanPerformActionOnWorkspace({
+					actorSubject: other,
+					activeWorkspaceScope: scope,
 					action: "read",
-					resourceRef: ResourceRef.create({ type: "gardening.plant", id: "p1" }),
 				}),
-			).rejects.toBeInstanceOf(AccessSubjectNotResolvedApplicationError);
-		});
-	});
-
-	describe("static list helpers", () => {
-		it("filterItemsByReadableMask returns all items when includesAllOfType", () => {
-			const items = [{ id: "a" }, { id: "b" }];
-			expect(AccessControlApplicationService.filterItemsByReadableMask(items, { exactIds: [], includesAllOfType: true })).toEqual(
-				items,
-			);
-		});
-
-		it("filterItemsByReadableMask filters by exactIds", () => {
-			const items = [{ id: "a" }, { id: "b" }, { id: "c" }];
-			const out = AccessControlApplicationService.filterItemsByReadableMask(items, {
-				exactIds: ["b"],
-				includesAllOfType: false,
-			});
-			expect(out).toEqual([{ id: "b" }]);
-		});
-
-		it("filterReadableOrGlobalShared keeps systemCatalog rows outside the mask", () => {
-			const items = [
-				{ id: "a", systemCatalog: false },
-				{ id: "b", systemCatalog: true },
-			];
-			const out = AccessControlApplicationService.filterReadableOrGlobalShared(items, {
-				exactIds: ["a"],
-				includesAllOfType: false,
-			});
-			expect(out.map((x) => x.id)).toEqual(["a", "b"]);
+			).rejects.toBeInstanceOf(AccessForbiddenApplicationError);
 		});
 	});
 });

@@ -1,12 +1,11 @@
 import type { DependencyContainer } from "tsyringe";
-
+import { WorkspaceRoleAssignmentInMemoryRepository } from "../infrastructure/adapters/repositories/access/in-memory/workspace-role-assignment.repository.in-memory";
 import { CultivarInMemoryRepository } from "../infrastructure/adapters/repositories/gardening/in-memory/cultivar.repository.in-memory";
 import { GardeningEventInMemoryRepository } from "../infrastructure/adapters/repositories/gardening/in-memory/gardening-event.repository.in-memory";
 import { LocationInMemoryRepository } from "../infrastructure/adapters/repositories/gardening/in-memory/location.repository.in-memory";
 import { PlantInMemoryRepository } from "../infrastructure/adapters/repositories/gardening/in-memory/plant.repository.in-memory";
 import { SpeciesInMemoryRepository } from "../infrastructure/adapters/repositories/gardening/in-memory/species.repository.in-memory";
 import { SpeciesCategoryInMemoryRepository } from "../infrastructure/adapters/repositories/gardening/in-memory/species-category.repository.in-memory";
-import { ResoursePermissionInMemoryRepository } from "../infrastructure/adapters/repositories/resource-access/in-memory/resourse-permission.repository.in-memory";
 import { SpatialNodeInMemoryRepository } from "../infrastructure/adapters/repositories/spatial/in-memory/spatial-node.repository.in-memory";
 import { InMemoryStore } from "../infrastructure/integrations/in-memory-database/client";
 import { TOKENS } from "./tokens";
@@ -41,7 +40,7 @@ export function registerInMemoryRepositories(c: DependencyContainer): void {
 	c.register(TOKENS.SpatialNodeRepositoryPort, {
 		useFactory: (cx) => new SpatialNodeInMemoryRepository(cx.resolve(TOKENS.InMemoryStore)),
 	});
-	c.register(TOKENS.ResoursePermissionRepositoryPort, {
-		useFactory: (cx) => new ResoursePermissionInMemoryRepository(cx.resolve(TOKENS.InMemoryStore)),
+	c.register(TOKENS.WorkspaceRoleAssignmentRepositoryPort, {
+		useFactory: (cx) => new WorkspaceRoleAssignmentInMemoryRepository(cx.resolve(TOKENS.InMemoryStore)),
 	});
 }

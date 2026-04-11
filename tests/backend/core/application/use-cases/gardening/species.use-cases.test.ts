@@ -1,4 +1,3 @@
-import { AccessForbiddenApplicationError } from "@backend/core/application/services/access-control/access-control.errors";
 import {
   SpeciesCreateUseCase,
   SpeciesDeleteUseCase,
@@ -10,7 +9,8 @@ import {
   RepositoryConflictError,
   RepositoryNotFoundError,
 } from "@backend/core/application/ports/repositories/shared/base-repository.errors";
-import { createCatalogPopulateUseCaseContext } from "#/backend/core/application/use-cases/use-case-context.defaults";
+import { bootstrapPopulateServiceAccount } from "#/backend/core/application/service-accounts";
+import { WorkspaceVO } from "@backend/core/domain/access/workspace.vo";
 import { createTestUseCaseContext } from "../create-test-use-case-context";
 import { PopulateDefaultCatalogUseCase } from "@backend/core/application/use-cases/gardening/populate-default-catalog.use-case";
 import {
@@ -142,12 +142,15 @@ describe("Species use-cases", () => {
     });
   });
 
-  it("update rejects populated catalog species for non-catalog actor", async () => {
+  it("update allows populated catalog species in simplified workspace model", async () => {
     const c = createUseCaseTestContainer();
     const session = createTestUseCaseContext();
     const populate = c.resolve(PopulateDefaultCatalogUseCase);
     await populate.execute({
-      context: createCatalogPopulateUseCaseContext(),
+      context: {
+        actorSubject: bootstrapPopulateServiceAccount,
+        activeWorkspaceScope: WorkspaceVO.globalShared(),
+      },
       dto: { catalog: tinyDefaultCatalog },
     });
 
@@ -160,15 +163,18 @@ describe("Species use-cases", () => {
       context: session,
       dto: { id: seeded!.id, characteristics: fixtureSpeciesCharacteristics({ name: "Edited seeded species" }) },
     });
-    await expect(attempted).rejects.toBeInstanceOf(AccessForbiddenApplicationError);
+    await expect(attempted).resolves.toMatchObject({ id: seeded!.id });
   });
 
-  it("delete rejects populated catalog species for non-catalog actor", async () => {
+  it("delete allows populated catalog species in simplified workspace model", async () => {
     const c = createUseCaseTestContainer();
     const session = createTestUseCaseContext();
     const populate = c.resolve(PopulateDefaultCatalogUseCase);
     await populate.execute({
-      context: createCatalogPopulateUseCaseContext(),
+      context: {
+        actorSubject: bootstrapPopulateServiceAccount,
+        activeWorkspaceScope: WorkspaceVO.globalShared(),
+      },
       dto: { catalog: tinyDefaultCatalog },
     });
 
@@ -178,6 +184,6 @@ describe("Species use-cases", () => {
 
     const del = c.resolve(SpeciesDeleteUseCase);
     const attempted = del.execute({ context: session, dto: { id: seeded!.id } });
-    await expect(attempted).rejects.toBeInstanceOf(AccessForbiddenApplicationError);
+    await expect(attempted).resolves.toEqual(seeded!.id);
   });
 });

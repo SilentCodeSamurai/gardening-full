@@ -1,3 +1,4 @@
+import { WorkspaceVO } from "@backend/core/domain/access/workspace.vo";
 import type {
 	CultivarRepositoryCreateInputDTO,
 	CultivarRepositoryCreateOutputDTO,
@@ -12,12 +13,6 @@ import type {
 	CultivarRepositoryUpdateInputDTO,
 	CultivarRepositoryUpdateOutputDTO,
 } from "../../ports/repositories/gardening/cultivar.repositort.port";
-import type { SpeciesRepositoryPort } from "../../ports/repositories/gardening/species.repository.port";
-import {
-	APPLICATION_RESOURCE_TYPES,
-	gardeningCultivarRef,
-	gardeningSpeciesRef,
-} from "../../resource-refs";
 import type { AccessControlApplicationService } from "../../services/access-control/access-control.application-service";
 import type { IUseCase } from "../shared/use-case.interface";
 import type { UseCaseRequest } from "../use-case-context";
@@ -28,7 +23,8 @@ export type CultivarGetFullByIdUseCaseOutput = CultivarRepositoryGetFullByIdOutp
 	species: SpeciesWithSystemCatalog;
 };
 
-export type CultivarCreateUseCaseInput = UseCaseRequest<CultivarRepositoryCreateInputDTO>;
+type CultivarCreatePayload = Omit<CultivarRepositoryCreateInputDTO, "workspaceKey">;
+export type CultivarCreateUseCaseInput = UseCaseRequest<CultivarCreatePayload>;
 export type CultivarCreateUseCaseOutput = CultivarRepositoryCreateOutputDTO;
 
 export class CultivarCreateUseCase implements IUseCase<CultivarCreateUseCaseInput, CultivarCreateUseCaseOutput> {
@@ -37,9 +33,13 @@ export class CultivarCreateUseCase implements IUseCase<CultivarCreateUseCaseInpu
 		private readonly cultivarRepository: CultivarRepositoryPort,
 	) {}
 	public async execute(input: CultivarCreateUseCaseInput): Promise<CultivarCreateUseCaseOutput> {
-		await this.access.assertCanCreate(input.context, input.context.workspaceRef);
-		const created = await this.cultivarRepository.create(input.dto);
-		await this.access.bootstrapResourceAdminForActor(input.context, gardeningCultivarRef(String(created.id)));
+		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "create" });
+		const created = await this.cultivarRepository.createScoped({
+			dto: {
+				...input.dto,
+				workspaceKey: input.context.activeWorkspaceScope.toKey(),
+			},
+		});
 		return created;
 	}
 }
@@ -51,18 +51,11 @@ export class CultivarGetByIdUseCase implements IUseCase<CultivarGetByIdUseCaseIn
 	constructor(
 		private readonly access: AccessControlApplicationService,
 		private readonly cultivarRepository: CultivarRepositoryPort,
-		private readonly speciesRepository: SpeciesRepositoryPort,
 	) {}
 	public async execute(input: CultivarGetByIdUseCaseInput): Promise<CultivarGetByIdUseCaseOutput> {
-		const row = await this.cultivarRepository.getById(input.dto);
-		const species = await this.speciesRepository.getById({ id: row.speciesId });
-		const [speciesManaged] = await this.access.getGlobalSharedResourceFlags([
-			gardeningSpeciesRef(String(species.id)),
-		]);
-		if (!speciesManaged) {
-			await this.access.assertCanRead(input.context, gardeningCultivarRef(String(row.id)));
-		}
-		return row;
+		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "read" });
+		const wk = input.context.activeWorkspaceScope.toKey();
+		return this.cultivarRepository.getByIdScoped({ workspaceKey: wk, dto: input.dto });
 	}
 }
 
@@ -76,14 +69,16 @@ export class CultivarGetFullByIdUseCase
 		private readonly cultivarRepository: CultivarRepositoryPort,
 	) {}
 	public async execute(input: CultivarGetFullByIdUseCaseInput): Promise<CultivarGetFullByIdUseCaseOutput> {
-		const row = await this.cultivarRepository.getFullById(input.dto);
-		const [systemCatalog] = await this.access.getGlobalSharedResourceFlags([
-			gardeningSpeciesRef(String(row.species.id)),
-		]);
-		if (!systemCatalog) {
-			await this.access.assertCanRead(input.context, gardeningCultivarRef(String(row.id)));
-		}
-		return { ...row, species: { ...row.species, systemCatalog: systemCatalog ?? false } };
+		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "read" });
+		const wk = input.context.activeWorkspaceScope.toKey();
+		const item = await this.cultivarRepository.getFullByIdScoped({ workspaceKey: wk, dto: input.dto });
+		return {
+			...item,
+			species: {
+				...item.species,
+				systemCatalog: WorkspaceVO.isGlobalSharedKey(item.species.workspaceKey),
+			},
+		};
 	}
 }
 
@@ -94,26 +89,16 @@ export class CultivarGetAllUseCase implements IUseCase<CultivarGetAllUseCaseInpu
 	constructor(
 		private readonly access: AccessControlApplicationService,
 		private readonly cultivarRepository: CultivarRepositoryPort,
-		private readonly speciesRepository: SpeciesRepositoryPort,
 	) {}
 	public async execute(input: CultivarGetAllUseCaseInput): Promise<CultivarGetAllUseCaseOutput> {
-		const mask = await this.access.getReadableResourceMask({
-			actorRef: input.context.actorRef,
-			resourceType: APPLICATION_RESOURCE_TYPES.cultivar,
+		await this.access.assertCanPerformActionOnWorkspace({
+			...input.context,
+			action: "read",
 		});
-		const all = await this.cultivarRepository.getAll();
-		if (mask.includesAllOfType) {
-			return { items: all.items };
-		}
-		const speciesItems = (await this.speciesRepository.getAll()).items;
-		const speciesFlags = await this.access.getGlobalSharedResourceFlags(
-			speciesItems.map((s) => gardeningSpeciesRef(String(s.id))),
-		);
-		const managedSpeciesIds = new Set(speciesItems.filter((_s, i) => speciesFlags[i]).map((s) => String(s.id)));
-		const allow = new Set(mask.exactIds);
-		return {
-			items: all.items.filter((c) => managedSpeciesIds.has(String(c.speciesId)) || allow.has(String(c.id))),
-		};
+		const all = await this.cultivarRepository.getAllScoped({
+			workspaceKeys: [input.context.activeWorkspaceScope.toKey(), WorkspaceVO.globalShared().toKey()],
+		});
+		return { items: all.items };
 	}
 }
 
@@ -126,9 +111,12 @@ export class CultivarUpdateUseCase implements IUseCase<CultivarUpdateUseCaseInpu
 		private readonly cultivarRepository: CultivarRepositoryPort,
 	) {}
 	public async execute(input: CultivarUpdateUseCaseInput): Promise<CultivarUpdateUseCaseOutput> {
-		await this.cultivarRepository.getById({ id: input.dto.id });
-		await this.access.assertCanUpdate(input.context, gardeningCultivarRef(String(input.dto.id)));
-		return this.cultivarRepository.update(input.dto);
+		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "update" });
+		const wk = input.context.activeWorkspaceScope.toKey();
+		return this.cultivarRepository.updateByIdScoped({
+			workspaceKey: wk,
+			dto: input.dto,
+		});
 	}
 }
 
@@ -141,8 +129,11 @@ export class CultivarDeleteUseCase implements IUseCase<CultivarDeleteUseCaseInpu
 		private readonly cultivarRepository: CultivarRepositoryPort,
 	) {}
 	public async execute(input: CultivarDeleteUseCaseInput): Promise<CultivarDeleteUseCaseOutput> {
-		await this.cultivarRepository.getById({ id: input.dto.id });
-		await this.access.assertCanDelete(input.context, gardeningCultivarRef(String(input.dto.id)));
-		return this.cultivarRepository.delete(input.dto);
+		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "delete" });
+		const wk = input.context.activeWorkspaceScope.toKey();
+		return this.cultivarRepository.deleteByIdScoped({
+			workspaceKey: wk,
+			dto: input.dto,
+		});
 	}
 }

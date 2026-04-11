@@ -1,3 +1,4 @@
+import type { WorkspaceKey } from "@backend/core/domain/access/workspace.vo";
 import type { BaseEntity, BaseEntityId } from "@backend/core/domain/shared/entities";
 
 export type SpatialNodeEntityId = BaseEntityId<string, "SpatialNode">;
@@ -21,6 +22,7 @@ export type SpatialNodeEntityRef = Readonly<{
 export type SpatialNodeKind = "frame" | "leaf";
 
 export type SpatialNodeEntity = BaseEntity<SpatialNodeEntityId> & {
+	workspaceKey: WorkspaceKey;
 	parentId: SpatialNodeEntityId | null;
 	rect: SpatialRect;
 	kind: SpatialNodeKind;

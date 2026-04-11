@@ -1,6 +1,6 @@
-import { IdentityRef } from "@backend/core/domain/resource-access";
+import { SubjectVO } from "@backend/core/domain/access/subject.vo";
 
 const testsLocalServiceAccountId = "tests-local";
 
-/** Built-in identity for backend tests and `createTestUseCaseContext`. */
-export const testsLocalServiceAccount = IdentityRef.serviceAccount(testsLocalServiceAccountId);
+/** Built-in subject for backend tests and `createTestUseCaseContext`. */
+export const testsLocalServiceAccount = SubjectVO.serviceAccount(testsLocalServiceAccountId);

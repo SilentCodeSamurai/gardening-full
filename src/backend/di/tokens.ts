@@ -8,10 +8,8 @@ export const TOKENS = {
 	LocationRepositoryPort: Symbol.for("LocationRepositoryPort"),
 	GardeningEventRepositoryPort: Symbol.for("GardeningEventRepositoryPort"),
 	SpatialNodeRepositoryPort: Symbol.for("SpatialNodeRepositoryPort"),
-	ResoursePermissionRepositoryPort: Symbol.for("ResoursePermissionRepositoryPort"),
-	SubjectExpansionResolverPort: Symbol.for("SubjectExpansionResolverPort"),
-	ResourceAccessAuditPort: Symbol.for("ResourceAccessAuditPort"),
-	GlobalSharedResourcePolicyPort: Symbol.for("GlobalSharedResourcePolicyPort"),
+	WorkspaceRoleAssignmentRepositoryPort: Symbol.for("WorkspaceRoleAssignmentRepositoryPort"),
+	AccessAuditPort: Symbol.for("AccessAuditPort"),
 } as const;
 
 export type Token = (typeof TOKENS)[keyof typeof TOKENS];

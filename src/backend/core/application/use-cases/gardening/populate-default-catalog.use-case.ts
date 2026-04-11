@@ -1,7 +1,7 @@
+import { WorkspaceVO } from "@backend/core/domain/access/workspace.vo";
 import type { SpeciesCategoryEntityId } from "@backend/core/domain/gardening/entities";
 import type { SpeciesRepositoryPort } from "../../ports/repositories/gardening/species.repository.port";
 import type { SpeciesCategoryRepositoryPort } from "../../ports/repositories/gardening/species-category.repository.port";
-import { gardeningCatalogRootRef, gardeningSpeciesCategoryRef, gardeningSpeciesRef } from "../../resource-refs";
 import type { AccessControlApplicationService } from "../../services/access-control/access-control.application-service";
 import { BaseUseCaseError } from "../shared/errors";
 import type { IUseCase } from "../shared/use-case.interface";
@@ -59,21 +59,34 @@ export class PopulateDefaultCatalogUseCase
 	public async execute(input: PopulateDefaultCatalogInput): Promise<PopulateDefaultCatalogOutput> {
 		assertUniqueCategorySlugs(input.dto.catalog.categories);
 
-		await this.access.assertCanCreate(input.context, gardeningCatalogRootRef());
+		const globalShared = WorkspaceVO.globalShared();
+		await this.access.assertCanPerformActionOnWorkspace({
+			actorSubject: input.context.actorSubject,
+			activeWorkspaceScope: globalShared,
+			action: "create",
+		});
 
-		const existing = await this.speciesCategoryRepository.getAll();
+		const catalogWorkspaceKey = globalShared.toKey();
+		const existing = await this.speciesCategoryRepository.getAllScoped({ workspaceKeys: [catalogWorkspaceKey] });
 		if (existing.items.length > 0) {
 			return { status: "skipped", reason: "catalog-not-empty" };
 		}
 
 		const slugToCategoryId = new Map<string, SpeciesCategoryEntityId>();
 
+		const createdCategories = [];
+		const createdSpecies = [];
+
 		for (const row of input.dto.catalog.categories) {
 			const { slug, ...categoryCreate } = row;
-			const created = await this.speciesCategoryRepository.create(categoryCreate);
+			const created = await this.speciesCategoryRepository.createScoped({
+				dto: {
+					...categoryCreate,
+					workspaceKey: catalogWorkspaceKey,
+				},
+			});
+			createdCategories.push(created);
 			slugToCategoryId.set(slug, created.id);
-			const categoryRef = gardeningSpeciesCategoryRef(String(created.id));
-			await this.access.bootstrapResourceAdminForActor(input.context, categoryRef);
 		}
 
 		for (const row of input.dto.catalog.species) {
@@ -85,18 +98,20 @@ export class PopulateDefaultCatalogUseCase
 			}
 			const { categorySlug, ...speciesCreate } = row;
 			void categorySlug;
-			const species = await this.speciesRepository.create({
-				categoryId,
-				...speciesCreate,
+			const created = await this.speciesRepository.createScoped({
+				dto: {
+					categoryId,
+					...speciesCreate,
+					workspaceKey: catalogWorkspaceKey,
+				},
 			});
-			const speciesRef = gardeningSpeciesRef(String(species.id));
-			await this.access.bootstrapResourceAdminForActor(input.context, speciesRef);
+			createdSpecies.push(created);
 		}
 
 		return {
 			status: "populated",
-			createdCategories: input.dto.catalog.categories.length,
-			createdSpecies: input.dto.catalog.species.length,
+			createdCategories: createdCategories.length,
+			createdSpecies: createdSpecies.length,
 		};
 	}
 }

@@ -1,3 +1,4 @@
+import type { WorkspaceRoleAssignmentEntityId } from "@backend/core/domain/access/workspace-role-assignment.entity";
 import type {
 	CultivarEntityId,
 	GardeningEventEntityId,
@@ -6,7 +7,6 @@ import type {
 	SpeciesCategoryEntityId,
 	SpeciesEntityId,
 } from "@backend/core/domain/gardening/entities";
-import type { ResoursePermissionEntityId } from "@backend/core/domain/resource-access";
 import type { SpatialNodeEntityId } from "@backend/core/domain/spatial/entities";
 
 export function newRawId(): string {
@@ -41,8 +41,8 @@ export function spatialNodeId(id: string = newRawId()): SpatialNodeEntityId {
 	return id as SpatialNodeEntityId;
 }
 
-export function resoursePermissionId(id: string = newRawId()): ResoursePermissionEntityId {
-	return id as ResoursePermissionEntityId;
+export function workspaceRoleAssignmentId(id: string = newRawId()): WorkspaceRoleAssignmentEntityId {
+	return id as WorkspaceRoleAssignmentEntityId;
 }
 
 export function idKey(id: unknown): string {

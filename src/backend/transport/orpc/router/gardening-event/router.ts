@@ -12,7 +12,7 @@ import {
 } from "@backend/core/application/use-cases/gardening/gardening-event.use-cases";
 
 import { createUseCaseContextFromOrpc } from "../../create-use-case-context";
-import { procedure } from "../../orpc-procedure";
+import { authenticatedProcedure } from "../../orpc-procedure";
 import { resolveAndExecute } from "../../shared/resolve-use-case";
 import {
 	CreateGardeningEventForLocationInputSchema,
@@ -27,10 +27,10 @@ import {
 } from "./schemas";
 
 export const gardeningEventRouter = {
-	getAll: procedure.handler(({ context }) =>
+	getAll: authenticatedProcedure.handler(({ context }) =>
 		resolveAndExecute(GardeningEventGetAllUseCase, { context: createUseCaseContextFromOrpc(context) }),
 	),
-	getById: procedure
+	getById: authenticatedProcedure
 		.input(GetGardeningEventByIdInputSchema)
 		.handler(({ input, context }) =>
 			resolveAndExecute(GardeningEventGetByIdUseCase, {
@@ -38,12 +38,12 @@ export const gardeningEventRouter = {
 				dto: { id: input.id },
 			}),
 		),
-	update: procedure
+	update: authenticatedProcedure
 		.input(UpdateGardeningEventInputSchema)
 		.handler(({ input, context }) =>
 			resolveAndExecute(GardeningEventUpdateUseCase, { context: createUseCaseContextFromOrpc(context), dto: input }),
 		),
-	delete: procedure
+	delete: authenticatedProcedure
 		.input(DeleteGardeningEventInputSchema)
 		.handler(({ input, context }) =>
 			resolveAndExecute(GardeningEventDeleteUseCase, {
@@ -51,12 +51,12 @@ export const gardeningEventRouter = {
 				dto: { id: input.id },
 			}),
 		),
-	create: procedure
+	create: authenticatedProcedure
 		.input(CreateGardeningEventInputSchema)
 		.handler(({ input, context }) =>
 			resolveAndExecute(GardeningEventCreateUseCase, { context: createUseCaseContextFromOrpc(context), dto: input }),
 		),
-	createForLocation: procedure
+	createForLocation: authenticatedProcedure
 		.input(CreateGardeningEventForLocationInputSchema)
 		.handler(({ input, context }) =>
 			resolveAndExecute(GardeningEventCreateForLocationUseCase, {
@@ -64,7 +64,7 @@ export const gardeningEventRouter = {
 				dto: input,
 			}),
 		),
-	createForPlantList: procedure
+	createForPlantList: authenticatedProcedure
 		.input(CreateGardeningEventForPlantListInputSchema)
 		.handler(({ input, context }) =>
 			resolveAndExecute(GardeningEventCreateForPlantListUseCase, {
@@ -72,7 +72,7 @@ export const gardeningEventRouter = {
 				dto: input,
 			}),
 		),
-	getForPlant: procedure
+	getForPlant: authenticatedProcedure
 		.input(GetGardeningEventForPlantInputSchema)
 		.handler(({ input, context }) =>
 			resolveAndExecute(GardeningEventGetForPlantUseCase, {
@@ -80,7 +80,7 @@ export const gardeningEventRouter = {
 				dto: { plantId: input.plantId },
 			}),
 		),
-	getForLocation: procedure
+	getForLocation: authenticatedProcedure
 		.input(GetGardeningEventForLocationInputSchema)
 		.handler(({ input, context }) =>
 			resolveAndExecute(GardeningEventGetForLocationUseCase, {
@@ -88,7 +88,7 @@ export const gardeningEventRouter = {
 				dto: { locationId: input.locationId },
 			}),
 		),
-	getBindingsForEvent: procedure
+	getBindingsForEvent: authenticatedProcedure
 		.input(GetGardeningEventBindingsInputSchema)
 		.handler(({ input, context }) =>
 			resolveAndExecute(GardeningEventGetBindingsForEventUseCase, {

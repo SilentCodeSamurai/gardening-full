@@ -1,3 +1,4 @@
+import type { WorkspaceRoleAssignmentEntity } from "@backend/core/domain/access/workspace-role-assignment.entity";
 import type {
 	CultivarEntity,
 	GardeningEventEntity,
@@ -9,9 +10,9 @@ import type {
 	SpeciesCategoryEntity,
 	SpeciesEntity,
 } from "@backend/core/domain/gardening/entities";
-import type { ResoursePermissionEntity } from "@backend/core/domain/resource-access";
 import type { SpatialNodeEntity } from "@backend/core/domain/spatial/entities";
-
+import type { SubjectKey } from "#/backend/core/domain/access/subject.vo";
+import type { WorkspaceKey } from "#/backend/core/domain/access/workspace.vo";
 import { idKey, locationId, plantId } from "../shared/database-ids";
 
 /**
@@ -26,7 +27,7 @@ export class InMemoryStore {
 	readonly locations = new Map<string, LocationEntity>();
 	readonly spatialNodes = new Map<string, SpatialNodeEntity>();
 	readonly gardeningEvents = new Map<string, GardeningEventEntity>();
-	readonly resoursePermissions = new Map<string, ResoursePermissionEntity>();
+	readonly workspaceRoleAssignments = new Map<`${SubjectKey}|${WorkspaceKey}`, WorkspaceRoleAssignmentEntity>();
 
 	private readonly eventToPlants = new Map<string, Set<string>>();
 	readonly plantToEvents = new Map<string, Set<string>>();

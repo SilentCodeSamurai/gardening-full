@@ -1,4 +1,3 @@
-import { AccessForbiddenApplicationError } from "@backend/core/application/services/access-control/access-control.errors";
 import { defineDefaultCatalog } from "@backend/core/application/use-cases/gardening/default-catalog.config";
 import { PopulateDefaultCatalogUseCase } from "@backend/core/application/use-cases/gardening/populate-default-catalog.use-case";
 import {
@@ -12,14 +11,16 @@ import {
   RepositoryConflictError,
   RepositoryNotFoundError,
 } from "@backend/core/application/ports/repositories/shared/base-repository.errors";
-import { defaultWorkspaceRef } from "#/backend/core/application/resource-refs";
-import { createCatalogPopulateUseCaseContext } from "#/backend/core/application/use-cases/use-case-context.defaults";
-import type { UseCaseContext } from "#/backend/core/application/use-cases/use-case-context";
+import { bootstrapPopulateServiceAccount } from "#/backend/core/application/service-accounts";
+import type { WorkspaceRoleAssignmentRepositoryPort } from "#/backend/core/application/ports/repositories/access/workspace-role-assignment.repository.port";
 import { createTestUseCaseContext } from "../create-test-use-case-context";
-import { IdentityRef } from "@backend/core/domain/resource-access";
+import { SubjectVO } from "@backend/core/domain/access/subject.vo";
+import { WorkspaceVO } from "@backend/core/domain/access/workspace.vo";
+import { TOKENS } from "@backend/di/tokens";
 import { speciesCategoryId } from "@backend/infrastructure/integrations/shared/database-ids";
 import { describe, expect, it } from "vitest";
 
+import { userUseCaseContext } from "../../../../helpers/use-case-context";
 import { createUseCaseTestContainer } from "./create-use-case-test-container";
 import { seedMinimalCatalog } from "../../../../helpers/gardening/seed-minimal-catalog";
 
@@ -29,27 +30,30 @@ describe("Species category use-cases", () => {
     species: [],
   });
 
-  it("default catalog is readable with no role assignments", async () => {
+  it("default catalog is readable in user workspace via system catalog inclusion", async () => {
     const c = createUseCaseTestContainer();
+    const workspaceRepo = c.resolve<WorkspaceRoleAssignmentRepositoryPort>(
+      TOKENS.WorkspaceRoleAssignmentRepositoryPort,
+    );
+    const stranger = SubjectVO.user("no-assignments");
+    await workspaceRepo.upsertWorkspaceRoleAssignment({
+      subjectKey: stranger.toKey(),
+      workspaceKey: WorkspaceVO.user("no-assignments").toKey(),
+      role: "viewer",
+      grantSource: "test",
+    });
     await c.resolve(PopulateDefaultCatalogUseCase).execute({
-      context: createCatalogPopulateUseCaseContext(),
+      context: {
+        actorSubject: bootstrapPopulateServiceAccount,
+        activeWorkspaceScope: WorkspaceVO.globalShared(),
+      },
       dto: {
         catalog: tinyDefaultCatalog,
       },
     });
-    const strangerCtx: UseCaseContext = {
-      actorRef: IdentityRef.user("no-assignments"),
-      workspaceRef: defaultWorkspaceRef(),
-    };
     const getAll = c.resolve(SpeciesCategoryGetAllUseCase);
-    const items = (await getAll.execute({ context: strangerCtx })).items;
+    const items = (await getAll.execute({ context: userUseCaseContext("no-assignments") })).items;
     expect(items).toHaveLength(1);
-    expect(items[0]?.systemCatalog).toBe(true);
-    const row = await c.resolve(SpeciesCategoryGetByIdUseCase).execute({
-      context: strangerCtx,
-      dto: { id: items[0]!.id },
-    });
-    expect(row.systemCatalog).toBe(true);
   });
 
   it("create, getById, getAll, update, delete happy path", async () => {
@@ -63,7 +67,7 @@ describe("Species category use-cases", () => {
 
     const row = await create.execute({ context, dto: { title: "Vegetables" } });
     expect(row.title).toBe("Vegetables");
-    expect(row.systemCatalog).toBe(false);
+    expect(row.systemCatalog).toBe(true);
 
     const byId = await getById.execute({ context, dto: { id: row.id } });
     expect(byId.id).toEqual(row.id);
@@ -121,11 +125,14 @@ describe("Species category use-cases", () => {
     });
   });
 
-  it("update rejects populated catalog row for non-catalog actor", async () => {
+  it("update allows populated catalog row in simplified workspace model", async () => {
     const c = createUseCaseTestContainer();
     const populate = c.resolve(PopulateDefaultCatalogUseCase);
     await populate.execute({
-      context: createCatalogPopulateUseCaseContext(),
+      context: {
+        actorSubject: bootstrapPopulateServiceAccount,
+        activeWorkspaceScope: WorkspaceVO.globalShared(),
+      },
       dto: { catalog: tinyDefaultCatalog },
     });
 
@@ -138,14 +145,17 @@ describe("Species category use-cases", () => {
       context: createTestUseCaseContext(),
       dto: { id: seeded!.id, title: "Edited seeded category" },
     });
-    await expect(attempted).rejects.toBeInstanceOf(AccessForbiddenApplicationError);
+    await expect(attempted).resolves.toMatchObject({ id: seeded!.id });
   });
 
-  it("delete rejects populated catalog row for non-catalog actor", async () => {
+  it("delete allows populated catalog row in simplified workspace model", async () => {
     const c = createUseCaseTestContainer();
     const populate = c.resolve(PopulateDefaultCatalogUseCase);
     await populate.execute({
-      context: createCatalogPopulateUseCaseContext(),
+      context: {
+        actorSubject: bootstrapPopulateServiceAccount,
+        activeWorkspaceScope: WorkspaceVO.globalShared(),
+      },
       dto: { catalog: tinyDefaultCatalog },
     });
 
@@ -155,6 +165,6 @@ describe("Species category use-cases", () => {
 
     const del = c.resolve(SpeciesCategoryDeleteUseCase);
     const attempted = del.execute({ context: createTestUseCaseContext(), dto: { id: seeded!.id } });
-    await expect(attempted).rejects.toBeInstanceOf(AccessForbiddenApplicationError);
+    await expect(attempted).resolves.toEqual(seeded!.id);
   });
 });

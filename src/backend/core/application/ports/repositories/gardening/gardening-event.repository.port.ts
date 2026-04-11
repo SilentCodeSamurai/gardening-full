@@ -5,7 +5,12 @@ import type {
 	PlantEntityId,
 } from "@backend/core/domain/gardening/entities";
 import type { ItemsContainer } from "@backend/shared/types";
-import type { BaseCRUDRepositoryPort } from "../shared/base.crud-repository.port";
+import type {
+	BaseScopedCRUDRepositoryPort,
+	NoScopedInnerRepositoryDto,
+	RepositoryMultiScopedInput,
+	RepositorySingleScopedInput,
+} from "../shared/base.scoped-crud-repository-port";
 import type {
 	BaseRepositoryCreateInputDTO,
 	BaseRepositoryIdActionInputDTO,
@@ -18,8 +23,6 @@ export type GardeningEventRepositoryCreateOutputDTO = GardeningEventEntity;
 export type GardeningEventRepositoryGetByIdInputDTO = BaseRepositoryIdActionInputDTO<GardeningEventEntity>;
 export type GardeningEventRepositoryGetByIdOutputDTO = GardeningEventEntity;
 
-// biome-ignore lint/suspicious/noConfusingVoidType: <This dto is a type parameter used as generic parameter for the BaseCRUDRepositoryPort so it's declared separately for better readability>
-export type GardeningEventRepositoryGetAllInputDTO = void;
 export type GardeningEventRepositoryGetAllOutputDTO = ItemsContainer<GardeningEventEntity>;
 
 export type GardeningEventRepositoryUpdateInputDTO = BaseRepositoryUpdateInputDTO<GardeningEventEntity>;
@@ -55,31 +58,31 @@ export type GardeningEventRepositoryGetBindingsForEventOutputDTO = {
 };
 
 export interface GardeningEventRepositoryPort
-	extends BaseCRUDRepositoryPort<
+	extends BaseScopedCRUDRepositoryPort<
 		GardeningEventRepositoryCreateInputDTO,
 		GardeningEventRepositoryCreateOutputDTO,
+		NoScopedInnerRepositoryDto,
+		GardeningEventRepositoryGetAllOutputDTO,
 		GardeningEventRepositoryGetByIdInputDTO,
 		GardeningEventRepositoryGetByIdOutputDTO,
-		GardeningEventRepositoryGetAllInputDTO,
-		GardeningEventRepositoryGetAllOutputDTO,
 		GardeningEventRepositoryUpdateInputDTO,
 		GardeningEventRepositoryUpdateOutputDTO,
 		GardeningEventRepositoryDeleteInputDTO,
 		GardeningEventRepositoryDeleteOutputDTO
 	> {
-	getForPlant(
-		input: GardeningEventRepositoryGetForPlantInputDTO,
+	getForPlantScoped(
+		input: RepositoryMultiScopedInput<GardeningEventRepositoryGetForPlantInputDTO>,
 	): Promise<GardeningEventRepositoryGetForPlantOutputDTO>;
-	getForLocation(
-		input: GardeningEventRepositoryGetForLocationInputDTO,
+	getForLocationScoped(
+		input: RepositoryMultiScopedInput<GardeningEventRepositoryGetForLocationInputDTO>,
 	): Promise<GardeningEventRepositoryGetForLocationOutputDTO>;
-	bindToPlant(
-		input: GardeningEventRepositoryBindToPlantInputDTO,
+	bindToPlantScoped(
+		input: RepositorySingleScopedInput<GardeningEventRepositoryBindToPlantInputDTO>,
 	): Promise<GardeningEventRepositoryBindToPlantOutputDTO>;
-	bindToLocation(
-		input: GardeningEventRepositoryBindToLocationInputDTO,
+	bindToLocationScoped(
+		input: RepositorySingleScopedInput<GardeningEventRepositoryBindToLocationInputDTO>,
 	): Promise<GardeningEventRepositoryBindToLocationOutputDTO>;
-	getBindingsForEvent(
-		input: GardeningEventRepositoryGetBindingsForEventInputDTO,
+	getBindingsForEventScoped(
+		input: RepositorySingleScopedInput<GardeningEventRepositoryGetBindingsForEventInputDTO>,
 	): Promise<GardeningEventRepositoryGetBindingsForEventOutputDTO>;
 }
