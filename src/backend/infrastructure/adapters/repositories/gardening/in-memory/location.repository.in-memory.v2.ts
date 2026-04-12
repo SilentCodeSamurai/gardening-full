@@ -14,7 +14,7 @@ import type {
 	LocationRepositoryV2UpdatePatchDTO,
 } from "@backend/core/application/ports/repositories/gardening/location.repository.port.v2";
 import { BaseRepositoryErrors } from "@backend/core/application/ports/repositories/shared/base-repository.errors";
-import type { LocationEntity } from "@backend/core/domain/gardening/entities.v2";
+import type { LocationEntity } from "@backend/core/domain/gardening/entities";
 import {
 	findFirstRowMatchingAnyClause,
 	findRowsMatchingAnyClause,
@@ -31,9 +31,8 @@ export class LocationInMemoryRepositoryV2 extends BaseRepositoryErrors implement
 		const now = new Date();
 		const id = locationId();
 		const row: LocationEntity = {
+			...dto,
 			id,
-			name: dto.name,
-			presentation: dto.presentation,
 			createdAt: now,
 			updatedAt: now,
 		};
@@ -44,6 +43,7 @@ export class LocationInMemoryRepositoryV2 extends BaseRepositoryErrors implement
 	private patchStored(existing: LocationEntity, dto: LocationRepositoryV2UpdatePatchDTO): LocationEntity {
 		return {
 			...existing,
+			workspaceKey: dto.workspaceKey !== undefined ? dto.workspaceKey : existing.workspaceKey,
 			name: dto.name !== undefined ? dto.name : existing.name,
 			presentation: dto.presentation !== undefined ? dto.presentation : existing.presentation,
 			updatedAt: new Date(),

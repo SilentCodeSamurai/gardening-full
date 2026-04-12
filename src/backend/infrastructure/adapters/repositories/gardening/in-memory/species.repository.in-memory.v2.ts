@@ -14,7 +14,8 @@ import type {
 	SpeciesRepositoryV2UpdatePatchDTO,
 } from "@backend/core/application/ports/repositories/gardening/species.repository.port.v2";
 import { BaseRepositoryErrors } from "@backend/core/application/ports/repositories/shared/base-repository.errors";
-import type { SpeciesEntity } from "@backend/core/domain/gardening/entities.v2";
+import type { SpeciesEntity } from "@backend/core/domain/gardening/entities";
+import { workspaceKeysEqual } from "@backend/infrastructure/adapters/repositories/shared/workspace-key";
 import {
 	findFirstRowMatchingAnyClause,
 	findRowsMatchingAnyClause,
@@ -28,16 +29,22 @@ export class SpeciesInMemoryRepositoryV2 extends BaseRepositoryErrors implements
 	}
 
 	private insertRow(dto: SpeciesRepositoryV2CreateInputDTO): SpeciesRepositoryV2CreateOutputDTO {
-		if (!this.store.speciesCategories.has(idKey(dto.categoryId))) {
+		const cat = this.store.speciesCategories.get(idKey(dto.categoryId));
+		if (!cat) {
 			this.throwNotFoundError("SpeciesCategory", dto.categoryId);
+		}
+		if (!workspaceKeysEqual(cat.workspaceKey, dto.workspaceKey)) {
+			this.throwValidationError({
+				operation: "create",
+				validationCode: "category-workspace-mismatch",
+				context: { categoryId: dto.categoryId, workspaceKey: dto.workspaceKey },
+			});
 		}
 		const now = new Date();
 		const id = speciesId();
 		const row: SpeciesEntity = {
+			...dto,
 			id,
-			categoryId: dto.categoryId,
-			characteristics: dto.characteristics,
-			presentation: dto.presentation,
 			createdAt: now,
 			updatedAt: now,
 		};
@@ -46,14 +53,28 @@ export class SpeciesInMemoryRepositoryV2 extends BaseRepositoryErrors implements
 	}
 
 	private patchStored(existing: SpeciesEntity, dto: SpeciesRepositoryV2UpdatePatchDTO): SpeciesEntity {
+		const nextWorkspaceKey = dto.workspaceKey !== undefined ? dto.workspaceKey : existing.workspaceKey;
 		const nextCategoryId = dto.categoryId !== undefined ? dto.categoryId : existing.categoryId;
 		return {
 			...existing,
+			workspaceKey: nextWorkspaceKey,
 			categoryId: nextCategoryId,
 			characteristics: dto.characteristics !== undefined ? dto.characteristics : existing.characteristics,
 			presentation: dto.presentation !== undefined ? dto.presentation : existing.presentation,
 			updatedAt: new Date(),
 		};
+	}
+
+	private assertCategoryMatchesWorkspace(categoryId: SpeciesEntity["categoryId"], workspaceKey: SpeciesEntity["workspaceKey"]): void {
+		const cat = this.store.speciesCategories.get(idKey(categoryId));
+		if (!cat) this.throwNotFoundError("SpeciesCategory", categoryId);
+		if (!workspaceKeysEqual(cat.workspaceKey, workspaceKey)) {
+			this.throwValidationError({
+				operation: "update",
+				validationCode: "category-workspace-mismatch",
+				context: { categoryId, workspaceKey },
+			});
+		}
 	}
 
 	async createOne(dto: SpeciesRepositoryV2CreateInputDTO): Promise<SpeciesRepositoryV2CreateOutputDTO> {
@@ -94,10 +115,9 @@ export class SpeciesInMemoryRepositoryV2 extends BaseRepositoryErrors implements
 	}): Promise<SpeciesRepositoryV2UpdateOutputDTO> {
 		const row = findFirstRowMatchingAnyClause(this.store.species.values(), input.filters);
 		if (!row) this.throwNotFoundError("Species", input.filters);
-		if (input.dto.categoryId !== undefined && !this.store.speciesCategories.has(idKey(input.dto.categoryId))) {
-			this.throwNotFoundError("SpeciesCategory", input.dto.categoryId);
-		}
-		const updated = this.patchStored(row, input.dto);
+		const patchedPreview = this.patchStored(row, input.dto);
+		this.assertCategoryMatchesWorkspace(patchedPreview.categoryId, patchedPreview.workspaceKey);
+		const updated = patchedPreview;
 		this.store.species.set(idKey(updated.id), updated);
 		return updated;
 	}
@@ -106,13 +126,11 @@ export class SpeciesInMemoryRepositoryV2 extends BaseRepositoryErrors implements
 		filters: readonly SpeciesRepositoryV2FilterClause[];
 		dto: SpeciesRepositoryV2UpdatePatchDTO;
 	}): Promise<SpeciesRepositoryV2UpdateManyOutputDTO> {
-		if (input.dto.categoryId !== undefined && !this.store.speciesCategories.has(idKey(input.dto.categoryId))) {
-			this.throwNotFoundError("SpeciesCategory", input.dto.categoryId);
-		}
 		const rows = findRowsMatchingAnyClause([...this.store.species.values()], input.filters);
 		let count = 0;
 		for (const row of rows) {
 			const updated = this.patchStored(row, input.dto);
+			this.assertCategoryMatchesWorkspace(updated.categoryId, updated.workspaceKey);
 			this.store.species.set(idKey(updated.id), updated);
 			count += 1;
 		}
@@ -126,7 +144,7 @@ export class SpeciesInMemoryRepositoryV2 extends BaseRepositoryErrors implements
 		if (!row) this.throwNotFoundError("Species", input.filters);
 		const key = idKey(row.id);
 		for (const c of this.store.cultivars.values()) {
-			if (idKey(c.speciesId) === key) {
+			if (idKey(c.speciesId) === key && workspaceKeysEqual(c.workspaceKey, row.workspaceKey)) {
 				this.throwConflictError({
 					operation: "delete",
 					reason: "cultivar-reference-species",
@@ -150,7 +168,9 @@ export class SpeciesInMemoryRepositoryV2 extends BaseRepositoryErrors implements
 		let count = 0;
 		for (const row of rows) {
 			const key = idKey(row.id);
-			const blocked = [...this.store.cultivars.values()].some((c) => idKey(c.speciesId) === key);
+			const blocked = [...this.store.cultivars.values()].some(
+				(c) => idKey(c.speciesId) === key && workspaceKeysEqual(c.workspaceKey, row.workspaceKey),
+			);
 			if (blocked) continue;
 			if (this.store.species.delete(key)) count += 1;
 		}

@@ -9,15 +9,15 @@ import type {
 	PlantEntityId,
 	SpeciesCategoryEntity,
 	SpeciesEntity,
-} from "@backend/core/domain/gardening/entities.v2";
-import type { SpatialNodeEntity } from "@backend/core/domain/spatial/entities.v2";
+} from "@backend/core/domain/gardening/entities";
+import type { SpatialNodeEntity } from "@backend/core/domain/spatial/entities";
 import type { WorkspaceRoleAssignmentEntity } from "#/backend/core/domain/access/entities";
 import type { SubjectKey } from "#/backend/core/domain/access/subject.vo";
 import { idKey, locationId, plantId } from "../shared/database-ids";
 
 /**
- * In-memory persistence (v2): entity maps store {@link entities.v2} rows only — no workspace partition on gardening/spatial rows.
- * Tenant/workspace scope is enforced outside repositories (e.g. separate store per scope or workspace-item links).
+ * In-memory persistence (v2): entity maps store v1-shaped gardening/spatial rows (each row carries {@link WorkspaceKey}).
+ * Repositories validate FK/workspace alignment; callers scope reads with `workspaceKey` in filter clauses where needed.
  */
 export class InMemoryStoreV2 {
 	/** Workspace↔item link keys (see access in-memory workspace-item repository). */

@@ -17,7 +17,8 @@ import type {
 	GardeningEventRepositoryV2UpdatePatchDTO,
 } from "@backend/core/application/ports/repositories/gardening/gardening-event.repository.port.v2";
 import { BaseRepositoryErrors } from "@backend/core/application/ports/repositories/shared/base-repository.errors";
-import type { GardeningEventEntity, LocationEntityId, PlantEntityId } from "@backend/core/domain/gardening/entities.v2";
+import type { GardeningEventEntity, LocationEntityId, PlantEntityId } from "@backend/core/domain/gardening/entities";
+import { workspaceKeysEqual } from "@backend/infrastructure/adapters/repositories/shared/workspace-key";
 import {
 	findFirstRowMatchingAnyClause,
 	findRowsMatchingAnyClause,
@@ -34,8 +35,8 @@ export class GardeningEventInMemoryRepositoryV2 extends BaseRepositoryErrors imp
 		const now = new Date();
 		const id = gardeningEventId();
 		const row: GardeningEventEntity = {
+			...dto,
 			id,
-			action: dto.action,
 			createdAt: now,
 			updatedAt: now,
 		};
@@ -49,6 +50,7 @@ export class GardeningEventInMemoryRepositoryV2 extends BaseRepositoryErrors imp
 	): GardeningEventEntity {
 		return {
 			...existing,
+			workspaceKey: dto.workspaceKey !== undefined ? dto.workspaceKey : existing.workspaceKey,
 			action: dto.action !== undefined ? dto.action : existing.action,
 			updatedAt: new Date(),
 		};
@@ -149,6 +151,7 @@ export class GardeningEventInMemoryRepositoryV2 extends BaseRepositoryErrors imp
 			for (const eid of eventIds) {
 				const row = this.store.gardeningEvents.get(eid);
 				if (!row) continue;
+				if (!workspaceKeysEqual(row.workspaceKey, clause.workspaceKey)) continue;
 				const k = idKey(row.id);
 				if (seen.has(k)) continue;
 				seen.add(k);
@@ -169,6 +172,7 @@ export class GardeningEventInMemoryRepositoryV2 extends BaseRepositoryErrors imp
 			for (const eid of eventIds) {
 				const row = this.store.gardeningEvents.get(eid);
 				if (!row) continue;
+				if (!workspaceKeysEqual(row.workspaceKey, clause.workspaceKey)) continue;
 				const k = idKey(row.id);
 				if (seen.has(k)) continue;
 				seen.add(k);
@@ -184,7 +188,15 @@ export class GardeningEventInMemoryRepositoryV2 extends BaseRepositoryErrors imp
 		plantId: PlantEntityId;
 	}): Promise<GardeningEventEntity> {
 		const row = this.resolveStoredFromFilters(input.filters);
-		if (!this.store.plants.has(idKey(input.plantId))) this.throwNotFoundError("Plant", input.plantId);
+		const plant = this.store.plants.get(idKey(input.plantId));
+		if (!plant) this.throwNotFoundError("Plant", input.plantId);
+		if (!workspaceKeysEqual(plant.workspaceKey, row.workspaceKey)) {
+			this.throwValidationError({
+				operation: "bindToPlant",
+				validationCode: "plant-workspace-mismatch",
+				context: { plantId: input.plantId, eventWorkspaceKey: row.workspaceKey },
+			});
+		}
 		this.store.linkEventToPlant(row.id, input.plantId);
 		return row;
 	}
@@ -194,7 +206,15 @@ export class GardeningEventInMemoryRepositoryV2 extends BaseRepositoryErrors imp
 		locationId: LocationEntityId;
 	}): Promise<GardeningEventEntity> {
 		const row = this.resolveStoredFromFilters(input.filters);
-		if (!this.store.locations.has(idKey(input.locationId))) this.throwNotFoundError("Location", input.locationId);
+		const location = this.store.locations.get(idKey(input.locationId));
+		if (!location) this.throwNotFoundError("Location", input.locationId);
+		if (!workspaceKeysEqual(location.workspaceKey, row.workspaceKey)) {
+			this.throwValidationError({
+				operation: "bindToLocation",
+				validationCode: "location-workspace-mismatch",
+				context: { locationId: input.locationId, eventWorkspaceKey: row.workspaceKey },
+			});
+		}
 		this.store.linkEventToLocation(row.id, input.locationId);
 		return row;
 	}

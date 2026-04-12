@@ -1,9 +1,8 @@
 import type {
 	SpatialNodeEntity,
 	SpatialNodeEntityId,
-	SpatialNodeEntityRef,
 	SpatialNodeTreeNode,
-} from "@backend/core/domain/spatial/entities.v2";
+} from "@backend/core/domain/spatial/entities";
 import type { ItemsContainer } from "@backend/shared/types";
 import type {
 	RepositoryCreateManyPort,
@@ -18,13 +17,9 @@ import type {
 	RepositoryUpdatePatchDto,
 	WithRequiredRepositoryFilters,
 } from "../shared/repository-operation-ports";
+import type { BaseRepositoryCreateInputDTO } from "../shared/types";
 
-export type SpatialNodeRepositoryV2CreateInputDTO = {
-	parentId: SpatialNodeEntityId | null;
-	rect: SpatialNodeEntity["rect"];
-	kind: SpatialNodeEntity["kind"];
-	ref: SpatialNodeEntityRef;
-};
+export type SpatialNodeRepositoryV2CreateInputDTO = BaseRepositoryCreateInputDTO<SpatialNodeEntity>;
 export type SpatialNodeRepositoryV2CreateOutputDTO = SpatialNodeEntity;
 
 export type SpatialNodeRepositoryV2CreateManyInputDTO = {
@@ -50,24 +45,14 @@ export type SpatialNodeRepositoryV2DeleteOutputDTO = SpatialNodeEntityId;
 
 export type SpatialNodeRepositoryV2DeleteManyOutputDTO = { count: number };
 
-/** OR branch to resolve a node by domain `ref` (within adapter scope). */
-export type SpatialNodeRepositoryV2GetByRefFilterClause = {
-	ref: SpatialNodeEntityRef;
-};
+/** OR branch to resolve a node by domain `ref` scoped to a workspace. */
+export type SpatialNodeRepositoryV2GetByRefFilterClause = Pick<SpatialNodeEntity, "ref" | "workspaceKey">;
 
 /** Restore payload (includes `id` — not a pure filter-only API). */
-export type SpatialNodeRepositoryV2RestoreInputDTO = {
-	id: SpatialNodeEntityId;
-	parentId: SpatialNodeEntityId | null;
-	rect: SpatialNodeEntity["rect"];
-	kind: SpatialNodeEntity["kind"];
-	ref: SpatialNodeEntityRef;
-};
+export type SpatialNodeRepositoryV2RestoreInputDTO = { id: SpatialNodeEntityId } & BaseRepositoryCreateInputDTO<SpatialNodeEntity>;
 
-/** OR branch: root id for tree materialization. */
-export type SpatialNodeRepositoryV2TreeRootFilterClause = {
-	id: SpatialNodeEntityId;
-};
+/** OR branch: root id and workspace for tree materialization. */
+export type SpatialNodeRepositoryV2TreeRootFilterClause = Pick<SpatialNodeEntity, "id" | "workspaceKey">;
 
 /**
  * Spatial node persistence (v2): standard segregated ports plus ref lookup, soft-restore, and tree read.

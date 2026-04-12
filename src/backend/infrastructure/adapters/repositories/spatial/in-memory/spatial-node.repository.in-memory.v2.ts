@@ -17,7 +17,8 @@ import type {
 	SpatialNodeRepositoryV2UpdateOutputDTO,
 	SpatialNodeRepositoryV2UpdatePatchDTO,
 } from "@backend/core/application/ports/repositories/spatial/spatial-node.repository.port.v2";
-import type { SpatialNodeEntity, SpatialNodeTreeNode } from "@backend/core/domain/spatial/entities.v2";
+import type { SpatialNodeEntity, SpatialNodeTreeNode } from "@backend/core/domain/spatial/entities";
+import { workspaceKeysEqual } from "@backend/infrastructure/adapters/repositories/shared/workspace-key";
 import {
 	findFirstRowMatchingAnyClause,
 	findRowsMatchingAnyClause,
@@ -31,16 +32,21 @@ export class SpatialNodeInMemoryRepositoryV2 extends BaseRepositoryErrors implem
 	}
 
 	private insertRow(dto: SpatialNodeRepositoryV2CreateInputDTO): SpatialNodeRepositoryV2CreateOutputDTO {
-		if (dto.parentId !== null && !this.store.spatialNodes.has(idKey(dto.parentId))) {
-			this.throwNotFoundError("SpatialNode", dto.parentId);
+		if (dto.parentId !== null) {
+			const parent = this.store.spatialNodes.get(idKey(dto.parentId));
+			if (!parent) this.throwNotFoundError("SpatialNode", dto.parentId);
+			if (!workspaceKeysEqual(parent.workspaceKey, dto.workspaceKey)) {
+				this.throwValidationError({
+					operation: "create",
+					validationCode: "parent-workspace-mismatch",
+					context: { parentId: dto.parentId, workspaceKey: dto.workspaceKey },
+				});
+			}
 		}
 		const now = new Date();
 		const row: SpatialNodeEntity = {
+			...dto,
 			id: spatialNodeId(),
-			parentId: dto.parentId,
-			rect: dto.rect,
-			kind: dto.kind,
-			ref: dto.ref,
 			createdAt: now,
 			updatedAt: now,
 		};
@@ -49,9 +55,11 @@ export class SpatialNodeInMemoryRepositoryV2 extends BaseRepositoryErrors implem
 	}
 
 	private patchStored(existing: SpatialNodeEntity, dto: SpatialNodeRepositoryV2UpdatePatchDTO): SpatialNodeEntity {
+		const nextWorkspaceKey = dto.workspaceKey !== undefined ? dto.workspaceKey : existing.workspaceKey;
 		const nextParent = dto.parentId !== undefined ? dto.parentId : existing.parentId;
 		return {
 			...existing,
+			workspaceKey: nextWorkspaceKey,
 			parentId: nextParent,
 			rect: dto.rect !== undefined ? dto.rect : existing.rect,
 			kind: dto.kind !== undefined ? dto.kind : existing.kind,
@@ -61,7 +69,11 @@ export class SpatialNodeInMemoryRepositoryV2 extends BaseRepositoryErrors implem
 	}
 
 	private matchesRefClause(row: SpatialNodeEntity, clause: SpatialNodeRepositoryV2GetByRefFilterClause): boolean {
-		return row.ref.entity === clause.ref.entity && row.ref.entityId === clause.ref.entityId;
+		return (
+			row.ref.entity === clause.ref.entity &&
+			row.ref.entityId === clause.ref.entityId &&
+			workspaceKeysEqual(row.workspaceKey, clause.workspaceKey)
+		);
 	}
 
 	async createOne(dto: SpatialNodeRepositoryV2CreateInputDTO): Promise<SpatialNodeRepositoryV2CreateOutputDTO> {
@@ -115,12 +127,18 @@ export class SpatialNodeInMemoryRepositoryV2 extends BaseRepositoryErrors implem
 	}): Promise<SpatialNodeRepositoryV2UpdateOutputDTO> {
 		const row = findFirstRowMatchingAnyClause(this.store.spatialNodes.values(), input.filters);
 		if (!row) this.throwNotFoundError("SpatialNode", input.filters);
-		if (input.dto.parentId !== undefined && input.dto.parentId !== null) {
-			if (!this.store.spatialNodes.has(idKey(input.dto.parentId))) {
-				this.throwNotFoundError("SpatialNode", input.dto.parentId);
+		const updated = this.patchStored(row, input.dto);
+		if (updated.parentId !== null) {
+			const parent = this.store.spatialNodes.get(idKey(updated.parentId));
+			if (!parent) this.throwNotFoundError("SpatialNode", updated.parentId);
+			if (!workspaceKeysEqual(parent.workspaceKey, updated.workspaceKey)) {
+				this.throwValidationError({
+					operation: "update",
+					validationCode: "parent-workspace-mismatch",
+					context: { parentId: updated.parentId },
+				});
 			}
 		}
-		const updated = this.patchStored(row, input.dto);
 		this.store.spatialNodes.set(idKey(updated.id), updated);
 		return updated;
 	}
@@ -129,15 +147,21 @@ export class SpatialNodeInMemoryRepositoryV2 extends BaseRepositoryErrors implem
 		filters: readonly SpatialNodeRepositoryV2FilterClause[];
 		dto: SpatialNodeRepositoryV2UpdatePatchDTO;
 	}): Promise<SpatialNodeRepositoryV2UpdateManyOutputDTO> {
-		if (input.dto.parentId !== undefined && input.dto.parentId !== null) {
-			if (!this.store.spatialNodes.has(idKey(input.dto.parentId))) {
-				this.throwNotFoundError("SpatialNode", input.dto.parentId);
-			}
-		}
 		const rows = findRowsMatchingAnyClause([...this.store.spatialNodes.values()], input.filters);
 		let count = 0;
 		for (const row of rows) {
 			const updated = this.patchStored(row, input.dto);
+			if (updated.parentId !== null) {
+				const parent = this.store.spatialNodes.get(idKey(updated.parentId));
+				if (!parent) this.throwNotFoundError("SpatialNode", updated.parentId);
+				if (!workspaceKeysEqual(parent.workspaceKey, updated.workspaceKey)) {
+					this.throwValidationError({
+						operation: "updateMany",
+						validationCode: "parent-workspace-mismatch",
+						context: { parentId: updated.parentId },
+					});
+				}
+			}
 			this.store.spatialNodes.set(idKey(updated.id), updated);
 			count += 1;
 		}
@@ -151,7 +175,11 @@ export class SpatialNodeInMemoryRepositoryV2 extends BaseRepositoryErrors implem
 		if (!row) this.throwNotFoundError("SpatialNode", input.filters);
 		const key = idKey(row.id);
 		for (const n of this.store.spatialNodes.values()) {
-			if (n.parentId !== null && idKey(n.parentId) === key) {
+			if (
+				n.parentId !== null &&
+				idKey(n.parentId) === key &&
+				workspaceKeysEqual(n.workspaceKey, row.workspaceKey)
+			) {
 				this.throwConflictError({
 					operation: "delete",
 					reason: "child-nodes-exist",
@@ -176,7 +204,10 @@ export class SpatialNodeInMemoryRepositoryV2 extends BaseRepositoryErrors implem
 		for (const row of rows) {
 			const key = idKey(row.id);
 			const hasChild = [...this.store.spatialNodes.values()].some(
-				(n) => n.parentId !== null && idKey(n.parentId) === key,
+				(n) =>
+					n.parentId !== null &&
+					idKey(n.parentId) === key &&
+					workspaceKeysEqual(n.workspaceKey, row.workspaceKey),
 			);
 			if (hasChild) continue;
 			if (this.store.spatialNodes.delete(key)) count += 1;
@@ -187,16 +218,20 @@ export class SpatialNodeInMemoryRepositoryV2 extends BaseRepositoryErrors implem
 	async restoreOne(input: SpatialNodeRepositoryV2RestoreInputDTO): Promise<SpatialNodeEntity> {
 		const key = idKey(input.id);
 		const existing = this.store.spatialNodes.get(key);
-		if (input.parentId !== null && !this.store.spatialNodes.has(idKey(input.parentId))) {
-			this.throwNotFoundError("SpatialNode", input.parentId);
+		if (input.parentId !== null) {
+			const parent = this.store.spatialNodes.get(idKey(input.parentId));
+			if (!parent) this.throwNotFoundError("SpatialNode", input.parentId);
+			if (!workspaceKeysEqual(parent.workspaceKey, input.workspaceKey)) {
+				this.throwValidationError({
+					operation: "restore",
+					validationCode: "parent-workspace-mismatch",
+					context: { parentId: input.parentId },
+				});
+			}
 		}
 		const now = new Date();
 		const row: SpatialNodeEntity = {
-			id: input.id,
-			parentId: input.parentId,
-			rect: input.rect,
-			kind: input.kind,
-			ref: input.ref,
+			...input,
 			createdAt: existing?.createdAt ?? now,
 			updatedAt: now,
 		};
@@ -211,12 +246,15 @@ export class SpatialNodeInMemoryRepositoryV2 extends BaseRepositoryErrors implem
 			input.filters.length === 0
 				? undefined
 				: [...this.store.spatialNodes.values()].find((n) =>
-						input.filters.some((c) => idKey(n.id) === idKey(c.id)),
+						input.filters.some(
+							(c) => idKey(n.id) === idKey(c.id) && workspaceKeysEqual(n.workspaceKey, c.workspaceKey),
+						),
 					);
 		if (!root) this.throwNotFoundError("SpatialNode", input.filters);
 
 		const byParent = new Map<string, SpatialNodeEntity[]>();
 		for (const n of this.store.spatialNodes.values()) {
+			if (!workspaceKeysEqual(n.workspaceKey, root.workspaceKey)) continue;
 			const pkey = n.parentId ? idKey(n.parentId) : "__root__";
 			const arr = byParent.get(pkey) ?? [];
 			arr.push(n);

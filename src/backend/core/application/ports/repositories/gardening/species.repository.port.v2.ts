@@ -1,4 +1,4 @@
-import type { SpeciesEntity, SpeciesEntityId } from "@backend/core/domain/gardening/entities.v2";
+import type { SpeciesEntity, SpeciesEntityId } from "@backend/core/domain/gardening/entities";
 import type { ItemsContainer } from "@backend/shared/types";
 import type {
 	RepositoryCreateManyPort,

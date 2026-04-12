@@ -14,7 +14,7 @@ import type {
 	SpeciesCategoryRepositoryV2UpdatePatchDTO,
 } from "@backend/core/application/ports/repositories/gardening/species-category.repository.port.v2";
 import { BaseRepositoryErrors } from "@backend/core/application/ports/repositories/shared/base-repository.errors";
-import type { SpeciesCategoryEntity } from "@backend/core/domain/gardening/entities.v2";
+import type { SpeciesCategoryEntity } from "@backend/core/domain/gardening/entities";
 import {
 	findFirstRowMatchingAnyClause,
 	findRowsMatchingAnyClause,
@@ -34,9 +34,8 @@ export class SpeciesCategoryInMemoryRepositoryV2
 		const now = new Date();
 		const id = speciesCategoryId();
 		const row: SpeciesCategoryEntity = {
+			...dto,
 			id,
-			title: dto.title,
-			presentation: dto.presentation,
 			createdAt: now,
 			updatedAt: now,
 		};
@@ -50,6 +49,7 @@ export class SpeciesCategoryInMemoryRepositoryV2
 	): SpeciesCategoryEntity {
 		return {
 			...existing,
+			workspaceKey: dto.workspaceKey !== undefined ? dto.workspaceKey : existing.workspaceKey,
 			title: dto.title !== undefined ? dto.title : existing.title,
 			presentation: dto.presentation !== undefined ? dto.presentation : existing.presentation,
 			updatedAt: new Date(),
@@ -124,7 +124,7 @@ export class SpeciesCategoryInMemoryRepositoryV2
 		if (!row) this.throwNotFoundError("SpeciesCategory", input.filters);
 		const key = idKey(row.id);
 		for (const s of this.store.species.values()) {
-			if (idKey(s.categoryId) === key) {
+			if (idKey(s.categoryId) === key && String(s.workspaceKey) === String(row.workspaceKey)) {
 				this.throwConflictError({
 					operation: "delete",
 					reason: "species-reference-category",
@@ -148,7 +148,9 @@ export class SpeciesCategoryInMemoryRepositoryV2
 		let count = 0;
 		for (const row of rows) {
 			const key = idKey(row.id);
-			const blocked = [...this.store.species.values()].some((s) => idKey(s.categoryId) === key);
+			const blocked = [...this.store.species.values()].some(
+				(s) => idKey(s.categoryId) === key && String(s.workspaceKey) === String(row.workspaceKey),
+			);
 			if (blocked) continue;
 			if (this.store.speciesCategories.delete(key)) count += 1;
 		}

@@ -1,4 +1,4 @@
-import type { HydratedPlantEntity, PlantEntity, PlantEntityId } from "@backend/core/domain/gardening/entities.v2";
+import type { HydratedPlantEntity, PlantEntity, PlantEntityId } from "@backend/core/domain/gardening/entities";
 import type { ItemsContainer } from "@backend/shared/types";
 import type {
 	RepositoryCreateManyPort,
@@ -12,12 +12,9 @@ import type {
 	RepositoryUpdateOnePort,
 	RepositoryUpdatePatchDto,
 } from "../shared/repository-operation-ports";
+import type { BaseRepositoryCreateInputDTO } from "../shared/types";
 
-export type PlantRepositoryV2CreateInputDTO = {
-	title: PlantEntity["title"];
-	description: PlantEntity["description"];
-	cultivarId: PlantEntity["cultivarId"];
-};
+export type PlantRepositoryV2CreateInputDTO = BaseRepositoryCreateInputDTO<PlantEntity>;
 export type PlantRepositoryV2CreateOutputDTO = HydratedPlantEntity;
 
 export type PlantRepositoryV2CreateManyInputDTO = {

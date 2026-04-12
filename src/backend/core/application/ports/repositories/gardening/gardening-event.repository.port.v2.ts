@@ -1,9 +1,11 @@
 import type {
 	GardeningEventEntity,
 	GardeningEventEntityId,
+	LocationEntity,
 	LocationEntityId,
+	PlantEntity,
 	PlantEntityId,
-} from "@backend/core/domain/gardening/entities.v2";
+} from "@backend/core/domain/gardening/entities";
 import type { ItemsContainer } from "@backend/shared/types";
 import type {
 	RepositoryCreateManyPort,
@@ -48,12 +50,14 @@ export type GardeningEventRepositoryV2DeleteManyOutputDTO = { count: number };
 
 /** OR branch for events linked to a plant (junction semantics; adapter resolves). */
 export type GardeningEventRepositoryV2ForPlantFilterClause = {
-	plantId: PlantEntityId;
+	plantId: PlantEntity["id"];
+	workspaceKey: PlantEntity["workspaceKey"];
 };
 
 /** OR branch for events linked to a location (junction semantics; adapter resolves). */
 export type GardeningEventRepositoryV2ForLocationFilterClause = {
-	locationId: LocationEntityId;
+	locationId: LocationEntity["id"];
+	workspaceKey: LocationEntity["workspaceKey"];
 };
 
 export type GardeningEventRepositoryV2GetBindingsOutputDTO = {
@@ -119,7 +123,7 @@ export interface GardeningEventRepositoryPortV2
 	 */
 	bindToPlantOne(
 		input: WithRequiredRepositoryFilters<GardeningEventRepositoryV2FilterClause> & {
-			plantId: PlantEntityId;
+			plantId: PlantEntity["id"];
 		},
 	): Promise<GardeningEventEntity>;
 
@@ -131,7 +135,7 @@ export interface GardeningEventRepositoryPortV2
 	 */
 	bindToLocationOne(
 		input: WithRequiredRepositoryFilters<GardeningEventRepositoryV2FilterClause> & {
-			locationId: LocationEntityId;
+			locationId: LocationEntity["id"];
 		},
 	): Promise<GardeningEventEntity>;
 

@@ -1,5 +1,4 @@
-import type { LocationEntity, LocationEntityId } from "@backend/core/domain/gardening/entities.v2";
-import type { ItemPresentationValueObject } from "@backend/core/domain/gardening/value-objects";
+import type { LocationEntity, LocationEntityId } from "@backend/core/domain/gardening/entities";
 import type { ItemsContainer } from "@backend/shared/types";
 import type {
 	RepositoryCreateManyPort,
@@ -13,11 +12,9 @@ import type {
 	RepositoryUpdateOnePort,
 	RepositoryUpdatePatchDto,
 } from "../shared/repository-operation-ports";
+import type { BaseRepositoryCreateInputDTO } from "../shared/types";
 
-export type LocationRepositoryV2CreateInputDTO = {
-	name: string;
-	presentation?: ItemPresentationValueObject;
-};
+export type LocationRepositoryV2CreateInputDTO = BaseRepositoryCreateInputDTO<LocationEntity>;
 export type LocationRepositoryV2CreateOutputDTO = LocationEntity;
 
 export type LocationRepositoryV2CreateManyInputDTO = {

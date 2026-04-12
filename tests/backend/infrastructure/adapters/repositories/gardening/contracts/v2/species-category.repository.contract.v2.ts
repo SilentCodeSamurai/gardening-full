@@ -6,6 +6,10 @@ import { speciesCategoryId } from "@backend/infrastructure/integrations/shared/d
 import type { DependencyContainer } from "tsyringe";
 import { beforeEach, describe, expect, it } from "vitest";
 
+import {
+	contractTestWorkspaceKey as wk,
+	contractTestWorkspaceKeyB as wkB,
+} from "../../../shared/test-workspace-keys";
 import { resolveGardeningRepositoryPortsV2 } from "./resolve-gardening-repository-ports.v2";
 
 export function registerSpeciesCategoryRepositoryContractV2(
@@ -23,7 +27,7 @@ export function registerSpeciesCategoryRepositoryContractV2(
 		});
 
 		it("createOne, getOne by id, getMany without filters, updateOne, deleteOne", async () => {
-			const row = await speciesCategory.createOne({ title: "Herbs" });
+			const row = await speciesCategory.createOne({ workspaceKey: wk, title: "Herbs" });
 			expect(row.title).toBe("Herbs");
 
 			const got = await speciesCategory.getOne({ filters: [{ id: row.id }] });
@@ -47,7 +51,11 @@ export function registerSpeciesCategoryRepositoryContractV2(
 
 		it("createMany returns total inserted count", async () => {
 			const { count } = await speciesCategory.createMany({
-				items: [{ title: "A" }, { title: "B" }, { title: "C" }],
+				items: [
+					{ workspaceKey: wk, title: "A" },
+					{ workspaceKey: wk, title: "B" },
+					{ workspaceKey: wk, title: "C" },
+				],
 			});
 			expect(count).toBe(3);
 			const { items } = await speciesCategory.getMany();
@@ -55,8 +63,8 @@ export function registerSpeciesCategoryRepositoryContractV2(
 		});
 
 		it("getOne uses OR filters — first miss, second hit", async () => {
-			const a = await speciesCategory.createOne({ title: "Alpha" });
-			const { items } = await speciesCategory.getMany({ filters: [{ title: "Alpha" }] });
+			const a = await speciesCategory.createOne({ workspaceKey: wk, title: "Alpha" });
+			const { items } = await speciesCategory.getMany({ filters: [{ title: "Alpha", workspaceKey: wk }] });
 			expect(items).toHaveLength(1);
 			const ghost = speciesCategoryId("00000000-0000-4000-8000-00000000dead");
 			const got = await speciesCategory.getOne({
@@ -66,17 +74,20 @@ export function registerSpeciesCategoryRepositoryContractV2(
 		});
 
 		it("getMany with filters: [] returns empty container", async () => {
-			await speciesCategory.createOne({ title: "Only" });
+			await speciesCategory.createOne({ workspaceKey: wk, title: "Only" });
 			const { items } = await speciesCategory.getMany({ filters: [] });
 			expect(items).toHaveLength(0);
 		});
 
 		it("getMany with OR filters unions matching rows (by title)", async () => {
-			const x = await speciesCategory.createOne({ title: "match-x" });
-			const y = await speciesCategory.createOne({ title: "match-y" });
-			await speciesCategory.createOne({ title: "other" });
+			const x = await speciesCategory.createOne({ workspaceKey: wk, title: "match-x" });
+			const y = await speciesCategory.createOne({ workspaceKey: wk, title: "match-y" });
+			await speciesCategory.createOne({ workspaceKey: wk, title: "other" });
 			const { items } = await speciesCategory.getMany({
-				filters: [{ title: "match-x" }, { title: "match-y" }],
+				filters: [
+					{ title: "match-x", workspaceKey: wk },
+					{ title: "match-y", workspaceKey: wk },
+				],
 			});
 			const ids = new Set(items.map((i) => i.id as string));
 			expect(ids.has(x.id as string)).toBe(true);
@@ -103,20 +114,28 @@ export function registerSpeciesCategoryRepositoryContractV2(
 
 		it("updateMany patches every row matching OR filters and returns count", async () => {
 			await speciesCategory.createMany({
-				items: [{ title: "batch-1" }, { title: "batch-2" }],
+				items: [
+					{ workspaceKey: wk, title: "batch-1" },
+					{ workspaceKey: wk, title: "batch-2" },
+				],
 			});
 			const { count } = await speciesCategory.updateMany({
-				filters: [{ title: "batch-1" }, { title: "batch-2" }],
+				filters: [
+					{ title: "batch-1", workspaceKey: wk },
+					{ title: "batch-2", workspaceKey: wk },
+				],
 				dto: { title: "renamed" },
 			});
 			expect(count).toBe(2);
-			const { items } = await speciesCategory.getMany({ filters: [{ title: "renamed" }] });
+			const { items } = await speciesCategory.getMany({
+				filters: [{ title: "renamed", workspaceKey: wk }],
+			});
 			expect(items).toHaveLength(2);
 		});
 
 		it("updateMany returns count 0 when nothing matches", async () => {
 			const { count } = await speciesCategory.updateMany({
-				filters: [{ title: "nonexistent-title-xyz" }],
+				filters: [{ title: "nonexistent-title-xyz", workspaceKey: wk }],
 				dto: { title: "still-none" },
 			});
 			expect(count).toBe(0);
@@ -124,6 +143,7 @@ export function registerSpeciesCategoryRepositoryContractV2(
 
 		it("updateOne can set presentation", async () => {
 			const row = await speciesCategory.createOne({
+				workspaceKey: wk,
 				title: "WithPres",
 				presentation: { iconColor: "#111" },
 			});
@@ -136,8 +156,9 @@ export function registerSpeciesCategoryRepositoryContractV2(
 		});
 
 		it("deleteOne blocks when species reference category", async () => {
-			const cat = await speciesCategory.createOne({ title: "C" });
+			const cat = await speciesCategory.createOne({ workspaceKey: wk, title: "C" });
 			await species.createOne({
+				workspaceKey: wk,
 				categoryId: cat.id,
 				characteristics: { name: "S", description: null },
 			});
@@ -155,9 +176,10 @@ export function registerSpeciesCategoryRepositoryContractV2(
 		});
 
 		it("deleteMany removes all matching rows; skips categories blocked by species", async () => {
-			const free = await speciesCategory.createOne({ title: "free" });
-			const blocked = await speciesCategory.createOne({ title: "blocked" });
+			const free = await speciesCategory.createOne({ workspaceKey: wk, title: "free" });
+			const blocked = await speciesCategory.createOne({ workspaceKey: wk, title: "blocked" });
 			await species.createOne({
+				workspaceKey: wk,
 				categoryId: blocked.id,
 				characteristics: { name: "holds", description: null },
 			});
@@ -173,9 +195,77 @@ export function registerSpeciesCategoryRepositoryContractV2(
 
 		it("deleteMany returns 0 when filters match nothing", async () => {
 			const { count } = await speciesCategory.deleteMany({
-				filters: [{ title: "no-such-category-999" }],
+				filters: [{ title: "no-such-category-999", workspaceKey: wk }],
 			});
 			expect(count).toBe(0);
+		});
+
+		it("getMany single-field filter by id", async () => {
+			const row = await speciesCategory.createOne({ workspaceKey: wk, title: "by-id-cat" });
+			const { items } = await speciesCategory.getMany({ filters: [{ id: row.id }] });
+			expect(items).toHaveLength(1);
+			expect(items[0]?.title).toBe("by-id-cat");
+		});
+
+		it("getMany multi-field AND: wrong workspaceKey excludes row", async () => {
+			const row = await speciesCategory.createOne({ workspaceKey: wk, title: "ws-and" });
+			const { items } = await speciesCategory.getMany({ filters: [{ id: row.id, workspaceKey: wkB }] });
+			expect(items).toHaveLength(0);
+		});
+
+		it("getMany OR combines id miss with title hit", async () => {
+			const row = await speciesCategory.createOne({ workspaceKey: wk, title: "or-title-cat" });
+			const { items } = await speciesCategory.getMany({
+				filters: [
+					{ id: speciesCategoryId("00000000-0000-4000-8000-00000000bad") },
+					{ title: "or-title-cat", workspaceKey: wk },
+				],
+			});
+			expect(items).toHaveLength(1);
+			expect(items[0]?.id).toEqual(row.id);
+		});
+
+		it("updateOne OR filters", async () => {
+			const row = await speciesCategory.createOne({ workspaceKey: wk, title: "uo-or" });
+			const u = await speciesCategory.updateOne({
+				filters: [{ id: speciesCategoryId("00000000-0000-4000-8000-00000000bad") }, { id: row.id }],
+				dto: { title: "uo-or-done" },
+			});
+			expect(u.title).toBe("uo-or-done");
+		});
+
+		it("updateMany OR by id; count 0 when no match", async () => {
+			const a = await speciesCategory.createOne({ workspaceKey: wk, title: "sc-um-a" });
+			const b = await speciesCategory.createOne({ workspaceKey: wk, title: "sc-um-b" });
+			const { count } = await speciesCategory.updateMany({
+				filters: [{ id: a.id }, { id: b.id }],
+				dto: { title: "sc-um-both" },
+			});
+			expect(count).toBe(2);
+			const z = await speciesCategory.updateMany({
+				filters: [{ title: "missing-cat-xyz", workspaceKey: wk }],
+				dto: { title: "nope" },
+			});
+			expect(z.count).toBe(0);
+		});
+
+		it("deleteOne OR filters", async () => {
+			const row = await speciesCategory.createOne({ workspaceKey: wk, title: "del-one-or" });
+			await speciesCategory.deleteOne({
+				filters: [{ id: speciesCategoryId("00000000-0000-4000-8000-00000000bad") }, { id: row.id }],
+			});
+			await expect(speciesCategory.getOne({ filters: [{ id: row.id }] })).rejects.toBeInstanceOf(
+				RepositoryNotFoundError,
+			);
+		});
+
+		it("deleteMany OR by id and by title", async () => {
+			const a = await speciesCategory.createOne({ workspaceKey: wk, title: "dm-a" });
+			const b = await speciesCategory.createOne({ workspaceKey: wk, title: "dm-b" });
+			const { count } = await speciesCategory.deleteMany({
+				filters: [{ id: a.id }, { title: "dm-b", workspaceKey: wk }],
+			});
+			expect(count).toBe(2);
 		});
 	});
 }

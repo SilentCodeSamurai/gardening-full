@@ -344,5 +344,54 @@ export function registerWorkspaceRoleAssignmentRepositoryContractV2(
 			expect(items).toHaveLength(1);
 			expect(items[0]?.id).toEqual(row.id);
 		});
+
+		it("getMany single-field filter by workspaceKey", async () => {
+			await repo.createOne({ subjectKey: u1, workspaceKey: wsA, role: ACCESS_ROLE.VIEWER });
+			await repo.createOne({ subjectKey: u2, workspaceKey: wsB, role: ACCESS_ROLE.ADMIN });
+			const { items } = await repo.getMany({ filters: [{ workspaceKey: wsA }] });
+			expect(items.every((i) => i.workspaceKey === wsA)).toBe(true);
+			expect(items.some((i) => i.subjectKey === u1)).toBe(true);
+		});
+
+		it("getMany multi-field AND: wrong workspaceKey excludes row", async () => {
+			const row = await repo.createOne({ subjectKey: u1, workspaceKey: wsA, role: ACCESS_ROLE.VIEWER });
+			const { items } = await repo.getMany({ filters: [{ id: row.id, workspaceKey: wsB }] });
+			expect(items).toHaveLength(0);
+		});
+
+		it("getMany OR combines id miss with subjectKey hit", async () => {
+			const row = await repo.createOne({ subjectKey: u1, workspaceKey: wsA, role: ACCESS_ROLE.VIEWER });
+			const { items } = await repo.getMany({
+				filters: [{ id: workspaceRoleAssignmentId("00000000-0000-4000-8000-00000000bad") }, { subjectKey: u1 }],
+			});
+			expect(items).toHaveLength(1);
+			expect(items[0]?.id).toEqual(row.id);
+		});
+
+		it("updateOne OR filters", async () => {
+			const row = await repo.createOne({ subjectKey: u1, workspaceKey: wsA, role: ACCESS_ROLE.VIEWER });
+			const u = await repo.updateOne({
+				filters: [{ id: workspaceRoleAssignmentId("00000000-0000-4000-8000-00000000bad") }, { id: row.id }],
+				dto: { role: ACCESS_ROLE.ADMIN },
+			});
+			expect(u.role).toBe(ACCESS_ROLE.ADMIN);
+		});
+
+		it("deleteOne OR filters", async () => {
+			const row = await repo.createOne({ subjectKey: u2, workspaceKey: wsB, role: ACCESS_ROLE.VIEWER });
+			await repo.deleteOne({
+				filters: [{ id: workspaceRoleAssignmentId("00000000-0000-4000-8000-00000000bad") }, { id: row.id }],
+			});
+			await expect(repo.getOne({ filters: [{ id: row.id }] })).rejects.toBeInstanceOf(RepositoryNotFoundError);
+		});
+
+		it("deleteMany OR by id and by workspaceKey", async () => {
+			const a = await repo.createOne({ subjectKey: u1, workspaceKey: wsA, role: ACCESS_ROLE.VIEWER });
+			await repo.createOne({ subjectKey: u2, workspaceKey: wsB, role: ACCESS_ROLE.EDITOR });
+			const { count } = await repo.deleteMany({
+				filters: [{ id: a.id }, { workspaceKey: wsB, subjectKey: u2 }],
+			});
+			expect(count).toBe(2);
+		});
 	});
 }

@@ -14,7 +14,8 @@ import type {
 	PlantRepositoryV2UpdatePatchDTO,
 } from "@backend/core/application/ports/repositories/gardening/plant.repository.port.v2";
 import { BaseRepositoryErrors } from "@backend/core/application/ports/repositories/shared/base-repository.errors";
-import type { HydratedPlantEntity, PlantEntity } from "@backend/core/domain/gardening/entities.v2";
+import type { HydratedPlantEntity, PlantEntity } from "@backend/core/domain/gardening/entities";
+import { workspaceKeysEqual } from "@backend/infrastructure/adapters/repositories/shared/workspace-key";
 import {
 	findFirstRowMatchingAnyClause,
 	findRowsMatchingAnyClause,
@@ -42,16 +43,22 @@ export class PlantInMemoryRepositoryV2 extends BaseRepositoryErrors implements P
 	}
 
 	private insertRow(dto: PlantRepositoryV2CreateInputDTO): PlantRepositoryV2CreateOutputDTO {
-		if (!this.store.cultivars.has(idKey(dto.cultivarId))) {
+		const cultivarRow = this.store.cultivars.get(idKey(dto.cultivarId));
+		if (!cultivarRow) {
 			this.throwNotFoundError("Cultivar", dto.cultivarId);
+		}
+		if (!workspaceKeysEqual(cultivarRow.workspaceKey, dto.workspaceKey)) {
+			this.throwValidationError({
+				operation: "create",
+				validationCode: "cultivar-workspace-mismatch",
+				context: { cultivarId: dto.cultivarId, workspaceKey: dto.workspaceKey },
+			});
 		}
 		const now = new Date();
 		const id = plantId();
 		const row: PlantEntity = {
+			...dto,
 			id,
-			title: dto.title,
-			description: dto.description,
-			cultivarId: dto.cultivarId,
 			createdAt: now,
 			updatedAt: now,
 		};
@@ -60,14 +67,31 @@ export class PlantInMemoryRepositoryV2 extends BaseRepositoryErrors implements P
 	}
 
 	private patchStored(existing: PlantEntity, dto: PlantRepositoryV2UpdatePatchDTO): PlantEntity {
+		const nextWorkspaceKey = dto.workspaceKey !== undefined ? dto.workspaceKey : existing.workspaceKey;
 		const nextCultivarId = dto.cultivarId !== undefined ? dto.cultivarId : existing.cultivarId;
 		return {
 			...existing,
+			workspaceKey: nextWorkspaceKey,
 			title: dto.title !== undefined ? dto.title : existing.title,
 			description: dto.description !== undefined ? dto.description : existing.description,
 			cultivarId: nextCultivarId,
 			updatedAt: new Date(),
 		};
+	}
+
+	private assertCultivarMatchesWorkspace(
+		cultivarId: PlantEntity["cultivarId"],
+		workspaceKey: PlantEntity["workspaceKey"],
+	): void {
+		const cultivarRow = this.store.cultivars.get(idKey(cultivarId));
+		if (!cultivarRow) this.throwNotFoundError("Cultivar", cultivarId);
+		if (!workspaceKeysEqual(cultivarRow.workspaceKey, workspaceKey)) {
+			this.throwValidationError({
+				operation: "update",
+				validationCode: "cultivar-workspace-mismatch",
+				context: { cultivarId, workspaceKey },
+			});
+		}
 	}
 
 	async createOne(dto: PlantRepositoryV2CreateInputDTO): Promise<PlantRepositoryV2CreateOutputDTO> {
@@ -107,10 +131,8 @@ export class PlantInMemoryRepositoryV2 extends BaseRepositoryErrors implements P
 	}): Promise<PlantRepositoryV2UpdateOutputDTO> {
 		const row = findFirstRowMatchingAnyClause(this.store.plants.values(), input.filters);
 		if (!row) this.throwNotFoundError("Plant", input.filters);
-		if (input.dto.cultivarId !== undefined && !this.store.cultivars.has(idKey(input.dto.cultivarId))) {
-			this.throwNotFoundError("Cultivar", input.dto.cultivarId);
-		}
 		const updated = this.patchStored(row, input.dto);
+		this.assertCultivarMatchesWorkspace(updated.cultivarId, updated.workspaceKey);
 		this.store.plants.set(idKey(updated.id), updated);
 		return this.hydrate(updated);
 	}
@@ -119,13 +141,11 @@ export class PlantInMemoryRepositoryV2 extends BaseRepositoryErrors implements P
 		filters: readonly PlantRepositoryV2FilterClause[];
 		dto: PlantRepositoryV2UpdatePatchDTO;
 	}): Promise<PlantRepositoryV2UpdateManyOutputDTO> {
-		if (input.dto.cultivarId !== undefined && !this.store.cultivars.has(idKey(input.dto.cultivarId))) {
-			this.throwNotFoundError("Cultivar", input.dto.cultivarId);
-		}
 		const rows = findRowsMatchingAnyClause([...this.store.plants.values()], input.filters);
 		let count = 0;
 		for (const row of rows) {
 			const updated = this.patchStored(row, input.dto);
+			this.assertCultivarMatchesWorkspace(updated.cultivarId, updated.workspaceKey);
 			this.store.plants.set(idKey(updated.id), updated);
 			count += 1;
 		}

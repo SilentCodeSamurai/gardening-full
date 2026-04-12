@@ -65,13 +65,10 @@ export class WorkspaceRoleAssignmentInMemoryRepositoryV2
 		const now = new Date();
 		const id = workspaceRoleAssignmentId();
 		const row: WorkspaceRoleAssignmentEntity = {
+			...dto,
 			id,
 			createdAt: now,
 			updatedAt: now,
-			subjectKey: dto.subjectKey,
-			workspaceKey: dto.workspaceKey,
-			role: dto.role,
-			grantSource: dto.grantSource,
 		};
 		this.store.workspaceRoleAssignments.set(mapKey, row);
 		return row;
