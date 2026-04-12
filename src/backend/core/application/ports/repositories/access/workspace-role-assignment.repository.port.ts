@@ -1,7 +1,7 @@
-import type { AccessRole } from "@backend/core/domain/access/access-role";
+import type { WorkspaceRoleAssignmentEntity } from "@backend/core/domain/access/entities";	
 import type { SubjectKey } from "@backend/core/domain/access/subject.vo";
+import type { AccessRole } from "@backend/core/domain/access/types";
 import type { WorkspaceKey } from "@backend/core/domain/access/workspace.vo";
-import type { WorkspaceRoleAssignmentEntity } from "@backend/core/domain/access/workspace-role-assignment.entity";
 
 import type { ItemsContainer } from "@backend/shared/types";
 
@@ -40,7 +40,9 @@ export interface WorkspaceRoleAssignmentRepositoryPort {
 
 	revokeWorkspaceRoleAssignment(input: WorkspaceRoleAssignmentRevokeInputDTO): Promise<void>;
 
-	getBySubjectAndWorkspace(input: WorkspaceRoleAssignmentGetBySubjectAndWorkspaceInputDTO): Promise<WorkspaceRoleAssignmentGetBySubjectAndWorkspaceOutputDTO>;
+	getBySubjectAndWorkspace(
+		input: WorkspaceRoleAssignmentGetBySubjectAndWorkspaceInputDTO,
+	): Promise<WorkspaceRoleAssignmentGetBySubjectAndWorkspaceOutputDTO>;
 
 	listAssignmentsForSubject(
 		input: WorkspaceRoleAssignmentListForSubjectInputDTO,
