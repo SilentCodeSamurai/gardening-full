@@ -1,27 +1,28 @@
 import type {
-	GardeningEventRepositoryBindToLocationInputDTO,
-	GardeningEventRepositoryBindToLocationOutputDTO,
-	GardeningEventRepositoryBindToPlantInputDTO,
-	GardeningEventRepositoryBindToPlantOutputDTO,
-	GardeningEventRepositoryCreateInputDTO,
-	GardeningEventRepositoryCreateOutputDTO,
-	GardeningEventRepositoryDeleteInputDTO,
-	GardeningEventRepositoryDeleteOutputDTO,
-	GardeningEventRepositoryGetAllOutputDTO,
-	GardeningEventRepositoryGetBindingsForEventInputDTO,
-	GardeningEventRepositoryGetBindingsForEventOutputDTO,
-	GardeningEventRepositoryGetByIdInputDTO,
-	GardeningEventRepositoryGetByIdOutputDTO,
-	GardeningEventRepositoryGetForLocationInputDTO,
-	GardeningEventRepositoryGetForLocationOutputDTO,
-	GardeningEventRepositoryGetForPlantInputDTO,
-	GardeningEventRepositoryGetForPlantOutputDTO,
 	GardeningEventRepositoryPort,
-	GardeningEventRepositoryUpdateInputDTO,
+	GardeningEventRepositoryCreateInputDTO,
+	GardeningEventRepositoryCreateManyInputDTO,
+	GardeningEventRepositoryCreateManyOutputDTO,
+	GardeningEventRepositoryCreateOutputDTO,
+	GardeningEventRepositoryDeleteManyOutputDTO,
+	GardeningEventRepositoryDeleteOutputDTO,
+	GardeningEventRepositoryFilterClause,
+	GardeningEventRepositoryForLocationFilterClause,
+	GardeningEventRepositoryForPlantFilterClause,
+	GardeningEventRepositoryGetBindingsOutputDTO,
+	GardeningEventRepositoryGetManyOutputDTO,
+	GardeningEventRepositoryGetOneOutputDTO,
+	GardeningEventRepositoryUpdateManyOutputDTO,
 	GardeningEventRepositoryUpdateOutputDTO,
+	GardeningEventRepositoryUpdatePatchDTO,
 } from "@backend/core/application/ports/repositories/gardening/gardening-event.repository.port";
 import { BaseRepositoryErrors } from "@backend/core/application/ports/repositories/shared/base-repository.errors";
-import type { GardeningEventEntity } from "@backend/core/domain/gardening/entities";
+import type { GardeningEventEntity, LocationEntityId, PlantEntityId } from "@backend/core/domain/gardening/entities";
+import { workspaceKeysEqual } from "@backend/infrastructure/adapters/repositories/shared/workspace-key";
+import {
+	findFirstRowMatchingAnyClause,
+	findRowsMatchingAnyClause,
+} from "@backend/infrastructure/adapters/repositories/shared/in-memory-entity-filter";
 import type { InMemoryStore } from "@backend/infrastructure/integrations/in-memory-database/client";
 import { gardeningEventId, idKey } from "@backend/infrastructure/integrations/shared/database-ids";
 
@@ -34,9 +35,8 @@ export class GardeningEventInMemoryRepository extends BaseRepositoryErrors imple
 		const now = new Date();
 		const id = gardeningEventId();
 		const row: GardeningEventEntity = {
+			...dto,
 			id,
-			workspaceKey: dto.workspaceKey,
-			action: dto.action,
 			createdAt: now,
 			updatedAt: now,
 		};
@@ -44,142 +44,185 @@ export class GardeningEventInMemoryRepository extends BaseRepositoryErrors imple
 		return row;
 	}
 
-	private loadById(dto: GardeningEventRepositoryGetByIdInputDTO): GardeningEventRepositoryGetByIdOutputDTO {
-		const row = this.store.gardeningEvents.get(idKey(dto.id));
-		if (!row) this.throwNotFoundError("GardeningEvent", dto.id);
+	private patchStored(
+		existing: GardeningEventEntity,
+		dto: GardeningEventRepositoryUpdatePatchDTO,
+	): GardeningEventEntity {
+		return {
+			...existing,
+			workspaceKey: dto.workspaceKey !== undefined ? dto.workspaceKey : existing.workspaceKey,
+			action: dto.action !== undefined ? dto.action : existing.action,
+			updatedAt: new Date(),
+		};
+	}
+
+	private resolveStoredFromFilters(
+		filters: readonly GardeningEventRepositoryFilterClause[],
+	): GardeningEventEntity {
+		const row = findFirstRowMatchingAnyClause(this.store.gardeningEvents.values(), filters);
+		if (!row) this.throwNotFoundError("GardeningEvent", filters);
 		return row;
 	}
 
-	private listInWorkspaces(
-		workspaceKeys: readonly GardeningEventEntity["workspaceKey"][],
-	): GardeningEventRepositoryGetAllOutputDTO {
-		const allowed = new Set(workspaceKeys.map((key) => String(key)));
-		return { items: [...this.store.gardeningEvents.values()].filter((x) => allowed.has(String(x.workspaceKey))) };
+	async createOne(dto: GardeningEventRepositoryCreateInputDTO): Promise<GardeningEventRepositoryCreateOutputDTO> {
+		return this.insertRow(dto);
 	}
 
-	private patchRow(dto: GardeningEventRepositoryUpdateInputDTO): GardeningEventRepositoryUpdateOutputDTO {
-		const key = idKey(dto.id);
-		const existing = this.store.gardeningEvents.get(key);
-		if (!existing) this.throwNotFoundError("GardeningEvent", dto.id);
-		const updated: GardeningEventEntity = {
-			...existing,
-			...dto,
-			id: existing.id,
-			createdAt: existing.createdAt,
-			updatedAt: new Date(),
-		};
-		this.store.gardeningEvents.set(key, updated);
+	async createMany(
+		input: GardeningEventRepositoryCreateManyInputDTO,
+	): Promise<GardeningEventRepositoryCreateManyOutputDTO> {
+		let count = 0;
+		for (const item of input.items) {
+			this.insertRow(item);
+			count += 1;
+		}
+		return { count };
+	}
+
+	async getOne(input: {
+		filters: readonly GardeningEventRepositoryFilterClause[];
+	}): Promise<GardeningEventRepositoryGetOneOutputDTO> {
+		return this.resolveStoredFromFilters(input.filters);
+	}
+
+	async getMany(input?: {
+		filters?: readonly GardeningEventRepositoryFilterClause[];
+	}): Promise<GardeningEventRepositoryGetManyOutputDTO> {
+		if (input?.filters === undefined) {
+			return { items: [...this.store.gardeningEvents.values()] };
+		}
+		if (input.filters.length === 0) return { items: [] };
+		const rows = findRowsMatchingAnyClause([...this.store.gardeningEvents.values()], input.filters);
+		return { items: rows };
+	}
+
+	async updateOne(input: {
+		filters: readonly GardeningEventRepositoryFilterClause[];
+		dto: GardeningEventRepositoryUpdatePatchDTO;
+	}): Promise<GardeningEventRepositoryUpdateOutputDTO> {
+		const row = this.resolveStoredFromFilters(input.filters);
+		const updated = this.patchStored(row, input.dto);
+		this.store.gardeningEvents.set(idKey(updated.id), updated);
 		return updated;
 	}
 
-	private removeRow(dto: GardeningEventRepositoryDeleteInputDTO): GardeningEventRepositoryDeleteOutputDTO {
-		const key = idKey(dto.id);
-		if (!this.store.gardeningEvents.has(key)) this.throwNotFoundError("GardeningEvent", dto.id);
-		this.store.clearAllLinksForEvent(dto.id);
-		this.store.gardeningEvents.delete(key);
-		return dto.id;
+	async updateMany(input: {
+		filters: readonly GardeningEventRepositoryFilterClause[];
+		dto: GardeningEventRepositoryUpdatePatchDTO;
+	}): Promise<GardeningEventRepositoryUpdateManyOutputDTO> {
+		const rows = findRowsMatchingAnyClause([...this.store.gardeningEvents.values()], input.filters);
+		let count = 0;
+		for (const row of rows) {
+			const updated = this.patchStored(row, input.dto);
+			this.store.gardeningEvents.set(idKey(updated.id), updated);
+			count += 1;
+		}
+		return { count };
 	}
 
-	async bindToPlantScoped(input: {
-		workspaceKey: GardeningEventEntity["workspaceKey"];
-		dto: GardeningEventRepositoryBindToPlantInputDTO;
-	}): Promise<GardeningEventRepositoryBindToPlantOutputDTO> {
-		const ev = this.loadById({ id: input.dto.id });
-		if (String(ev.workspaceKey) !== String(input.workspaceKey)) {
-			this.throwNotFoundError("GardeningEvent", input.dto.id);
-		}
-		if (!this.store.plants.has(idKey(input.dto.plantId))) this.throwNotFoundError("Plant", input.dto.plantId);
-		this.store.linkEventToPlant(input.dto.id, input.dto.plantId);
-		return ev;
+	async deleteOne(input: {
+		filters: readonly GardeningEventRepositoryFilterClause[];
+	}): Promise<GardeningEventRepositoryDeleteOutputDTO> {
+		const row = this.resolveStoredFromFilters(input.filters);
+		this.store.clearAllLinksForEvent(row.id);
+		this.store.gardeningEvents.delete(idKey(row.id));
+		return row.id;
 	}
 
-	async bindToLocationScoped(input: {
-		workspaceKey: GardeningEventEntity["workspaceKey"];
-		dto: GardeningEventRepositoryBindToLocationInputDTO;
-	}): Promise<GardeningEventRepositoryBindToLocationOutputDTO> {
-		const ev = this.loadById({ id: input.dto.id });
-		if (String(ev.workspaceKey) !== String(input.workspaceKey)) {
-			this.throwNotFoundError("GardeningEvent", input.dto.id);
+	async deleteMany(input: {
+		filters: readonly GardeningEventRepositoryFilterClause[];
+	}): Promise<GardeningEventRepositoryDeleteManyOutputDTO> {
+		const rows = findRowsMatchingAnyClause([...this.store.gardeningEvents.values()], input.filters);
+		let count = 0;
+		for (const row of rows) {
+			this.store.clearAllLinksForEvent(row.id);
+			if (this.store.gardeningEvents.delete(idKey(row.id))) count += 1;
 		}
-		if (!this.store.locations.has(idKey(input.dto.locationId))) {
-			this.throwNotFoundError("Location", input.dto.locationId);
-		}
-		this.store.linkEventToLocation(input.dto.id, input.dto.locationId);
-		return ev;
+		return { count };
 	}
 
-	async getForPlantScoped(input: {
-		workspaceKeys: readonly GardeningEventEntity["workspaceKey"][];
-		dto: GardeningEventRepositoryGetForPlantInputDTO;
-	}): Promise<GardeningEventRepositoryGetForPlantOutputDTO> {
-		const allowed = new Set(input.workspaceKeys.map((key) => String(key)));
-		const eventIds = this.store.plantToEvents.get(idKey(input.dto.plantId)) ?? new Set();
-		const items = [...eventIds]
-			.map((eid) => this.store.gardeningEvents.get(eid))
-			.filter((e): e is GardeningEventEntity => e !== undefined)
-			.filter((e) => allowed.has(String(e.workspaceKey)))
-			.sort((a, b) => idKey(a.id).localeCompare(idKey(b.id)));
+	async getManyForPlant(input: {
+		filters: readonly GardeningEventRepositoryForPlantFilterClause[];
+	}): Promise<GardeningEventRepositoryGetManyOutputDTO> {
+		const items: GardeningEventEntity[] = [];
+		const seen = new Set<string>();
+		for (const clause of input.filters) {
+			const eventIds = this.store.plantToEvents.get(idKey(clause.plantId)) ?? new Set();
+			for (const eid of eventIds) {
+				const row = this.store.gardeningEvents.get(eid);
+				if (!row) continue;
+				if (!workspaceKeysEqual(row.workspaceKey, clause.workspaceKey)) continue;
+				const k = idKey(row.id);
+				if (seen.has(k)) continue;
+				seen.add(k);
+				items.push(row);
+			}
+		}
+		items.sort((a, b) => idKey(a.id).localeCompare(idKey(b.id)));
 		return { items };
 	}
 
-	async getForLocationScoped(input: {
-		workspaceKeys: readonly GardeningEventEntity["workspaceKey"][];
-		dto: GardeningEventRepositoryGetForLocationInputDTO;
-	}): Promise<GardeningEventRepositoryGetForLocationOutputDTO> {
-		const allowed = new Set(input.workspaceKeys.map((key) => String(key)));
-		const eventIds = this.store.locationToEvents.get(idKey(input.dto.locationId)) ?? new Set();
-		const items = [...eventIds]
-			.map((eid) => this.store.gardeningEvents.get(eid))
-			.filter((e): e is GardeningEventEntity => e !== undefined)
-			.filter((e) => allowed.has(String(e.workspaceKey)))
-			.sort((a, b) => idKey(a.id).localeCompare(idKey(b.id)));
+	async getManyForLocation(input: {
+		filters: readonly GardeningEventRepositoryForLocationFilterClause[];
+	}): Promise<GardeningEventRepositoryGetManyOutputDTO> {
+		const items: GardeningEventEntity[] = [];
+		const seen = new Set<string>();
+		for (const clause of input.filters) {
+			const eventIds = this.store.locationToEvents.get(idKey(clause.locationId)) ?? new Set();
+			for (const eid of eventIds) {
+				const row = this.store.gardeningEvents.get(eid);
+				if (!row) continue;
+				if (!workspaceKeysEqual(row.workspaceKey, clause.workspaceKey)) continue;
+				const k = idKey(row.id);
+				if (seen.has(k)) continue;
+				seen.add(k);
+				items.push(row);
+			}
+		}
+		items.sort((a, b) => idKey(a.id).localeCompare(idKey(b.id)));
 		return { items };
 	}
 
-	async getBindingsForEventScoped(input: {
-		workspaceKey: GardeningEventEntity["workspaceKey"];
-		dto: GardeningEventRepositoryGetBindingsForEventInputDTO;
-	}): Promise<GardeningEventRepositoryGetBindingsForEventOutputDTO> {
-		const row = await this.getByIdScoped({ workspaceKey: input.workspaceKey, dto: { id: input.dto.id } });
-		return this.store.getBindingsForEvent(row.id);
-	}
-
-	async createScoped(
-		input: { dto: GardeningEventRepositoryCreateInputDTO },
-	): Promise<GardeningEventRepositoryCreateOutputDTO> {
-		return this.insertRow(input.dto);
-	}
-
-	async getAllScoped(input: {
-		workspaceKeys: readonly GardeningEventEntity["workspaceKey"][];
-	}): Promise<GardeningEventRepositoryGetAllOutputDTO> {
-		return this.listInWorkspaces(input.workspaceKeys);
-	}
-
-	async getByIdScoped(input: {
-		workspaceKey: GardeningEventEntity["workspaceKey"];
-		dto: GardeningEventRepositoryGetByIdInputDTO;
-	}): Promise<GardeningEventRepositoryGetByIdOutputDTO> {
-		const row = this.loadById(input.dto);
-		if (String(row.workspaceKey) !== String(input.workspaceKey)) {
-			this.throwNotFoundError("GardeningEvent", input.dto.id);
+	async bindToPlantOne(input: {
+		filters: readonly GardeningEventRepositoryFilterClause[];
+		plantId: PlantEntityId;
+	}): Promise<GardeningEventEntity> {
+		const row = this.resolveStoredFromFilters(input.filters);
+		const plant = this.store.plants.get(idKey(input.plantId));
+		if (!plant) this.throwNotFoundError("Plant", input.plantId);
+		if (!workspaceKeysEqual(plant.workspaceKey, row.workspaceKey)) {
+			this.throwValidationError({
+				operation: "bindToPlant",
+				validationCode: "plant-workspace-mismatch",
+				context: { plantId: input.plantId, eventWorkspaceKey: row.workspaceKey },
+			});
 		}
+		this.store.linkEventToPlant(row.id, input.plantId);
 		return row;
 	}
 
-	async updateByIdScoped(input: {
-		workspaceKey: GardeningEventEntity["workspaceKey"];
-		dto: GardeningEventRepositoryUpdateInputDTO;
-	}): Promise<GardeningEventRepositoryUpdateOutputDTO> {
-		await this.getByIdScoped({ workspaceKey: input.workspaceKey, dto: { id: input.dto.id } });
-		return this.patchRow(input.dto);
+	async bindToLocationOne(input: {
+		filters: readonly GardeningEventRepositoryFilterClause[];
+		locationId: LocationEntityId;
+	}): Promise<GardeningEventEntity> {
+		const row = this.resolveStoredFromFilters(input.filters);
+		const location = this.store.locations.get(idKey(input.locationId));
+		if (!location) this.throwNotFoundError("Location", input.locationId);
+		if (!workspaceKeysEqual(location.workspaceKey, row.workspaceKey)) {
+			this.throwValidationError({
+				operation: "bindToLocation",
+				validationCode: "location-workspace-mismatch",
+				context: { locationId: input.locationId, eventWorkspaceKey: row.workspaceKey },
+			});
+		}
+		this.store.linkEventToLocation(row.id, input.locationId);
+		return row;
 	}
 
-	async deleteByIdScoped(input: {
-		workspaceKey: GardeningEventEntity["workspaceKey"];
-		dto: GardeningEventRepositoryDeleteInputDTO;
-	}): Promise<GardeningEventRepositoryDeleteOutputDTO> {
-		await this.getByIdScoped({ workspaceKey: input.workspaceKey, dto: input.dto });
-		return this.removeRow(input.dto);
+	async getBindingsOne(input: {
+		filters: readonly GardeningEventRepositoryFilterClause[];
+	}): Promise<GardeningEventRepositoryGetBindingsOutputDTO> {
+		const row = this.resolveStoredFromFilters(input.filters);
+		return this.store.getBindingsForEvent(row.id);
 	}
 }

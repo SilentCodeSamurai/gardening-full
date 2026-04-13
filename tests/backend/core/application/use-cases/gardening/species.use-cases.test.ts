@@ -64,7 +64,12 @@ describe("Species use-cases", () => {
     expect((await getAll.execute({ context })).items.filter((s) => s.id === row.id)).toHaveLength(0);
     const missing = getById.execute({ context, dto: { id: row.id } });
     await expect(missing).rejects.toBeInstanceOf(RepositoryNotFoundError);
-    await expect(missing).rejects.toMatchObject({ resource: "Species", context: { id: row.id } });
+    await expect(missing).rejects.toMatchObject({
+      resource: "Species",
+      context: {
+        id: expect.arrayContaining([expect.objectContaining({ id: row.id })]),
+      },
+    });
   });
 
   it("create throws when categoryId does not exist", async () => {
@@ -137,7 +142,7 @@ describe("Species use-cases", () => {
     await expect(conflict).rejects.toBeInstanceOf(RepositoryConflictError);
     await expect(conflict).rejects.toMatchObject({
       operation: "delete",
-      reason: "cultivars-reference-species",
+      reason: "cultivar-reference-species",
       context: { speciesId: species.id },
     });
   });

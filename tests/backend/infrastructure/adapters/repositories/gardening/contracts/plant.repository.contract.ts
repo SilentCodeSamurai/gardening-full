@@ -1,6 +1,5 @@
-import { cultivarId, plantId } from "@backend/infrastructure/integrations/shared/database-ids";
 import { RepositoryNotFoundError } from "@backend/core/application/ports/repositories/shared/base-repository.errors";
-import { WorkspaceVO } from "@backend/core/domain/access/workspace.vo";
+import { cultivarId, plantId } from "@backend/infrastructure/integrations/shared/database-ids";
 import type { DependencyContainer } from "tsyringe";
 import { beforeEach, describe, expect, it } from "vitest";
 
@@ -9,242 +8,337 @@ import {
 	fixtureNoteAction,
 	fixtureSpeciesCharacteristics,
 } from "../../../../../helpers/gardening/test-fixtures";
+import {
+	contractTestWorkspaceKey as wk,
+	contractTestWorkspaceKeyB as wkB,
+} from "../../shared/test-workspace-keys";
 import { resolveGardeningRepositoryPorts } from "./resolve-gardening-repository-ports";
 
 export function registerPlantRepositoryContract(
 	adapterLabel: string,
 	createContainer: () => DependencyContainer,
 ): void {
-	describe(`PlantRepository (${adapterLabel})`, () => {
-		const wk = WorkspaceVO.globalShared().toKey();
-		let speciesCategoryRepository: ReturnType<typeof resolveGardeningRepositoryPorts>["speciesCategory"];
-		let speciesRepository: ReturnType<typeof resolveGardeningRepositoryPorts>["species"];
-		let cultivarRepository: ReturnType<typeof resolveGardeningRepositoryPorts>["cultivar"];
-		let plantRepository: ReturnType<typeof resolveGardeningRepositoryPorts>["plant"];
-		let gardeningEventRepository: ReturnType<typeof resolveGardeningRepositoryPorts>["gardeningEvent"];
+	describe(`PlantRepositoryPort (${adapterLabel})`, () => {
+		let speciesCategory: ReturnType<typeof resolveGardeningRepositoryPorts>["speciesCategory"];
+		let species: ReturnType<typeof resolveGardeningRepositoryPorts>["species"];
+		let cultivar: ReturnType<typeof resolveGardeningRepositoryPorts>["cultivar"];
+		let plant: ReturnType<typeof resolveGardeningRepositoryPorts>["plant"];
+		let gardeningEvent: ReturnType<typeof resolveGardeningRepositoryPorts>["gardeningEvent"];
 
 		beforeEach(() => {
 			const ports = resolveGardeningRepositoryPorts(createContainer());
-			speciesCategoryRepository = ports.speciesCategory;
-			speciesRepository = ports.species;
-			cultivarRepository = ports.cultivar;
-			plantRepository = ports.plant;
-			gardeningEventRepository = ports.gardeningEvent;
+			speciesCategory = ports.speciesCategory;
+			species = ports.species;
+			cultivar = ports.cultivar;
+			plant = ports.plant;
+			gardeningEvent = ports.gardeningEvent;
 		});
 
-		async function seedAndCultivar() {
-			const cat = await speciesCategoryRepository.createScoped({ dto: { title: "C", workspaceKey: wk } });
-			const species = await speciesRepository.createScoped({
-				dto: {
-					workspaceKey: wk,
-					categoryId: cat.id,
-					characteristics: fixtureSpeciesCharacteristics(),
-				},
+		async function seedCultivar() {
+			const cat = await speciesCategory.createOne({ workspaceKey: wk, title: "C" });
+			const sp = await species.createOne({
+				workspaceKey: wk,
+				categoryId: cat.id,
+				characteristics: fixtureSpeciesCharacteristics(),
 			});
-			const cultivar = await cultivarRepository.createScoped({
-				dto: {
-					workspaceKey: wk,
-					speciesId: species.id,
-					characteristics: fixtureCultivarCharacteristics(),
-				},
+			return cultivar.createOne({
+				workspaceKey: wk,
+				speciesId: sp.id,
+				characteristics: fixtureCultivarCharacteristics(),
 			});
-			return { cultivar, species };
 		}
 
-		it("create requires cultivar row to exist", async () => {
-			await seedAndCultivar();
-			const ghostCultivarId = cultivarId("00000000-0000-4000-8000-00000000dead");
+		it("createOne requires cultivar", async () => {
+			await seedCultivar();
 			await expect(
-				plantRepository.createScoped({
-					dto: {
-						workspaceKey: wk,
-						title: null,
-						description: null,
-						cultivarId: ghostCultivarId,
-					},
-				}),
-			).rejects.toBeInstanceOf(RepositoryNotFoundError);
-		});
-
-		it("createMany reuses species/cultivar and produces distinct ids", async () => {
-			const { cultivar } = await seedAndCultivar();
-			const { items } = await plantRepository.createManyScoped({
-				dto: {
-					rows: [
-						{ workspaceKey: wk, title: null, description: null, cultivarId: cultivar.id },
-						{ workspaceKey: wk, title: null, description: null, cultivarId: cultivar.id },
-						{ workspaceKey: wk, title: null, description: null, cultivarId: cultivar.id },
-					],
-				},
-			});
-			expect(items).toHaveLength(3);
-			const ids = new Set(items.map((p) => p.id as string));
-			expect(ids.size).toBe(3);
-			expect(items.every((p) => p.cultivar.species.id === cultivar.speciesId)).toBe(true);
-			expect(items.every((p) => p.cultivar.id === cultivar.id)).toBe(true);
-		});
-
-		it("createMany persists the supplied rows as-is", async () => {
-			const { cultivar } = await seedAndCultivar();
-			const { items } = await plantRepository.createManyScoped({
-				dto: {
-					rows: [
-						{ workspaceKey: wk, title: "Patch #5", description: null, cultivarId: cultivar.id },
-						{ workspaceKey: wk, title: "Patch #6", description: null, cultivarId: cultivar.id },
-					],
-				},
-			});
-			expect(items.map((p) => p.title)).toEqual(["Patch #5", "Patch #6"]);
-		});
-
-		it("getListByIds preserves input order and skips missing", async () => {
-			const { cultivar } = await seedAndCultivar();
-			const a = await plantRepository.createScoped({
-				dto: { workspaceKey: wk, title: "a", description: null, cultivarId: cultivar.id },
-			});
-			const b = await plantRepository.createScoped({
-				dto: { workspaceKey: wk, title: "b", description: null, cultivarId: cultivar.id },
-			});
-			const missing = plantId("00000000-0000-4000-8000-00000000aaaa");
-			const { items } = await plantRepository.getListByIdsScoped({
-				workspaceKeys: [wk],
-				dto: { ids: [b.id, missing, a.id] },
-			});
-			expect(items.map((p) => p.title)).toEqual(["b", "a"]);
-		});
-
-		it("getByCultivarIdScoped", async () => {
-			const { cultivar } = await seedAndCultivar();
-			await plantRepository.createScoped({
-				dto: { workspaceKey: wk, title: "p1", description: null, cultivarId: cultivar.id },
-			});
-			const byCultivar = await plantRepository.getByCultivarIdScoped({
-				workspaceKeys: [wk],
-				dto: { cultivarId: cultivar.id },
-			});
-			expect(byCultivar.items).toHaveLength(1);
-		});
-
-		it("getByIdScoped hides plant when workspace key does not match row", async () => {
-			const { cultivar } = await seedAndCultivar();
-			const plantWk = WorkspaceVO.user("plant-owner").toKey();
-			const plant = await plantRepository.createScoped({
-				dto: {
-					workspaceKey: plantWk,
-					title: "isolated",
-					description: null,
-					cultivarId: cultivar.id,
-				},
-			});
-			await expect(
-				plantRepository.getByIdScoped({ workspaceKey: wk, dto: { id: plant.id } }),
-			).rejects.toBeInstanceOf(RepositoryNotFoundError);
-			await expect(
-				plantRepository.getByIdScoped({ workspaceKey: plantWk, dto: { id: plant.id } }),
-			).resolves.toMatchObject({ id: plant.id });
-		});
-
-		it("update with new cultivar requires cultivar to exist", async () => {
-			const { cultivar } = await seedAndCultivar();
-			const plant = await plantRepository.createScoped({
-				dto: { workspaceKey: wk, title: null, description: null, cultivarId: cultivar.id },
-			});
-			await expect(
-				plantRepository.updateByIdScoped({
+				plant.createOne({
 					workspaceKey: wk,
-					dto: {
-						id: plant.id,
-						cultivarId: cultivarId("00000000-0000-4000-8000-00000000beef"),
-					},
+					title: null,
+					description: null,
+					cultivarId: cultivarId("00000000-0000-4000-8000-00000000dead"),
 				}),
 			).rejects.toBeInstanceOf(RepositoryNotFoundError);
 		});
 
-		it("delete clears gardening event↔plant links and removes the plant", async () => {
-			const { cultivar } = await seedAndCultivar();
-			const plant = await plantRepository.createScoped({
-				dto: { workspaceKey: wk, title: null, description: null, cultivarId: cultivar.id },
+		it("createMany returns hydrated items with distinct ids", async () => {
+			const cv = await seedCultivar();
+			const { items } = await plant.createMany({
+				items: [
+					{ workspaceKey: wk, title: null, description: null, cultivarId: cv.id },
+					{ workspaceKey: wk, title: null, description: null, cultivarId: cv.id },
+				],
 			});
-			const ev = await gardeningEventRepository.createScoped({
-				dto: { workspaceKey: wk, action: fixtureNoteAction() },
-			});
-			await gardeningEventRepository.bindToPlantScoped({
-				workspaceKey: wk,
-				dto: { id: ev.id, plantId: plant.id },
-			});
-			const before = await gardeningEventRepository.getBindingsForEventScoped({
-				workspaceKey: wk,
-				dto: { id: ev.id },
-			});
-			expect(before.plantIds.map((id) => id as string)).toContain(plant.id as string);
+			expect(items).toHaveLength(2);
+			expect(new Set(items.map((p) => p.id as string)).size).toBe(2);
+			expect(items.every((p) => p.cultivar.id === cv.id)).toBe(true);
+		});
 
-			await plantRepository.deleteByIdScoped({ workspaceKey: wk, dto: { id: plant.id } });
+		it("getMany without filters lists all plants", async () => {
+			const cv = await seedCultivar();
+			await plant.createOne({
+				workspaceKey: wk,
+				title: "listed",
+				description: null,
+				cultivarId: cv.id,
+			});
+			const { items } = await plant.getMany();
+			expect(items.some((p) => p.title === "listed")).toBe(true);
+		});
 
+		it("getMany filters: [] returns empty", async () => {
+			const cv = await seedCultivar();
+			await plant.createOne({
+				workspaceKey: wk,
+				title: null,
+				description: null,
+				cultivarId: cv.id,
+			});
+			const { items } = await plant.getMany({ filters: [] });
+			expect(items).toHaveLength(0);
+		});
+
+		it("getMany OR by id and filter by cultivarId", async () => {
+			const cv = await seedCultivar();
+			const p1 = await plant.createOne({
+				workspaceKey: wk,
+				title: "p1",
+				description: null,
+				cultivarId: cv.id,
+			});
+			const p2 = await plant.createOne({
+				workspaceKey: wk,
+				title: "p2",
+				description: null,
+				cultivarId: cv.id,
+			});
+			const byIds = await plant.getMany({ filters: [{ id: p1.id }, { id: p2.id }] });
+			expect(byIds.items).toHaveLength(2);
+			const byCv = await plant.getMany({ filters: [{ cultivarId: cv.id, workspaceKey: wk }] });
+			expect(byCv.items.length).toBeGreaterThanOrEqual(2);
+		});
+
+		it("getOne OR filters", async () => {
+			const cv = await seedCultivar();
+			const p = await plant.createOne({
+				workspaceKey: wk,
+				title: "or",
+				description: null,
+				cultivarId: cv.id,
+			});
+			const got = await plant.getOne({
+				filters: [{ id: plantId("00000000-0000-4000-8000-00000000bad") }, { id: p.id }],
+			});
+			expect(got.id).toEqual(p.id);
+		});
+
+		it("updateOne patches title; updateMany sets title on all matches", async () => {
+			const cv = await seedCultivar();
+			const a = await plant.createOne({
+				workspaceKey: wk,
+				title: "a",
+				description: null,
+				cultivarId: cv.id,
+			});
+			const u = await plant.updateOne({
+				filters: [{ id: a.id }],
+				dto: { title: "a-patched" },
+			});
+			expect(u.title).toBe("a-patched");
+			const b = await plant.createOne({
+				workspaceKey: wk,
+				title: "b",
+				description: null,
+				cultivarId: cv.id,
+			});
+			const { count } = await plant.updateMany({
+				filters: [{ title: "b", workspaceKey: wk }],
+				dto: { title: "b-many" },
+			});
+			expect(count).toBe(1);
+			const b2 = await plant.getOne({ filters: [{ id: b.id }] });
+			expect(b2.title).toBe("b-many");
+		});
+
+		it("updateOne throws when no match", async () => {
 			await expect(
-				plantRepository.getByIdScoped({ workspaceKey: wk, dto: { id: plant.id } }),
+				plant.updateOne({
+					filters: [{ id: plantId("00000000-0000-4000-8000-00000000cafe") }],
+					dto: { title: "x" },
+				}),
 			).rejects.toBeInstanceOf(RepositoryNotFoundError);
-			const after = await gardeningEventRepository.getBindingsForEventScoped({
+		});
+
+		it("updateOne with invalid cultivarId throws", async () => {
+			const cv = await seedCultivar();
+			const p = await plant.createOne({
 				workspaceKey: wk,
-				dto: { id: ev.id },
+				title: null,
+				description: null,
+				cultivarId: cv.id,
 			});
+			await expect(
+				plant.updateOne({
+					filters: [{ id: p.id }],
+					dto: { cultivarId: cultivarId("00000000-0000-4000-8000-00000000beef") },
+				}),
+			).rejects.toBeInstanceOf(RepositoryNotFoundError);
+		});
+
+		it("deleteOne clears event↔plant links", async () => {
+			const cv = await seedCultivar();
+			const p = await plant.createOne({
+				workspaceKey: wk,
+				title: null,
+				description: null,
+				cultivarId: cv.id,
+			});
+			const ev = await gardeningEvent.createOne({ workspaceKey: wk, action: fixtureNoteAction() });
+			await gardeningEvent.bindToPlantOne({ filters: [{ id: ev.id }], plantId: p.id });
+			const before = await gardeningEvent.getBindingsOne({ filters: [{ id: ev.id }] });
+			expect(before.plantIds.map(String)).toContain(String(p.id));
+
+			await plant.deleteOne({ filters: [{ id: p.id }] });
+			await expect(plant.getOne({ filters: [{ id: p.id }] })).rejects.toBeInstanceOf(RepositoryNotFoundError);
+			const after = await gardeningEvent.getBindingsOne({ filters: [{ id: ev.id }] });
 			expect(after.plantIds).toHaveLength(0);
-			const stillThere = await gardeningEventRepository.getByIdScoped({
-				workspaceKey: wk,
-				dto: { id: ev.id },
-			});
-			expect(stillThere.id).toEqual(ev.id);
 		});
 
-		it("deleteMany removes existing plants in request order and skips missing ids", async () => {
-			const { cultivar } = await seedAndCultivar();
-			const a = await plantRepository.createScoped({
-				dto: { workspaceKey: wk, title: "a", description: null, cultivarId: cultivar.id },
-			});
-			const b = await plantRepository.createScoped({
-				dto: { workspaceKey: wk, title: "b", description: null, cultivarId: cultivar.id },
-			});
-			const ghost = plantId("00000000-0000-4000-8000-00000000aaaa");
-			const { deletedIds } = await plantRepository.deleteManyScoped({
-				workspaceKeys: [wk],
-				dto: { ids: [b.id, ghost, a.id] },
-			});
-			expect(deletedIds).toEqual([b.id, a.id]);
+		it("deleteOne throws when missing", async () => {
 			await expect(
-				plantRepository.getByIdScoped({ workspaceKey: wk, dto: { id: a.id } }),
-			).rejects.toBeInstanceOf(RepositoryNotFoundError);
-			await expect(
-				plantRepository.getByIdScoped({ workspaceKey: wk, dto: { id: b.id } }),
+				plant.deleteOne({ filters: [{ id: plantId("00000000-0000-4000-8000-00000000fade") }] }),
 			).rejects.toBeInstanceOf(RepositoryNotFoundError);
 		});
 
-		it("deleteMany clears event links for each removed plant", async () => {
-			const { cultivar } = await seedAndCultivar();
-			const p1 = await plantRepository.createScoped({
-				dto: { workspaceKey: wk, title: null, description: null, cultivarId: cultivar.id },
-			});
-			const p2 = await plantRepository.createScoped({
-				dto: { workspaceKey: wk, title: null, description: null, cultivarId: cultivar.id },
-			});
-			const ev = await gardeningEventRepository.createScoped({
-				dto: { workspaceKey: wk, action: fixtureNoteAction() },
-			});
-			await gardeningEventRepository.bindToPlantScoped({
+		it("deleteMany removes rows matching OR filters", async () => {
+			const cv = await seedCultivar();
+			const a = await plant.createOne({
 				workspaceKey: wk,
-				dto: { id: ev.id, plantId: p1.id },
+				title: "da",
+				description: null,
+				cultivarId: cv.id,
 			});
-			await gardeningEventRepository.bindToPlantScoped({
+			const b = await plant.createOne({
 				workspaceKey: wk,
-				dto: { id: ev.id, plantId: p2.id },
+				title: "db",
+				description: null,
+				cultivarId: cv.id,
 			});
-			await plantRepository.deleteManyScoped({
-				workspaceKeys: [wk],
-				dto: { ids: [p1.id, p2.id] },
+			const { count } = await plant.deleteMany({ filters: [{ id: b.id }, { id: a.id }] });
+			expect(count).toBe(2);
+		});
+
+		it("deleteMany count 0 when nothing matches", async () => {
+			const { count } = await plant.deleteMany({
+				filters: [{ title: "nonexistent-plant-title-xyz", workspaceKey: wk }],
 			});
-			const bindings = await gardeningEventRepository.getBindingsForEventScoped({
+			expect(count).toBe(0);
+		});
+
+		it("getOne throws for missing id", async () => {
+			await expect(
+				plant.getOne({ filters: [{ id: plantId("00000000-0000-4000-8000-000000000001") }] }),
+			).rejects.toBeInstanceOf(RepositoryNotFoundError);
+		});
+
+		it("createOne succeeds with valid cultivar", async () => {
+			const cv = await seedCultivar();
+			const p = await plant.createOne({
 				workspaceKey: wk,
-				dto: { id: ev.id },
+				title: "created-ok",
+				description: null,
+				cultivarId: cv.id,
 			});
-			expect(bindings.plantIds).toHaveLength(0);
+			expect(p.title).toBe("created-ok");
+			expect(p.cultivar.id).toEqual(cv.id);
+		});
+
+		it("getMany single-field filter by id", async () => {
+			const cv = await seedCultivar();
+			const p = await plant.createOne({
+				workspaceKey: wk,
+				title: "gmid",
+				description: null,
+				cultivarId: cv.id,
+			});
+			const { items } = await plant.getMany({ filters: [{ id: p.id }] });
+			expect(items).toHaveLength(1);
+			expect(items[0]?.id).toEqual(p.id);
+		});
+
+		it("getMany multi-field AND: wrong workspaceKey excludes row", async () => {
+			const cv = await seedCultivar();
+			const p = await plant.createOne({
+				workspaceKey: wk,
+				title: null,
+				description: null,
+				cultivarId: cv.id,
+			});
+			const { items } = await plant.getMany({ filters: [{ id: p.id, workspaceKey: wkB }] });
+			expect(items).toHaveLength(0);
+		});
+
+		it("getMany OR combines id miss with title hit", async () => {
+			const cv = await seedCultivar();
+			const p = await plant.createOne({
+				workspaceKey: wk,
+				title: "title-or-only",
+				description: null,
+				cultivarId: cv.id,
+			});
+			const { items } = await plant.getMany({
+				filters: [{ id: plantId("00000000-0000-4000-8000-00000000bad") }, { title: "title-or-only", workspaceKey: wk }],
+			});
+			expect(items).toHaveLength(1);
+			expect(items[0]?.id).toEqual(p.id);
+		});
+
+		it("updateMany OR matches multiple plants", async () => {
+			const cv = await seedCultivar();
+			const a = await plant.createOne({
+				workspaceKey: wk,
+				title: "uma",
+				description: null,
+				cultivarId: cv.id,
+			});
+			const b = await plant.createOne({
+				workspaceKey: wk,
+				title: "umb",
+				description: null,
+				cultivarId: cv.id,
+			});
+			const { count } = await plant.updateMany({
+				filters: [{ id: a.id }, { id: b.id }],
+				dto: { title: "um-merged" },
+			});
+			expect(count).toBe(2);
+		});
+
+		it("updateMany count 0 when filters match nothing", async () => {
+			const { count } = await plant.updateMany({
+				filters: [{ title: "nonexistent-plant-um-0", workspaceKey: wk }],
+				dto: { title: "x" },
+			});
+			expect(count).toBe(0);
+		});
+
+		it("deleteMany OR by id merges distinct rows", async () => {
+			const cv = await seedCultivar();
+			const a = await plant.createOne({
+				workspaceKey: wk,
+				title: "dma",
+				description: null,
+				cultivarId: cv.id,
+			});
+			const b = await plant.createOne({
+				workspaceKey: wk,
+				title: "dmb",
+				description: null,
+				cultivarId: cv.id,
+			});
+			const { count } = await plant.deleteMany({
+				filters: [{ id: a.id }, { title: "dmb", workspaceKey: wk }],
+			});
+			expect(count).toBe(2);
 		});
 	});
 }

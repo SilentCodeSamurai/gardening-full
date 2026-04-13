@@ -1,17 +1,25 @@
 import type {
-	SpeciesRepositoryCreateInputDTO,
-	SpeciesRepositoryCreateOutputDTO,
-	SpeciesRepositoryDeleteInputDTO,
-	SpeciesRepositoryDeleteOutputDTO,
-	SpeciesRepositoryGetAllOutputDTO,
-	SpeciesRepositoryGetByIdInputDTO,
-	SpeciesRepositoryGetByIdOutputDTO,
 	SpeciesRepositoryPort,
-	SpeciesRepositoryUpdateInputDTO,
+	SpeciesRepositoryCreateInputDTO,
+	SpeciesRepositoryCreateManyInputDTO,
+	SpeciesRepositoryCreateManyOutputDTO,
+	SpeciesRepositoryCreateOutputDTO,
+	SpeciesRepositoryDeleteManyOutputDTO,
+	SpeciesRepositoryDeleteOutputDTO,
+	SpeciesRepositoryFilterClause,
+	SpeciesRepositoryGetManyOutputDTO,
+	SpeciesRepositoryGetOneOutputDTO,
+	SpeciesRepositoryUpdateManyOutputDTO,
 	SpeciesRepositoryUpdateOutputDTO,
+	SpeciesRepositoryUpdatePatchDTO,
 } from "@backend/core/application/ports/repositories/gardening/species.repository.port";
 import { BaseRepositoryErrors } from "@backend/core/application/ports/repositories/shared/base-repository.errors";
 import type { SpeciesEntity } from "@backend/core/domain/gardening/entities";
+import { workspaceKeysEqual } from "@backend/infrastructure/adapters/repositories/shared/workspace-key";
+import {
+	findFirstRowMatchingAnyClause,
+	findRowsMatchingAnyClause,
+} from "@backend/infrastructure/adapters/repositories/shared/in-memory-entity-filter";
 import type { InMemoryStore } from "@backend/infrastructure/integrations/in-memory-database/client";
 import { idKey, speciesId } from "@backend/infrastructure/integrations/shared/database-ids";
 
@@ -21,17 +29,22 @@ export class SpeciesInMemoryRepository extends BaseRepositoryErrors implements S
 	}
 
 	private insertRow(dto: SpeciesRepositoryCreateInputDTO): SpeciesRepositoryCreateOutputDTO {
-		if (!this.store.speciesCategories.has(idKey(dto.categoryId))) {
+		const cat = this.store.speciesCategories.get(idKey(dto.categoryId));
+		if (!cat) {
 			this.throwNotFoundError("SpeciesCategory", dto.categoryId);
+		}
+		if (!workspaceKeysEqual(cat.workspaceKey, dto.workspaceKey)) {
+			this.throwValidationError({
+				operation: "create",
+				validationCode: "category-workspace-mismatch",
+				context: { categoryId: dto.categoryId, workspaceKey: dto.workspaceKey },
+			});
 		}
 		const now = new Date();
 		const id = speciesId();
 		const row: SpeciesEntity = {
+			...dto,
 			id,
-			workspaceKey: dto.workspaceKey,
-			categoryId: dto.categoryId,
-			characteristics: dto.characteristics,
-			presentation: dto.presentation,
 			createdAt: now,
 			updatedAt: now,
 		};
@@ -39,92 +52,128 @@ export class SpeciesInMemoryRepository extends BaseRepositoryErrors implements S
 		return row;
 	}
 
-	private loadById(dto: SpeciesRepositoryGetByIdInputDTO): SpeciesRepositoryGetByIdOutputDTO {
-		const row = this.store.species.get(idKey(dto.id));
-		if (!row) this.throwNotFoundError("Species", dto.id);
+	private patchStored(existing: SpeciesEntity, dto: SpeciesRepositoryUpdatePatchDTO): SpeciesEntity {
+		const nextWorkspaceKey = dto.workspaceKey !== undefined ? dto.workspaceKey : existing.workspaceKey;
+		const nextCategoryId = dto.categoryId !== undefined ? dto.categoryId : existing.categoryId;
+		return {
+			...existing,
+			workspaceKey: nextWorkspaceKey,
+			categoryId: nextCategoryId,
+			characteristics: dto.characteristics !== undefined ? dto.characteristics : existing.characteristics,
+			presentation: dto.presentation !== undefined ? dto.presentation : existing.presentation,
+			updatedAt: new Date(),
+		};
+	}
+
+	private assertCategoryMatchesWorkspace(categoryId: SpeciesEntity["categoryId"], workspaceKey: SpeciesEntity["workspaceKey"]): void {
+		const cat = this.store.speciesCategories.get(idKey(categoryId));
+		if (!cat) this.throwNotFoundError("SpeciesCategory", categoryId);
+		if (!workspaceKeysEqual(cat.workspaceKey, workspaceKey)) {
+			this.throwValidationError({
+				operation: "update",
+				validationCode: "category-workspace-mismatch",
+				context: { categoryId, workspaceKey },
+			});
+		}
+	}
+
+	async createOne(dto: SpeciesRepositoryCreateInputDTO): Promise<SpeciesRepositoryCreateOutputDTO> {
+		return this.insertRow(dto);
+	}
+
+	async createMany(input: SpeciesRepositoryCreateManyInputDTO): Promise<SpeciesRepositoryCreateManyOutputDTO> {
+		let count = 0;
+		for (const item of input.items) {
+			this.insertRow(item);
+			count += 1;
+		}
+		return { count };
+	}
+
+	async getOne(input: {
+		filters: readonly SpeciesRepositoryFilterClause[];
+	}): Promise<SpeciesRepositoryGetOneOutputDTO> {
+		const row = findFirstRowMatchingAnyClause(this.store.species.values(), input.filters);
+		if (!row) this.throwNotFoundError("Species", input.filters);
 		return row;
 	}
 
-	private listInWorkspaces(
-		workspaceKeys: readonly SpeciesEntity["workspaceKey"][],
-	): SpeciesRepositoryGetAllOutputDTO {
-		const allowed = new Set(workspaceKeys.map((key) => String(key)));
-		return { items: [...this.store.species.values()].filter((x) => allowed.has(String(x.workspaceKey))) };
+	async getMany(input?: {
+		filters?: readonly SpeciesRepositoryFilterClause[];
+	}): Promise<SpeciesRepositoryGetManyOutputDTO> {
+		if (input?.filters === undefined) {
+			return { items: [...this.store.species.values()] };
+		}
+		if (input.filters.length === 0) return { items: [] };
+		const rows = findRowsMatchingAnyClause([...this.store.species.values()], input.filters);
+		return { items: rows };
 	}
 
-	private patchRow(dto: SpeciesRepositoryUpdateInputDTO): SpeciesRepositoryUpdateOutputDTO {
-		const key = idKey(dto.id);
-		const existing = this.store.species.get(key);
-		if (!existing) this.throwNotFoundError("Species", dto.id);
-		if (dto.categoryId !== undefined && !this.store.speciesCategories.has(idKey(dto.categoryId))) {
-			this.throwNotFoundError("SpeciesCategory", dto.categoryId);
-		}
-		const updated: SpeciesEntity = {
-			...existing,
-			...dto,
-			id: existing.id,
-			createdAt: existing.createdAt,
-			updatedAt: new Date(),
-		};
-		this.store.species.set(key, updated);
+	async updateOne(input: {
+		filters: readonly SpeciesRepositoryFilterClause[];
+		dto: SpeciesRepositoryUpdatePatchDTO;
+	}): Promise<SpeciesRepositoryUpdateOutputDTO> {
+		const row = findFirstRowMatchingAnyClause(this.store.species.values(), input.filters);
+		if (!row) this.throwNotFoundError("Species", input.filters);
+		const patchedPreview = this.patchStored(row, input.dto);
+		this.assertCategoryMatchesWorkspace(patchedPreview.categoryId, patchedPreview.workspaceKey);
+		const updated = patchedPreview;
+		this.store.species.set(idKey(updated.id), updated);
 		return updated;
 	}
 
-	private removeRow(dto: SpeciesRepositoryDeleteInputDTO): SpeciesRepositoryDeleteOutputDTO {
-		const key = idKey(dto.id);
-		if (!this.store.species.has(key)) this.throwNotFoundError("Species", dto.id);
+	async updateMany(input: {
+		filters: readonly SpeciesRepositoryFilterClause[];
+		dto: SpeciesRepositoryUpdatePatchDTO;
+	}): Promise<SpeciesRepositoryUpdateManyOutputDTO> {
+		const rows = findRowsMatchingAnyClause([...this.store.species.values()], input.filters);
+		let count = 0;
+		for (const row of rows) {
+			const updated = this.patchStored(row, input.dto);
+			this.assertCategoryMatchesWorkspace(updated.categoryId, updated.workspaceKey);
+			this.store.species.set(idKey(updated.id), updated);
+			count += 1;
+		}
+		return { count };
+	}
+
+	async deleteOne(input: {
+		filters: readonly SpeciesRepositoryFilterClause[];
+	}): Promise<SpeciesRepositoryDeleteOutputDTO> {
+		const row = findFirstRowMatchingAnyClause(this.store.species.values(), input.filters);
+		if (!row) this.throwNotFoundError("Species", input.filters);
+		const key = idKey(row.id);
 		for (const c of this.store.cultivars.values()) {
-			if (idKey(c.speciesId) === key) {
+			if (idKey(c.speciesId) === key && workspaceKeysEqual(c.workspaceKey, row.workspaceKey)) {
 				this.throwConflictError({
 					operation: "delete",
-					reason: "cultivars-reference-species",
-					context: { speciesId: dto.id, cultivarId: c.id },
+					reason: "cultivar-reference-species",
+					context: { speciesId: row.id, cultivarId: c.id },
 					participants: [
-						{ entity: "Species", role: "target", id: dto.id },
-						{ entity: "Cultivar", role: "blocking-reference", id: c.id },
+						{ entity: "Species", role: "target", id: row.id as unknown as string },
+						{ entity: "Cultivar", role: "blocking-reference", id: c.id as unknown as string },
 					],
 					message: "Cannot delete species: cultivars still reference it.",
 				});
 			}
 		}
 		this.store.species.delete(key);
-		return dto.id;
+		return row.id;
 	}
 
-	async createScoped(input: { dto: SpeciesRepositoryCreateInputDTO }): Promise<SpeciesRepositoryCreateOutputDTO> {
-		return this.insertRow(input.dto);
-	}
-
-	async getAllScoped(input: {
-		workspaceKeys: readonly SpeciesEntity["workspaceKey"][];
-	}): Promise<SpeciesRepositoryGetAllOutputDTO> {
-		return this.listInWorkspaces(input.workspaceKeys);
-	}
-
-	async getByIdScoped(input: {
-		workspaceKey: SpeciesEntity["workspaceKey"];
-		dto: SpeciesRepositoryGetByIdInputDTO;
-	}): Promise<SpeciesRepositoryGetByIdOutputDTO> {
-		const row = this.loadById(input.dto);
-		if (String(row.workspaceKey) !== String(input.workspaceKey)) {
-			this.throwNotFoundError("Species", input.dto.id);
+	async deleteMany(input: {
+		filters: readonly SpeciesRepositoryFilterClause[];
+	}): Promise<SpeciesRepositoryDeleteManyOutputDTO> {
+		const rows = findRowsMatchingAnyClause([...this.store.species.values()], input.filters);
+		let count = 0;
+		for (const row of rows) {
+			const key = idKey(row.id);
+			const blocked = [...this.store.cultivars.values()].some(
+				(c) => idKey(c.speciesId) === key && workspaceKeysEqual(c.workspaceKey, row.workspaceKey),
+			);
+			if (blocked) continue;
+			if (this.store.species.delete(key)) count += 1;
 		}
-		return row;
-	}
-
-	async updateByIdScoped(input: {
-		workspaceKey: SpeciesEntity["workspaceKey"];
-		dto: SpeciesRepositoryUpdateInputDTO;
-	}): Promise<SpeciesRepositoryUpdateOutputDTO> {
-		await this.getByIdScoped({ workspaceKey: input.workspaceKey, dto: { id: input.dto.id } });
-		return this.patchRow(input.dto);
-	}
-
-	async deleteByIdScoped(input: {
-		workspaceKey: SpeciesEntity["workspaceKey"];
-		dto: SpeciesRepositoryDeleteInputDTO;
-	}): Promise<SpeciesRepositoryDeleteOutputDTO> {
-		await this.getByIdScoped({ workspaceKey: input.workspaceKey, dto: input.dto });
-		return this.removeRow(input.dto);
+		return { count };
 	}
 }

@@ -1,5 +1,5 @@
 import type { DependencyContainer } from "tsyringe";
-import type { CultivarRepositoryPort } from "../core/application/ports/repositories/gardening/cultivar.repositort.port";
+import type { CultivarRepositoryPort } from "../core/application/ports/repositories/gardening/cultivar.repository.port";
 import type { GardeningEventRepositoryPort } from "../core/application/ports/repositories/gardening/gardening-event.repository.port";
 import type { LocationRepositoryPort } from "../core/application/ports/repositories/gardening/location.repository.port";
 import type { PlantRepositoryPort } from "../core/application/ports/repositories/gardening/plant.repository.port";

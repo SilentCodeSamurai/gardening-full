@@ -9,7 +9,7 @@ import { TOKENS } from "#/backend/di/tokens";
  * @param userId - The ID of the user to grant the permissions to.
  * @returns A promise that resolves when the permissions are granted.
  */
-export async function grantDefaultPermissionsOnUserCreated(user: {id: unknown}): Promise<void> {
+export async function grantDefaultPermissionsOnUserCreated(user: { id: unknown }): Promise<void> {
 	const userId = String(user.id ?? "").trim();
 	if (userId.length < 1) return;
 	const userSubject = SubjectVO.user(userId);
@@ -18,7 +18,7 @@ export async function grantDefaultPermissionsOnUserCreated(user: {id: unknown}):
 	const repository = appContainer.resolve<WorkspaceRoleAssignmentRepositoryPort>(
 		TOKENS.WorkspaceRoleAssignmentRepositoryPort,
 	);
-	await repository.upsertWorkspaceRoleAssignment({
+	await repository.upsertOne({
 		subjectKey: userSubject.toKey(),
 		workspaceKey: userWorkspace.toKey(),
 		role: "admin",

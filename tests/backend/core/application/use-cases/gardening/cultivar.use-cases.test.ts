@@ -126,7 +126,7 @@ describe("Cultivar use-cases", () => {
     const conflict = c.resolve(CultivarDeleteUseCase).execute({ context, dto: { id: cultivar.id } });
     await expect(conflict).rejects.toBeInstanceOf(RepositoryConflictError);
     await expect(conflict).rejects.toMatchObject({
-      reason: "plants-reference-cultivar",
+      reason: "plant-reference-cultivar",
       context: { cultivarId: cultivar.id },
     });
   });

@@ -3,11 +3,11 @@ import { TOKENS } from "@backend/di/tokens";
 import type { DependencyContainer } from "tsyringe";
 
 export type SpatialRepositoryPorts = {
-  spatialNode: SpatialNodeRepositoryPort;
+	spatialNode: SpatialNodeRepositoryPort;
 };
 
 export function resolveSpatialRepositoryPorts(c: DependencyContainer): SpatialRepositoryPorts {
-  return {
-    spatialNode: c.resolve<SpatialNodeRepositoryPort>(TOKENS.SpatialNodeRepositoryPort),
-  };
+	return {
+		spatialNode: c.resolve<SpatialNodeRepositoryPort>(TOKENS.SpatialNodeRepositoryPort),
+	};
 }

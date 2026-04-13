@@ -1,23 +1,28 @@
 import { BaseRepositoryErrors } from "@backend/core/application/ports/repositories/shared/base-repository.errors";
 import type {
-	SpatialNodeRepositoryCreateInputDTO,
-	SpatialNodeRepositoryCreateOutputDTO,
-	SpatialNodeRepositoryDeleteInputDTO,
-	SpatialNodeRepositoryDeleteOutputDTO,
-	SpatialNodeRepositoryGetAllOutputDTO,
-	SpatialNodeRepositoryGetByIdInputDTO,
-	SpatialNodeRepositoryGetByIdOutputDTO,
-	SpatialNodeRepositoryGetByRefInputDTO,
-	SpatialNodeRepositoryGetByRefOutputDTO,
-	SpatialNodeRepositoryGetTreeForRootIdInputDTO,
-	SpatialNodeRepositoryGetTreeForRootIdOutputDTO,
 	SpatialNodeRepositoryPort,
-	SpatialNodeRepositoryRestoreInnerDTO,
-	SpatialNodeRepositoryRestoreOutputDTO,
-	SpatialNodeRepositoryUpdateInputDTO,
+	SpatialNodeRepositoryCreateInputDTO,
+	SpatialNodeRepositoryCreateManyInputDTO,
+	SpatialNodeRepositoryCreateManyOutputDTO,
+	SpatialNodeRepositoryCreateOutputDTO,
+	SpatialNodeRepositoryDeleteManyOutputDTO,
+	SpatialNodeRepositoryDeleteOutputDTO,
+	SpatialNodeRepositoryFilterClause,
+	SpatialNodeRepositoryGetByRefFilterClause,
+	SpatialNodeRepositoryGetManyOutputDTO,
+	SpatialNodeRepositoryGetOneOutputDTO,
+	SpatialNodeRepositoryRestoreInputDTO,
+	SpatialNodeRepositoryTreeRootFilterClause,
+	SpatialNodeRepositoryUpdateManyOutputDTO,
 	SpatialNodeRepositoryUpdateOutputDTO,
+	SpatialNodeRepositoryUpdatePatchDTO,
 } from "@backend/core/application/ports/repositories/spatial/spatial-node.repository.port";
 import type { SpatialNodeEntity, SpatialNodeTreeNode } from "@backend/core/domain/spatial/entities";
+import { workspaceKeysEqual } from "@backend/infrastructure/adapters/repositories/shared/workspace-key";
+import {
+	findFirstRowMatchingAnyClause,
+	findRowsMatchingAnyClause,
+} from "@backend/infrastructure/adapters/repositories/shared/in-memory-entity-filter";
 import type { InMemoryStore } from "@backend/infrastructure/integrations/in-memory-database/client";
 import { idKey, spatialNodeId } from "@backend/infrastructure/integrations/shared/database-ids";
 
@@ -27,17 +32,21 @@ export class SpatialNodeInMemoryRepository extends BaseRepositoryErrors implemen
 	}
 
 	private insertRow(dto: SpatialNodeRepositoryCreateInputDTO): SpatialNodeRepositoryCreateOutputDTO {
-		if (dto.parentId !== null && !this.store.spatialNodes.has(idKey(dto.parentId))) {
-			this.throwNotFoundError("SpatialNode", dto.parentId);
+		if (dto.parentId !== null) {
+			const parent = this.store.spatialNodes.get(idKey(dto.parentId));
+			if (!parent) this.throwNotFoundError("SpatialNode", dto.parentId);
+			if (!workspaceKeysEqual(parent.workspaceKey, dto.workspaceKey)) {
+				this.throwValidationError({
+					operation: "create",
+					validationCode: "parent-workspace-mismatch",
+					context: { parentId: dto.parentId, workspaceKey: dto.workspaceKey },
+				});
+			}
 		}
 		const now = new Date();
 		const row: SpatialNodeEntity = {
+			...dto,
 			id: spatialNodeId(),
-			workspaceKey: dto.workspaceKey,
-			parentId: dto.parentId,
-			rect: dto.rect,
-			kind: dto.kind,
-			ref: dto.ref,
 			createdAt: now,
 			updatedAt: now,
 		};
@@ -45,46 +54,138 @@ export class SpatialNodeInMemoryRepository extends BaseRepositoryErrors implemen
 		return row;
 	}
 
-	private loadById(dto: SpatialNodeRepositoryGetByIdInputDTO): SpatialNodeRepositoryGetByIdOutputDTO {
-		const row = this.store.spatialNodes.get(idKey(dto.id));
-		if (!row) this.throwNotFoundError("SpatialNode", dto.id);
+	private patchStored(existing: SpatialNodeEntity, dto: SpatialNodeRepositoryUpdatePatchDTO): SpatialNodeEntity {
+		const nextWorkspaceKey = dto.workspaceKey !== undefined ? dto.workspaceKey : existing.workspaceKey;
+		const nextParent = dto.parentId !== undefined ? dto.parentId : existing.parentId;
+		return {
+			...existing,
+			workspaceKey: nextWorkspaceKey,
+			parentId: nextParent,
+			rect: dto.rect !== undefined ? dto.rect : existing.rect,
+			kind: dto.kind !== undefined ? dto.kind : existing.kind,
+			ref: dto.ref !== undefined ? dto.ref : existing.ref,
+			updatedAt: new Date(),
+		};
+	}
+
+	private matchesRefClause(row: SpatialNodeEntity, clause: SpatialNodeRepositoryGetByRefFilterClause): boolean {
+		return (
+			row.ref.entity === clause.ref.entity &&
+			row.ref.entityId === clause.ref.entityId &&
+			workspaceKeysEqual(row.workspaceKey, clause.workspaceKey)
+		);
+	}
+
+	async createOne(dto: SpatialNodeRepositoryCreateInputDTO): Promise<SpatialNodeRepositoryCreateOutputDTO> {
+		return this.insertRow(dto);
+	}
+
+	async createMany(
+		input: SpatialNodeRepositoryCreateManyInputDTO,
+	): Promise<SpatialNodeRepositoryCreateManyOutputDTO> {
+		let count = 0;
+		for (const item of input.items) {
+			this.insertRow(item);
+			count += 1;
+		}
+		return { count };
+	}
+
+	async getOne(input: {
+		filters: readonly SpatialNodeRepositoryFilterClause[];
+	}): Promise<SpatialNodeRepositoryGetOneOutputDTO> {
+		const row = findFirstRowMatchingAnyClause(this.store.spatialNodes.values(), input.filters);
+		if (!row) this.throwNotFoundError("SpatialNode", input.filters);
 		return row;
 	}
 
-	private patchRow(dto: SpatialNodeRepositoryUpdateInputDTO): SpatialNodeRepositoryUpdateOutputDTO {
-		const key = idKey(dto.id);
-		const existing = this.store.spatialNodes.get(key);
-		if (!existing) this.throwNotFoundError("SpatialNode", dto.id);
-		if (dto.parentId !== undefined && dto.parentId !== null) {
-			if (!this.store.spatialNodes.has(idKey(dto.parentId))) {
-				this.throwNotFoundError("SpatialNode", dto.parentId);
+	async getOneByRef(input: {
+		filters: readonly SpatialNodeRepositoryGetByRefFilterClause[];
+	}): Promise<SpatialNodeRepositoryGetOneOutputDTO> {
+		for (const row of this.store.spatialNodes.values()) {
+			if (input.filters.some((c) => this.matchesRefClause(row, c))) {
+				return row;
 			}
 		}
-		const updated: SpatialNodeEntity = {
-			...existing,
-			parentId: dto.parentId !== undefined ? dto.parentId : existing.parentId,
-			rect: dto.rect ?? existing.rect,
-			kind: dto.kind ?? existing.kind,
-			ref: dto.ref ?? existing.ref,
-			id: existing.id,
-			createdAt: existing.createdAt,
-			updatedAt: new Date(),
-		};
-		this.store.spatialNodes.set(key, updated);
+		this.throwNotFoundError("SpatialNodeRef", input.filters);
+	}
+
+	async getMany(input?: {
+		filters?: readonly SpatialNodeRepositoryFilterClause[];
+	}): Promise<SpatialNodeRepositoryGetManyOutputDTO> {
+		if (input?.filters === undefined) {
+			return { items: [...this.store.spatialNodes.values()] };
+		}
+		if (input.filters.length === 0) return { items: [] };
+		const rows = findRowsMatchingAnyClause([...this.store.spatialNodes.values()], input.filters);
+		return { items: rows };
+	}
+
+	async updateOne(input: {
+		filters: readonly SpatialNodeRepositoryFilterClause[];
+		dto: SpatialNodeRepositoryUpdatePatchDTO;
+	}): Promise<SpatialNodeRepositoryUpdateOutputDTO> {
+		const row = findFirstRowMatchingAnyClause(this.store.spatialNodes.values(), input.filters);
+		if (!row) this.throwNotFoundError("SpatialNode", input.filters);
+		const updated = this.patchStored(row, input.dto);
+		if (updated.parentId !== null) {
+			const parent = this.store.spatialNodes.get(idKey(updated.parentId));
+			if (!parent) this.throwNotFoundError("SpatialNode", updated.parentId);
+			if (!workspaceKeysEqual(parent.workspaceKey, updated.workspaceKey)) {
+				this.throwValidationError({
+					operation: "update",
+					validationCode: "parent-workspace-mismatch",
+					context: { parentId: updated.parentId },
+				});
+			}
+		}
+		this.store.spatialNodes.set(idKey(updated.id), updated);
 		return updated;
 	}
 
-	private removeRow(dto: SpatialNodeRepositoryDeleteInputDTO): SpatialNodeRepositoryDeleteOutputDTO {
-		const key = idKey(dto.id);
-		if (!this.store.spatialNodes.has(key)) this.throwNotFoundError("SpatialNode", dto.id);
+	async updateMany(input: {
+		filters: readonly SpatialNodeRepositoryFilterClause[];
+		dto: SpatialNodeRepositoryUpdatePatchDTO;
+	}): Promise<SpatialNodeRepositoryUpdateManyOutputDTO> {
+		const rows = findRowsMatchingAnyClause([...this.store.spatialNodes.values()], input.filters);
+		let count = 0;
+		for (const row of rows) {
+			const updated = this.patchStored(row, input.dto);
+			if (updated.parentId !== null) {
+				const parent = this.store.spatialNodes.get(idKey(updated.parentId));
+				if (!parent) this.throwNotFoundError("SpatialNode", updated.parentId);
+				if (!workspaceKeysEqual(parent.workspaceKey, updated.workspaceKey)) {
+					this.throwValidationError({
+						operation: "updateMany",
+						validationCode: "parent-workspace-mismatch",
+						context: { parentId: updated.parentId },
+					});
+				}
+			}
+			this.store.spatialNodes.set(idKey(updated.id), updated);
+			count += 1;
+		}
+		return { count };
+	}
+
+	async deleteOne(input: {
+		filters: readonly SpatialNodeRepositoryFilterClause[];
+	}): Promise<SpatialNodeRepositoryDeleteOutputDTO> {
+		const row = findFirstRowMatchingAnyClause(this.store.spatialNodes.values(), input.filters);
+		if (!row) this.throwNotFoundError("SpatialNode", input.filters);
+		const key = idKey(row.id);
 		for (const n of this.store.spatialNodes.values()) {
-			if (n.parentId !== null && idKey(n.parentId) === key) {
+			if (
+				n.parentId !== null &&
+				idKey(n.parentId) === key &&
+				workspaceKeysEqual(n.workspaceKey, row.workspaceKey)
+			) {
 				this.throwConflictError({
 					operation: "delete",
 					reason: "child-nodes-exist",
-					context: { id: dto.id, childId: n.id, parentId: n.parentId },
+					context: { id: row.id, childId: n.id, parentId: n.parentId },
 					participants: [
-						{ entity: "SpatialNode", role: "target", id: dto.id as unknown as string },
+						{ entity: "SpatialNode", role: "target", id: row.id as unknown as string },
 						{ entity: "SpatialNode", role: "child", id: n.id as unknown as string },
 					],
 					message: "Cannot delete spatial node: child nodes exist.",
@@ -92,50 +193,45 @@ export class SpatialNodeInMemoryRepository extends BaseRepositoryErrors implemen
 			}
 		}
 		this.store.spatialNodes.delete(key);
-		return dto.id;
+		return row.id;
 	}
 
-	private listInWorkspaces(
-		workspaceKeys: readonly SpatialNodeEntity["workspaceKey"][],
-	): SpatialNodeRepositoryGetAllOutputDTO {
-		const allowed = new Set(workspaceKeys.map((key) => String(key)));
-		return { items: [...this.store.spatialNodes.values()].filter((x) => allowed.has(String(x.workspaceKey))) };
+	async deleteMany(input: {
+		filters: readonly SpatialNodeRepositoryFilterClause[];
+	}): Promise<SpatialNodeRepositoryDeleteManyOutputDTO> {
+		const rows = findRowsMatchingAnyClause([...this.store.spatialNodes.values()], input.filters);
+		let count = 0;
+		for (const row of rows) {
+			const key = idKey(row.id);
+			const hasChild = [...this.store.spatialNodes.values()].some(
+				(n) =>
+					n.parentId !== null &&
+					idKey(n.parentId) === key &&
+					workspaceKeysEqual(n.workspaceKey, row.workspaceKey),
+			);
+			if (hasChild) continue;
+			if (this.store.spatialNodes.delete(key)) count += 1;
+		}
+		return { count };
 	}
 
-	async getByRefScoped(input: {
-		workspaceKeys: readonly SpatialNodeEntity["workspaceKey"][];
-		dto: SpatialNodeRepositoryGetByRefInputDTO;
-	}): Promise<SpatialNodeRepositoryGetByRefOutputDTO> {
-		const allowed = new Set(input.workspaceKeys.map((key) => String(key)));
-		for (const row of this.store.spatialNodes.values()) {
-			if (
-				row.ref.entity === input.dto.ref.entity &&
-				row.ref.entityId === input.dto.ref.entityId &&
-				allowed.has(String(row.workspaceKey))
-			) {
-				return row;
+	async restoreOne(input: SpatialNodeRepositoryRestoreInputDTO): Promise<SpatialNodeEntity> {
+		const key = idKey(input.id);
+		const existing = this.store.spatialNodes.get(key);
+		if (input.parentId !== null) {
+			const parent = this.store.spatialNodes.get(idKey(input.parentId));
+			if (!parent) this.throwNotFoundError("SpatialNode", input.parentId);
+			if (!workspaceKeysEqual(parent.workspaceKey, input.workspaceKey)) {
+				this.throwValidationError({
+					operation: "restore",
+					validationCode: "parent-workspace-mismatch",
+					context: { parentId: input.parentId },
+				});
 			}
 		}
-		this.throwNotFoundError("SpatialNodeRef", `${input.dto.ref.entity}:${input.dto.ref.entityId}`);
-	}
-
-	async restoreScoped(input: {
-		workspaceKey: SpatialNodeEntity["workspaceKey"];
-		dto: SpatialNodeRepositoryRestoreInnerDTO;
-	}): Promise<SpatialNodeRepositoryRestoreOutputDTO> {
-		if (input.dto.parentId !== null && !this.store.spatialNodes.has(idKey(input.dto.parentId))) {
-			this.throwNotFoundError("SpatialNode", input.dto.parentId);
-		}
-		const key = idKey(input.dto.id);
-		const existing = this.store.spatialNodes.get(key);
 		const now = new Date();
 		const row: SpatialNodeEntity = {
-			id: input.dto.id,
-			workspaceKey: input.workspaceKey,
-			parentId: input.dto.parentId,
-			rect: input.dto.rect,
-			kind: input.dto.kind,
-			ref: input.dto.ref,
+			...input,
 			createdAt: existing?.createdAt ?? now,
 			updatedAt: now,
 		};
@@ -143,65 +239,37 @@ export class SpatialNodeInMemoryRepository extends BaseRepositoryErrors implemen
 		return row;
 	}
 
-	async getTreeForRootIdScoped(input: {
-		workspaceKey: SpatialNodeEntity["workspaceKey"];
-		dto: SpatialNodeRepositoryGetTreeForRootIdInputDTO;
-	}): Promise<SpatialNodeRepositoryGetTreeForRootIdOutputDTO> {
-		const root = this.store.spatialNodes.get(idKey(input.dto.id));
-		if (!root) this.throwNotFoundError("SpatialNode", input.dto.id);
-		if (String(root.workspaceKey) !== String(input.workspaceKey)) {
-			this.throwNotFoundError("SpatialNode", input.dto.id);
-		}
+	async getTreeForRootOne(input: {
+		filters: readonly SpatialNodeRepositoryTreeRootFilterClause[];
+	}): Promise<SpatialNodeTreeNode> {
+		const root =
+			input.filters.length === 0
+				? undefined
+				: [...this.store.spatialNodes.values()].find((n) =>
+						input.filters.some(
+							(c) => idKey(n.id) === idKey(c.id) && workspaceKeysEqual(n.workspaceKey, c.workspaceKey),
+						),
+					);
+		if (!root) this.throwNotFoundError("SpatialNode", input.filters);
+
 		const byParent = new Map<string, SpatialNodeEntity[]>();
 		for (const n of this.store.spatialNodes.values()) {
+			if (!workspaceKeysEqual(n.workspaceKey, root.workspaceKey)) continue;
 			const pkey = n.parentId ? idKey(n.parentId) : "__root__";
 			const arr = byParent.get(pkey) ?? [];
 			arr.push(n);
 			byParent.set(pkey, arr);
 		}
+
 		const build = (node: SpatialNodeEntity): SpatialNodeTreeNode => {
 			const children = (byParent.get(idKey(node.id)) ?? [])
 				.slice()
 				.sort((a, b) => idKey(a.id).localeCompare(idKey(b.id)));
-			return { ...node, children: children.map(build) };
+			return {
+				...node,
+				children: children.map(build),
+			};
 		};
 		return build(root);
-	}
-
-	async createScoped(input: { dto: SpatialNodeRepositoryCreateInputDTO }): Promise<SpatialNodeRepositoryCreateOutputDTO> {
-		return this.insertRow(input.dto);
-	}
-
-	async getAllScoped(input: {
-		workspaceKeys: readonly SpatialNodeEntity["workspaceKey"][];
-	}): Promise<SpatialNodeRepositoryGetAllOutputDTO> {
-		return this.listInWorkspaces(input.workspaceKeys);
-	}
-
-	async getByIdScoped(input: {
-		workspaceKey: SpatialNodeEntity["workspaceKey"];
-		dto: SpatialNodeRepositoryGetByIdInputDTO;
-	}): Promise<SpatialNodeRepositoryGetByIdOutputDTO> {
-		const row = this.loadById(input.dto);
-		if (String(row.workspaceKey) !== String(input.workspaceKey)) {
-			this.throwNotFoundError("SpatialNode", input.dto.id);
-		}
-		return row;
-	}
-
-	async updateByIdScoped(input: {
-		workspaceKey: SpatialNodeEntity["workspaceKey"];
-		dto: SpatialNodeRepositoryUpdateInputDTO;
-	}): Promise<SpatialNodeRepositoryUpdateOutputDTO> {
-		await this.getByIdScoped({ workspaceKey: input.workspaceKey, dto: { id: input.dto.id } });
-		return this.patchRow(input.dto);
-	}
-
-	async deleteByIdScoped(input: {
-		workspaceKey: SpatialNodeEntity["workspaceKey"];
-		dto: SpatialNodeRepositoryDeleteInputDTO;
-	}): Promise<SpatialNodeRepositoryDeleteOutputDTO> {
-		await this.getByIdScoped({ workspaceKey: input.workspaceKey, dto: input.dto });
-		return this.removeRow(input.dto);
 	}
 }

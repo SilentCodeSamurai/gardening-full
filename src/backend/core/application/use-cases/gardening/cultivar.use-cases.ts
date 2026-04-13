@@ -1,25 +1,22 @@
 import { WorkspaceVO } from "@backend/core/domain/access/workspace.vo";
+import type { CultivarEntityId } from "@backend/core/domain/gardening/entities";
 import type {
+	CultivarRepositoryPort,
 	CultivarRepositoryCreateInputDTO,
 	CultivarRepositoryCreateOutputDTO,
-	CultivarRepositoryDeleteInputDTO,
 	CultivarRepositoryDeleteOutputDTO,
-	CultivarRepositoryGetAllOutputDTO,
-	CultivarRepositoryGetByIdInputDTO,
-	CultivarRepositoryGetByIdOutputDTO,
-	CultivarRepositoryGetFullByIdInputDTO,
-	CultivarRepositoryGetFullByIdOutputDTO,
-	CultivarRepositoryPort,
-	CultivarRepositoryUpdateInputDTO,
+	CultivarRepositoryGetFullOutputDTO,
+	CultivarRepositoryGetManyOutputDTO,
 	CultivarRepositoryUpdateOutputDTO,
-} from "../../ports/repositories/gardening/cultivar.repositort.port";
+	CultivarRepositoryUpdatePatchDTO,
+} from "../../ports/repositories/gardening/cultivar.repository.port";
 import type { AccessControlApplicationService } from "../../services/access-control/access-control.application-service";
 import type { IUseCase } from "../shared/use-case.interface";
 import type { UseCaseRequest } from "../use-case-context";
 
 import type { SpeciesWithSystemCatalog } from "./species.use-cases";
 
-export type CultivarGetFullByIdUseCaseOutput = CultivarRepositoryGetFullByIdOutputDTO & {
+export type CultivarGetFullByIdUseCaseOutput = CultivarRepositoryGetFullOutputDTO & {
 	species: SpeciesWithSystemCatalog;
 };
 
@@ -34,18 +31,15 @@ export class CultivarCreateUseCase implements IUseCase<CultivarCreateUseCaseInpu
 	) {}
 	public async execute(input: CultivarCreateUseCaseInput): Promise<CultivarCreateUseCaseOutput> {
 		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "create" });
-		const created = await this.cultivarRepository.createScoped({
-			dto: {
-				...input.dto,
-				workspaceKey: input.context.activeWorkspaceScope.toKey(),
-			},
+		return this.cultivarRepository.createOne({
+			...input.dto,
+			workspaceKey: input.context.activeWorkspaceScope.toKey(),
 		});
-		return created;
 	}
 }
 
-export type CultivarGetByIdUseCaseInput = UseCaseRequest<CultivarRepositoryGetByIdInputDTO>;
-export type CultivarGetByIdUseCaseOutput = CultivarRepositoryGetByIdOutputDTO;
+export type CultivarGetByIdUseCaseInput = UseCaseRequest<{ id: CultivarEntityId }>;
+export type CultivarGetByIdUseCaseOutput = CultivarRepositoryCreateOutputDTO;
 
 export class CultivarGetByIdUseCase implements IUseCase<CultivarGetByIdUseCaseInput, CultivarGetByIdUseCaseOutput> {
 	constructor(
@@ -55,11 +49,11 @@ export class CultivarGetByIdUseCase implements IUseCase<CultivarGetByIdUseCaseIn
 	public async execute(input: CultivarGetByIdUseCaseInput): Promise<CultivarGetByIdUseCaseOutput> {
 		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "read" });
 		const wk = input.context.activeWorkspaceScope.toKey();
-		return this.cultivarRepository.getByIdScoped({ workspaceKey: wk, dto: input.dto });
+		return this.cultivarRepository.getOne({ filters: [{ id: input.dto.id, workspaceKey: wk }] });
 	}
 }
 
-export type CultivarGetFullByIdUseCaseInput = UseCaseRequest<CultivarRepositoryGetFullByIdInputDTO>;
+export type CultivarGetFullByIdUseCaseInput = UseCaseRequest<{ id: CultivarEntityId }>;
 
 export class CultivarGetFullByIdUseCase
 	implements IUseCase<CultivarGetFullByIdUseCaseInput, CultivarGetFullByIdUseCaseOutput>
@@ -71,7 +65,7 @@ export class CultivarGetFullByIdUseCase
 	public async execute(input: CultivarGetFullByIdUseCaseInput): Promise<CultivarGetFullByIdUseCaseOutput> {
 		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "read" });
 		const wk = input.context.activeWorkspaceScope.toKey();
-		const item = await this.cultivarRepository.getFullByIdScoped({ workspaceKey: wk, dto: input.dto });
+		const item = await this.cultivarRepository.getFullOne({ filters: [{ id: input.dto.id, workspaceKey: wk }] });
 		return {
 			...item,
 			species: {
@@ -83,7 +77,7 @@ export class CultivarGetFullByIdUseCase
 }
 
 export type CultivarGetAllUseCaseInput = UseCaseRequest;
-export type CultivarGetAllUseCaseOutput = CultivarRepositoryGetAllOutputDTO;
+export type CultivarGetAllUseCaseOutput = CultivarRepositoryGetManyOutputDTO;
 
 export class CultivarGetAllUseCase implements IUseCase<CultivarGetAllUseCaseInput, CultivarGetAllUseCaseOutput> {
 	constructor(
@@ -95,14 +89,17 @@ export class CultivarGetAllUseCase implements IUseCase<CultivarGetAllUseCaseInpu
 			...input.context,
 			action: "read",
 		});
-		const all = await this.cultivarRepository.getAllScoped({
-			workspaceKeys: [input.context.activeWorkspaceScope.toKey(), WorkspaceVO.globalShared().toKey()],
+		const active = input.context.activeWorkspaceScope.toKey();
+		const global = WorkspaceVO.globalShared().toKey();
+		return this.cultivarRepository.getMany({
+			filters: [{ workspaceKey: active }, { workspaceKey: global }],
 		});
-		return { items: all.items };
 	}
 }
 
-export type CultivarUpdateUseCaseInput = UseCaseRequest<CultivarRepositoryUpdateInputDTO>;
+export type CultivarUpdateUseCaseInput = UseCaseRequest<
+	{ id: CultivarEntityId } & CultivarRepositoryUpdatePatchDTO
+>;
 export type CultivarUpdateUseCaseOutput = CultivarRepositoryUpdateOutputDTO;
 
 export class CultivarUpdateUseCase implements IUseCase<CultivarUpdateUseCaseInput, CultivarUpdateUseCaseOutput> {
@@ -113,14 +110,15 @@ export class CultivarUpdateUseCase implements IUseCase<CultivarUpdateUseCaseInpu
 	public async execute(input: CultivarUpdateUseCaseInput): Promise<CultivarUpdateUseCaseOutput> {
 		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "update" });
 		const wk = input.context.activeWorkspaceScope.toKey();
-		return this.cultivarRepository.updateByIdScoped({
-			workspaceKey: wk,
-			dto: input.dto,
+		const { id, ...patch } = input.dto;
+		return this.cultivarRepository.updateOne({
+			filters: [{ id, workspaceKey: wk }],
+			dto: patch,
 		});
 	}
 }
 
-export type CultivarDeleteUseCaseInput = UseCaseRequest<CultivarRepositoryDeleteInputDTO>;
+export type CultivarDeleteUseCaseInput = UseCaseRequest<{ id: CultivarEntityId }>;
 export type CultivarDeleteUseCaseOutput = CultivarRepositoryDeleteOutputDTO;
 
 export class CultivarDeleteUseCase implements IUseCase<CultivarDeleteUseCaseInput, CultivarDeleteUseCaseOutput> {
@@ -131,9 +129,8 @@ export class CultivarDeleteUseCase implements IUseCase<CultivarDeleteUseCaseInpu
 	public async execute(input: CultivarDeleteUseCaseInput): Promise<CultivarDeleteUseCaseOutput> {
 		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "delete" });
 		const wk = input.context.activeWorkspaceScope.toKey();
-		return this.cultivarRepository.deleteByIdScoped({
-			workspaceKey: wk,
-			dto: input.dto,
+		return this.cultivarRepository.deleteOne({
+			filters: [{ id: input.dto.id, workspaceKey: wk }],
 		});
 	}
 }

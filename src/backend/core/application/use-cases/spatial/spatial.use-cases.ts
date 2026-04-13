@@ -18,7 +18,7 @@ async function getSpatialNodeOrNull(
 	id: SpatialNodeEntityId,
 ): Promise<SpatialNodeEntity | null> {
 	try {
-		return await repo.getByIdScoped({ workspaceKey, dto: { id } });
+		return await repo.getOne({ filters: [{ id, workspaceKey }] });
 	} catch (e) {
 		if (e instanceof RepositoryNotFoundError) return null;
 		throw e;
@@ -42,16 +42,13 @@ export class SpatialNodeCreateUseCase
 	) {}
 	public async execute(input: SpatialNodeCreateUseCaseInput): Promise<SpatialNodeCreateUseCaseOutput> {
 		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "create" });
-		const created = await this.repo.createScoped({
-			dto: {
-				workspaceKey: input.context.activeWorkspaceScope.toKey(),
-				parentId: input.dto.parentId,
-				rect: input.dto.rect,
-				kind: input.dto.kind,
-				ref: input.dto.ref,
-			},
+		return this.repo.createOne({
+			workspaceKey: input.context.activeWorkspaceScope.toKey(),
+			parentId: input.dto.parentId,
+			rect: input.dto.rect,
+			kind: input.dto.kind,
+			ref: input.dto.ref,
 		});
-		return created;
 	}
 }
 
@@ -67,8 +64,8 @@ export class SpatialNodeGetAllUseCase
 	) {}
 	public async execute(input: SpatialNodeGetAllUseCaseInput): Promise<SpatialNodeGetAllUseCaseOutput> {
 		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "read" });
-		const all = await this.repo.getAllScoped({ workspaceKeys: [input.context.activeWorkspaceScope.toKey()] });
-		return { items: all.items };
+		const wk = input.context.activeWorkspaceScope.toKey();
+		return this.repo.getMany({ filters: [{ workspaceKey: wk }] });
 	}
 }
 
@@ -87,11 +84,8 @@ export class SpatialNodeGetTreeForRootIdUseCase
 	): Promise<SpatialNodeGetTreeForRootIdUseCaseOutput> {
 		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "read" });
 		const wk = input.context.activeWorkspaceScope.toKey();
-		await this.repo.getByIdScoped({ workspaceKey: wk, dto: { id: input.dto.id } });
-		return this.repo.getTreeForRootIdScoped({
-			workspaceKey: wk,
-			dto: { id: input.dto.id },
-		});
+		await this.repo.getOne({ filters: [{ id: input.dto.id, workspaceKey: wk }] });
+		return this.repo.getTreeForRootOne({ filters: [{ id: input.dto.id, workspaceKey: wk }] });
 	}
 }
 
@@ -108,9 +102,8 @@ export class SpatialNodeDeleteUseCase
 	public async execute(input: SpatialNodeDeleteUseCaseInput): Promise<SpatialNodeDeleteUseCaseOutput> {
 		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "delete" });
 		const wk = input.context.activeWorkspaceScope.toKey();
-		return this.repo.deleteByIdScoped({
-			workspaceKey: wk,
-			dto: { id: input.dto.id },
+		return this.repo.deleteOne({
+			filters: [{ id: input.dto.id, workspaceKey: wk }],
 		});
 	}
 }
@@ -139,15 +132,13 @@ export class SpatialNodeRestoreUseCase
 		} else {
 			await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "update" });
 		}
-		return this.repo.restoreScoped({
+		return this.repo.restoreOne({
+			id: input.dto.id,
 			workspaceKey: wk,
-			dto: {
-				id: input.dto.id,
-				parentId: input.dto.parentId,
-				rect: input.dto.rect,
-				kind: input.dto.kind,
-				ref: input.dto.ref,
-			},
+			parentId: input.dto.parentId,
+			rect: input.dto.rect,
+			kind: input.dto.kind,
+			ref: input.dto.ref,
 		});
 	}
 }

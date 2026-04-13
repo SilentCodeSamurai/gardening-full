@@ -67,7 +67,9 @@ export class PopulateDefaultCatalogUseCase
 		});
 
 		const catalogWorkspaceKey = globalShared.toKey();
-		const existing = await this.speciesCategoryRepository.getAllScoped({ workspaceKeys: [catalogWorkspaceKey] });
+		const existing = await this.speciesCategoryRepository.getMany({
+			filters: [{ workspaceKey: catalogWorkspaceKey }],
+		});
 		if (existing.items.length > 0) {
 			return { status: "skipped", reason: "catalog-not-empty" };
 		}
@@ -79,11 +81,9 @@ export class PopulateDefaultCatalogUseCase
 
 		for (const row of input.dto.catalog.categories) {
 			const { slug, ...categoryCreate } = row;
-			const created = await this.speciesCategoryRepository.createScoped({
-				dto: {
-					...categoryCreate,
-					workspaceKey: catalogWorkspaceKey,
-				},
+			const created = await this.speciesCategoryRepository.createOne({
+				...categoryCreate,
+				workspaceKey: catalogWorkspaceKey,
 			});
 			createdCategories.push(created);
 			slugToCategoryId.set(slug, created.id);
@@ -98,12 +98,10 @@ export class PopulateDefaultCatalogUseCase
 			}
 			const { categorySlug, ...speciesCreate } = row;
 			void categorySlug;
-			const created = await this.speciesRepository.createScoped({
-				dto: {
-					categoryId,
-					...speciesCreate,
-					workspaceKey: catalogWorkspaceKey,
-				},
+			const created = await this.speciesRepository.createOne({
+				categoryId,
+				...speciesCreate,
+				workspaceKey: catalogWorkspaceKey,
 			});
 			createdSpecies.push(created);
 		}

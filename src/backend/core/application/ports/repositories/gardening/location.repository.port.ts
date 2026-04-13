@@ -1,53 +1,62 @@
 import type { LocationEntity, LocationEntityId } from "@backend/core/domain/gardening/entities";
-import type { ItemPresentationValueObject } from "@backend/core/domain/gardening/value-objects";
 import type { ItemsContainer } from "@backend/shared/types";
 import type {
-	BaseScopedCRUDRepositoryPort,
-	NoScopedInnerRepositoryDto,
-	RepositoryMultiScopedInput,
-} from "../shared/base.scoped-crud-repository-port";
-import type { BaseRepositoryIdActionInputDTO, BaseRepositoryUpdateInputDTO } from "../shared/types";
+	RepositoryCreateManyPort,
+	RepositoryCreateOnePort,
+	RepositoryDeleteManyPort,
+	RepositoryDeleteOnePort,
+	RepositoryEntityFilterClause,
+	RepositoryGetManyPort,
+	RepositoryGetOnePort,
+	RepositoryUpdateManyPort,
+	RepositoryUpdateOnePort,
+	RepositoryUpdatePatchDto,
+} from "../shared/repository-operation-ports";
+import type { BaseRepositoryCreateInputDTO } from "../shared/types";
 
-export type LocationRepositoryCreateInputDTO = {
-	workspaceKey: LocationEntity["workspaceKey"];
-	name: string;
-	presentation?: ItemPresentationValueObject;
-};
+export type LocationRepositoryCreateInputDTO = BaseRepositoryCreateInputDTO<LocationEntity>;
 export type LocationRepositoryCreateOutputDTO = LocationEntity;
 
-export type LocationRepositoryGetByIdInputDTO = BaseRepositoryIdActionInputDTO<LocationEntity>;
-export type LocationRepositoryGetByIdOutputDTO = LocationEntity;
+export type LocationRepositoryCreateManyInputDTO = {
+	items: readonly LocationRepositoryCreateInputDTO[];
+};
+export type LocationRepositoryCreateManyOutputDTO = { count: number };
 
-export type LocationRepositoryGetAllOutputDTO = ItemsContainer<LocationEntity>;
+export type LocationRepositoryGetOneOutputDTO = LocationEntity;
 
-export type LocationRepositoryUpdateInputDTO = BaseRepositoryUpdateInputDTO<LocationEntity, never>;
+export type LocationRepositoryFilterClause = RepositoryEntityFilterClause<
+	LocationEntity,
+	"createdAt" | "updatedAt"
+>;
+
+export type LocationRepositoryGetManyOutputDTO = ItemsContainer<LocationEntity>;
+
+export type LocationRepositoryUpdatePatchDTO = RepositoryUpdatePatchDto<LocationEntity>;
 export type LocationRepositoryUpdateOutputDTO = LocationEntity;
 
-export type LocationRepositoryDeleteInputDTO = BaseRepositoryIdActionInputDTO<LocationEntity>;
+export type LocationRepositoryUpdateManyOutputDTO = { count: number };
+
 export type LocationRepositoryDeleteOutputDTO = LocationEntityId;
 
-export type LocationRepositoryDeleteManyInputDTO = {
-	ids: LocationEntityId[];
-};
-export type LocationRepositoryDeleteManyOutputDTO = {
-	/** Ids removed, in request order; missing ids are skipped (no error). */
-	deletedIds: LocationEntityId[];
-};
+export type LocationRepositoryDeleteManyOutputDTO = { count: number };
 
+/**
+ * Location persistence (v2): segregated operation ports; {@link RepositoryGetManyPort#getMany} allows omitted `filters` per shared semantics.
+ */
 export interface LocationRepositoryPort
-	extends BaseScopedCRUDRepositoryPort<
-		LocationRepositoryCreateInputDTO,
-		LocationRepositoryCreateOutputDTO,
-		NoScopedInnerRepositoryDto,
-		LocationRepositoryGetAllOutputDTO,
-		LocationRepositoryGetByIdInputDTO,
-		LocationRepositoryGetByIdOutputDTO,
-		LocationRepositoryUpdateInputDTO,
-		LocationRepositoryUpdateOutputDTO,
-		LocationRepositoryDeleteInputDTO,
-		LocationRepositoryDeleteOutputDTO
-	> {
-	deleteManyScoped(
-		input: RepositoryMultiScopedInput<LocationRepositoryDeleteManyInputDTO>,
-	): Promise<LocationRepositoryDeleteManyOutputDTO>;
-}
+	extends RepositoryCreateOnePort<LocationRepositoryCreateInputDTO, LocationRepositoryCreateOutputDTO>,
+		RepositoryCreateManyPort<LocationRepositoryCreateManyInputDTO, LocationRepositoryCreateManyOutputDTO>,
+		RepositoryGetOnePort<LocationRepositoryFilterClause, LocationRepositoryGetOneOutputDTO>,
+		RepositoryGetManyPort<LocationRepositoryFilterClause, LocationRepositoryGetManyOutputDTO>,
+		RepositoryUpdateOnePort<
+			LocationRepositoryFilterClause,
+			LocationRepositoryUpdatePatchDTO,
+			LocationRepositoryUpdateOutputDTO
+		>,
+		RepositoryUpdateManyPort<
+			LocationRepositoryFilterClause,
+			LocationRepositoryUpdatePatchDTO,
+			LocationRepositoryUpdateManyOutputDTO
+		>,
+		RepositoryDeleteOnePort<LocationRepositoryFilterClause, LocationRepositoryDeleteOutputDTO>,
+		RepositoryDeleteManyPort<LocationRepositoryFilterClause, LocationRepositoryDeleteManyOutputDTO> {}

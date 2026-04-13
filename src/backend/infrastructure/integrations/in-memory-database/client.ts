@@ -1,3 +1,4 @@
+import type { WorkspaceKey } from "@backend/core/domain/access/workspace.vo";
 import type {
 	CultivarEntity,
 	GardeningEventEntity,
@@ -12,14 +13,16 @@ import type {
 import type { SpatialNodeEntity } from "@backend/core/domain/spatial/entities";
 import type { WorkspaceRoleAssignmentEntity } from "#/backend/core/domain/access/entities";
 import type { SubjectKey } from "#/backend/core/domain/access/subject.vo";
-import type { WorkspaceKey } from "#/backend/core/domain/access/workspace.vo";
 import { idKey, locationId, plantId } from "../shared/database-ids";
 
 /**
- * In-memory persistence client for the gardening aggregate: entity maps plus
- * event↔plant / event↔location associations (events do not embed FK fields).
+ * In-memory persistence (v2): entity maps store v1-shaped gardening/spatial rows (each row carries {@link WorkspaceKey}).
+ * Repositories validate FK/workspace alignment; callers scope reads with `workspaceKey` in filter clauses where needed.
  */
 export class InMemoryStore {
+	/** Workspace↔item link keys (see access in-memory workspace-item repository). */
+	readonly workspaceItemLinks = new Set<string>();
+
 	readonly speciesCategories = new Map<string, SpeciesCategoryEntity>();
 	readonly species = new Map<string, SpeciesEntity>();
 	readonly cultivars = new Map<string, CultivarEntity>();
@@ -34,9 +37,9 @@ export class InMemoryStore {
 	private readonly eventToLocations = new Map<string, Set<string>>();
 	readonly locationToEvents = new Map<string, Set<string>>();
 
-	linkEventToPlant(eventId: GardeningEventEntityId, plantId: PlantEntityId): void {
+	linkEventToPlant(eventId: GardeningEventEntityId, plantIdArg: PlantEntityId): void {
 		const e = idKey(eventId);
-		const p = idKey(plantId);
+		const p = idKey(plantIdArg);
 		let plantSet = this.eventToPlants.get(e);
 		if (!plantSet) {
 			plantSet = new Set();
@@ -51,9 +54,9 @@ export class InMemoryStore {
 		eventSet.add(e);
 	}
 
-	linkEventToLocation(eventId: GardeningEventEntityId, locationId: LocationEntityId): void {
+	linkEventToLocation(eventId: GardeningEventEntityId, locationIdArg: LocationEntityId): void {
 		const e = idKey(eventId);
-		const l = idKey(locationId);
+		const l = idKey(locationIdArg);
 		let locSet = this.eventToLocations.get(e);
 		if (!locSet) {
 			locSet = new Set();
@@ -68,9 +71,6 @@ export class InMemoryStore {
 		evSet.add(e);
 	}
 
-	/**
-	 * Reads association keys for an event (empty arrays when the event exists but has no links).
-	 */
 	getBindingsForEvent(eventId: GardeningEventEntityId): {
 		plantIds: PlantEntityId[];
 		locationIds: LocationEntityId[];
@@ -106,9 +106,8 @@ export class InMemoryStore {
 		this.eventToLocations.delete(e);
 	}
 
-	/** Remove every event↔location link for this location (events are kept; other links unchanged). */
-	unlinkAllEventsFromLocation(locationId: LocationEntityId): void {
-		const l = idKey(locationId);
+	unlinkAllEventsFromLocation(locationIdArg: LocationEntityId): void {
+		const l = idKey(locationIdArg);
 		const eventIds = this.locationToEvents.get(l);
 		if (!eventIds || eventIds.size === 0) return;
 		for (const e of [...eventIds]) {
@@ -120,9 +119,8 @@ export class InMemoryStore {
 		this.locationToEvents.delete(l);
 	}
 
-	/** Remove every event↔plant link for this plant (events are kept; other links unchanged). */
-	unlinkAllEventsFromPlant(plantId: PlantEntityId): void {
-		const p = idKey(plantId);
+	unlinkAllEventsFromPlant(plantIdArg: PlantEntityId): void {
+		const p = idKey(plantIdArg);
 		const eventIds = this.plantToEvents.get(p);
 		if (!eventIds || eventIds.size === 0) return;
 		for (const e of [...eventIds]) {

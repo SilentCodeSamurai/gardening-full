@@ -59,7 +59,7 @@ export class AccessControlApplicationService {
 			});
 		}
 		const grantSource = `WORKSPACE_ROLE_ASSIGNMENT: ${input.actorSubject.toKey()} -> ${input.targetSubject.toKey()}`;
-		const assignment = await this.workspaceRoleRepository.upsertWorkspaceRoleAssignment({
+		const assignment = await this.workspaceRoleRepository.upsertOne({
 			subjectKey: input.targetSubject.toKey(),
 			workspaceKey: input.activeWorkspaceScope.toKey(),
 			role: input.role,
@@ -90,10 +90,13 @@ export class AccessControlApplicationService {
 				context: { action },
 			});
 		}
-		await this.workspaceRoleRepository.revokeWorkspaceRoleAssignment({
-			subjectKey: input.targetSubject.toKey(),
-			workspaceKey: input.activeWorkspaceScope.toKey(),
-			role: input.role,
+		await this.workspaceRoleRepository.deleteOne({
+			filters: [
+				{
+					subjectKey: input.targetSubject.toKey(),
+					workspaceKey: input.activeWorkspaceScope.toKey(),
+				},
+			],
 		});
 		this.audit?.recordRoleRevoked({
 			actorSubjectKey: input.actorSubject.toKey(),
@@ -137,9 +140,13 @@ export class AccessControlApplicationService {
 				return { allowed: true, action: params.action, reasonCode: "ALLOW_ROLE", matchedRole: "admin" };
 			}
 		}
-		const { items: assignments } = await this.workspaceRoleRepository.getBySubjectAndWorkspace({
-			subjectKey: params.actorSubject.toKey(),
-			workspaceKey: params.activeWorkspaceScope.toKey(),
+		const { items: assignments } = await this.workspaceRoleRepository.getMany({
+			filters: [
+				{
+					subjectKey: params.actorSubject.toKey(),
+					workspaceKey: params.activeWorkspaceScope.toKey(),
+				},
+			],
 		});
 		if (!assignments.length) {
 			return { allowed: false, action: params.action, reasonCode: "DENY_NO_MATCHING_ASSIGNMENT" };

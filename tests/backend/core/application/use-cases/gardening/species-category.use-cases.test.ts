@@ -36,7 +36,7 @@ describe("Species category use-cases", () => {
       TOKENS.WorkspaceRoleAssignmentRepositoryPort,
     );
     const stranger = SubjectVO.user("no-assignments");
-    await workspaceRepo.upsertWorkspaceRoleAssignment({
+    await workspaceRepo.upsertOne({
       subjectKey: stranger.toKey(),
       workspaceKey: WorkspaceVO.user("no-assignments").toKey(),
       role: "viewer",

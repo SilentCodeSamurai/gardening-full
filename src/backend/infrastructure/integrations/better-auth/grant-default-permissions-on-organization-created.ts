@@ -21,7 +21,7 @@ export async function grantDefaultPermissionsOnOrganizationCreated(data: {
 	const repository = appContainer.resolve<WorkspaceRoleAssignmentRepositoryPort>(
 		TOKENS.WorkspaceRoleAssignmentRepositoryPort,
 	);
-	await repository.upsertWorkspaceRoleAssignment({
+	await repository.upsertOne({
 		subjectKey: creatorSubject.toKey(),
 		workspaceKey: orgWorkspace.toKey(),
 		role: "admin",

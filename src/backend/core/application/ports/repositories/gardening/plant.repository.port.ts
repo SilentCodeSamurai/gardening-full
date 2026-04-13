@@ -1,83 +1,64 @@
-import type {
-	CultivarEntityId,
-	HydratedPlantEntity,
-	PlantEntity,
-	PlantEntityId,
-} from "@backend/core/domain/gardening/entities";
+import type { HydratedPlantEntity, PlantEntity, PlantEntityId } from "@backend/core/domain/gardening/entities";
 import type { ItemsContainer } from "@backend/shared/types";
 import type {
-	BaseScopedCRUDRepositoryPort,
-	NoScopedInnerRepositoryDto,
-	RepositoryMultiScopedInput,
-} from "../shared/base.scoped-crud-repository-port";
-import type { BaseRepositoryIdActionInputDTO, BaseRepositoryUpdateInputDTO } from "../shared/types";
+	RepositoryCreateManyPort,
+	RepositoryCreateOnePort,
+	RepositoryDeleteManyPort,
+	RepositoryDeleteOnePort,
+	RepositoryEntityFilterClause,
+	RepositoryGetManyPort,
+	RepositoryGetOnePort,
+	RepositoryUpdateManyPort,
+	RepositoryUpdateOnePort,
+	RepositoryUpdatePatchDto,
+} from "../shared/repository-operation-ports";
+import type { BaseRepositoryCreateInputDTO } from "../shared/types";
 
-export type PlantRepositoryCreateInputDTO = {
-	workspaceKey: PlantEntity["workspaceKey"];
-	title: PlantEntity["title"];
-	description: PlantEntity["description"];
-	cultivarId: PlantEntity["cultivarId"];
-};
+export type PlantRepositoryCreateInputDTO = BaseRepositoryCreateInputDTO<PlantEntity>;
 export type PlantRepositoryCreateOutputDTO = HydratedPlantEntity;
 
-export type PlantRepositoryCreateManyInputDTO = PlantRepositoryCreateInputDTO[];
+export type PlantRepositoryCreateManyInputDTO = {
+	items: readonly PlantRepositoryCreateInputDTO[];
+};
 export type PlantRepositoryCreateManyOutputDTO = ItemsContainer<HydratedPlantEntity>;
 
-/** Each row carries `workspaceKey`; wrapper matches {@link RepositoryCreateScopedInput} shape without a duplicate outer key. */
-export type PlantRepositoryCreateManyScopedInputDTO = {
-	dto: { rows: PlantRepositoryCreateManyInputDTO };
-};
+export type PlantRepositoryGetOneOutputDTO = HydratedPlantEntity;
 
-export type PlantRepositoryGetByIdInputDTO = BaseRepositoryIdActionInputDTO<PlantEntity>;
-export type PlantRepositoryGetByIdOutputDTO = HydratedPlantEntity;
+export type PlantRepositoryFilterClause = RepositoryEntityFilterClause<
+	PlantEntity,
+	"createdAt" | "updatedAt"
+>;
 
-export type PlantRepositoryGetListByIdsInputDTO = {
-	ids: PlantEntityId[];
-};
-export type PlantRepositoryGetListByIdsOutputDTO = ItemsContainer<HydratedPlantEntity>;
+export type PlantRepositoryGetManyOutputDTO = ItemsContainer<HydratedPlantEntity>;
 
-export type PlantRepositoryGetAllOutputDTO = ItemsContainer<HydratedPlantEntity>;
-
-export type PlantRepositoryUpdateInputDTO = BaseRepositoryUpdateInputDTO<PlantEntity, never>;
+export type PlantRepositoryUpdatePatchDTO = RepositoryUpdatePatchDto<PlantEntity>;
 export type PlantRepositoryUpdateOutputDTO = HydratedPlantEntity;
 
-export type PlantRepositoryGetByCultivarIdInputDTO = {
-	cultivarId: CultivarEntityId;
-};
-export type PlantRepositoryGetByCultivarIdOutputDTO = ItemsContainer<HydratedPlantEntity>;
+export type PlantRepositoryUpdateManyOutputDTO = { count: number };
 
-export type PlantRepositoryDeleteInputDTO = BaseRepositoryIdActionInputDTO<PlantEntity>;
 export type PlantRepositoryDeleteOutputDTO = PlantEntityId;
 
-export type PlantRepositoryDeleteManyInputDTO = {
-	ids: PlantEntityId[];
-};
-export type PlantRepositoryDeleteManyOutputDTO = {
-	/** Ids removed, in request order; missing ids are skipped (no error). */
-	deletedIds: PlantEntityId[];
-};
+export type PlantRepositoryDeleteManyOutputDTO = { count: number };
 
+/**
+ * Plant persistence (v2): rows are hydrated with cultivar/species on reads and creates; filter clauses use {@link PlantEntity} shape.
+ *
+ * Legacy `getByCultivarId` / `getListByIds` map to {@link RepositoryGetManyPort#getMany} with OR `filters` (e.g. one clause per id, or a dedicated clause shape the adapter understands).
+ */
 export interface PlantRepositoryPort
-	extends BaseScopedCRUDRepositoryPort<
-		PlantRepositoryCreateInputDTO,
-		PlantRepositoryCreateOutputDTO,
-		NoScopedInnerRepositoryDto,
-		PlantRepositoryGetAllOutputDTO,
-		PlantRepositoryGetByIdInputDTO,
-		PlantRepositoryGetByIdOutputDTO,
-		PlantRepositoryUpdateInputDTO,
-		PlantRepositoryUpdateOutputDTO,
-		PlantRepositoryDeleteInputDTO,
-		PlantRepositoryDeleteOutputDTO
-	> {
-	createManyScoped(input: PlantRepositoryCreateManyScopedInputDTO): Promise<PlantRepositoryCreateManyOutputDTO>;
-	getByCultivarIdScoped(
-		input: RepositoryMultiScopedInput<PlantRepositoryGetByCultivarIdInputDTO>,
-	): Promise<PlantRepositoryGetByCultivarIdOutputDTO>;
-	getListByIdsScoped(
-		input: RepositoryMultiScopedInput<PlantRepositoryGetListByIdsInputDTO>,
-	): Promise<PlantRepositoryGetListByIdsOutputDTO>;
-	deleteManyScoped(
-		input: RepositoryMultiScopedInput<PlantRepositoryDeleteManyInputDTO>,
-	): Promise<PlantRepositoryDeleteManyOutputDTO>;
-}
+	extends RepositoryCreateOnePort<PlantRepositoryCreateInputDTO, PlantRepositoryCreateOutputDTO>,
+		RepositoryCreateManyPort<PlantRepositoryCreateManyInputDTO, PlantRepositoryCreateManyOutputDTO>,
+		RepositoryGetOnePort<PlantRepositoryFilterClause, PlantRepositoryGetOneOutputDTO>,
+		RepositoryGetManyPort<PlantRepositoryFilterClause, PlantRepositoryGetManyOutputDTO>,
+		RepositoryUpdateOnePort<
+			PlantRepositoryFilterClause,
+			PlantRepositoryUpdatePatchDTO,
+			PlantRepositoryUpdateOutputDTO
+		>,
+		RepositoryUpdateManyPort<
+			PlantRepositoryFilterClause,
+			PlantRepositoryUpdatePatchDTO,
+			PlantRepositoryUpdateManyOutputDTO
+		>,
+		RepositoryDeleteOnePort<PlantRepositoryFilterClause, PlantRepositoryDeleteOutputDTO>,
+		RepositoryDeleteManyPort<PlantRepositoryFilterClause, PlantRepositoryDeleteManyOutputDTO> {}

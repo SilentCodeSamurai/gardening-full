@@ -1,21 +1,31 @@
 import type {
-	SpeciesCategoryRepositoryCreateInputDTO,
-	SpeciesCategoryRepositoryCreateOutputDTO,
-	SpeciesCategoryRepositoryDeleteInputDTO,
-	SpeciesCategoryRepositoryDeleteOutputDTO,
-	SpeciesCategoryRepositoryGetAllOutputDTO,
-	SpeciesCategoryRepositoryGetByIdInputDTO,
-	SpeciesCategoryRepositoryGetByIdOutputDTO,
 	SpeciesCategoryRepositoryPort,
-	SpeciesCategoryRepositoryUpdateInputDTO,
+	SpeciesCategoryRepositoryCreateInputDTO,
+	SpeciesCategoryRepositoryCreateManyInputDTO,
+	SpeciesCategoryRepositoryCreateManyOutputDTO,
+	SpeciesCategoryRepositoryCreateOutputDTO,
+	SpeciesCategoryRepositoryDeleteManyOutputDTO,
+	SpeciesCategoryRepositoryDeleteOutputDTO,
+	SpeciesCategoryRepositoryFilterClause,
+	SpeciesCategoryRepositoryGetManyOutputDTO,
+	SpeciesCategoryRepositoryGetOneOutputDTO,
+	SpeciesCategoryRepositoryUpdateManyOutputDTO,
 	SpeciesCategoryRepositoryUpdateOutputDTO,
+	SpeciesCategoryRepositoryUpdatePatchDTO,
 } from "@backend/core/application/ports/repositories/gardening/species-category.repository.port";
 import { BaseRepositoryErrors } from "@backend/core/application/ports/repositories/shared/base-repository.errors";
 import type { SpeciesCategoryEntity } from "@backend/core/domain/gardening/entities";
+import {
+	findFirstRowMatchingAnyClause,
+	findRowsMatchingAnyClause,
+} from "@backend/infrastructure/adapters/repositories/shared/in-memory-entity-filter";
 import type { InMemoryStore } from "@backend/infrastructure/integrations/in-memory-database/client";
 import { idKey, speciesCategoryId } from "@backend/infrastructure/integrations/shared/database-ids";
 
-export class SpeciesCategoryInMemoryRepository extends BaseRepositoryErrors implements SpeciesCategoryRepositoryPort {
+export class SpeciesCategoryInMemoryRepository
+	extends BaseRepositoryErrors
+	implements SpeciesCategoryRepositoryPort
+{
 	constructor(private readonly store: InMemoryStore) {
 		super();
 	}
@@ -24,10 +34,8 @@ export class SpeciesCategoryInMemoryRepository extends BaseRepositoryErrors impl
 		const now = new Date();
 		const id = speciesCategoryId();
 		const row: SpeciesCategoryEntity = {
+			...dto,
 			id,
-			workspaceKey: dto.workspaceKey,
-			title: dto.title,
-			presentation: dto.presentation,
 			createdAt: now,
 			updatedAt: now,
 		};
@@ -35,92 +43,117 @@ export class SpeciesCategoryInMemoryRepository extends BaseRepositoryErrors impl
 		return row;
 	}
 
-	private loadById(dto: SpeciesCategoryRepositoryGetByIdInputDTO): SpeciesCategoryRepositoryGetByIdOutputDTO {
-		const row = this.store.speciesCategories.get(idKey(dto.id));
-		if (!row) this.throwNotFoundError("SpeciesCategory", dto.id);
+	private patchStored(
+		existing: SpeciesCategoryEntity,
+		dto: SpeciesCategoryRepositoryUpdatePatchDTO,
+	): SpeciesCategoryEntity {
+		return {
+			...existing,
+			workspaceKey: dto.workspaceKey !== undefined ? dto.workspaceKey : existing.workspaceKey,
+			title: dto.title !== undefined ? dto.title : existing.title,
+			presentation: dto.presentation !== undefined ? dto.presentation : existing.presentation,
+			updatedAt: new Date(),
+		};
+	}
+
+	async createOne(
+		dto: SpeciesCategoryRepositoryCreateInputDTO,
+	): Promise<SpeciesCategoryRepositoryCreateOutputDTO> {
+		return this.insertRow(dto);
+	}
+
+	async createMany(
+		input: SpeciesCategoryRepositoryCreateManyInputDTO,
+	): Promise<SpeciesCategoryRepositoryCreateManyOutputDTO> {
+		let count = 0;
+		for (const item of input.items) {
+			this.insertRow(item);
+			count += 1;
+		}
+		return { count };
+	}
+
+	async getOne(input: {
+		filters: readonly SpeciesCategoryRepositoryFilterClause[];
+	}): Promise<SpeciesCategoryRepositoryGetOneOutputDTO> {
+		const row = findFirstRowMatchingAnyClause(this.store.speciesCategories.values(), input.filters);
+		if (!row) this.throwNotFoundError("SpeciesCategory", input.filters);
 		return row;
 	}
 
-	private listInWorkspaces(
-		workspaceKeys: readonly SpeciesCategoryEntity["workspaceKey"][],
-	): SpeciesCategoryRepositoryGetAllOutputDTO {
-		const allowed = new Set(workspaceKeys.map((key) => String(key)));
-		return { items: [...this.store.speciesCategories.values()].filter((x) => allowed.has(String(x.workspaceKey))) };
+	async getMany(input?: {
+		filters?: readonly SpeciesCategoryRepositoryFilterClause[];
+	}): Promise<SpeciesCategoryRepositoryGetManyOutputDTO> {
+		if (input?.filters === undefined) {
+			return { items: [...this.store.speciesCategories.values()] };
+		}
+		if (input.filters.length === 0) return { items: [] };
+		const rows = findRowsMatchingAnyClause([...this.store.speciesCategories.values()], input.filters);
+		return { items: rows };
 	}
 
-	private patchRow(dto: SpeciesCategoryRepositoryUpdateInputDTO): SpeciesCategoryRepositoryUpdateOutputDTO {
-		const key = idKey(dto.id);
-		const existing = this.store.speciesCategories.get(key);
-		if (!existing) this.throwNotFoundError("SpeciesCategory", dto.id);
-		const updated: SpeciesCategoryEntity = {
-			...existing,
-			...dto,
-			id: existing.id,
-			createdAt: existing.createdAt,
-			updatedAt: new Date(),
-		};
-		this.store.speciesCategories.set(key, updated);
+	async updateOne(input: {
+		filters: readonly SpeciesCategoryRepositoryFilterClause[];
+		dto: SpeciesCategoryRepositoryUpdatePatchDTO;
+	}): Promise<SpeciesCategoryRepositoryUpdateOutputDTO> {
+		const row = findFirstRowMatchingAnyClause(this.store.speciesCategories.values(), input.filters);
+		if (!row) this.throwNotFoundError("SpeciesCategory", input.filters);
+		const updated = this.patchStored(row, input.dto);
+		this.store.speciesCategories.set(idKey(updated.id), updated);
 		return updated;
 	}
 
-	private removeRow(dto: SpeciesCategoryRepositoryDeleteInputDTO): SpeciesCategoryRepositoryDeleteOutputDTO {
-		const key = idKey(dto.id);
-		const existing = this.store.speciesCategories.get(key);
-		if (!existing) this.throwNotFoundError("SpeciesCategory", dto.id);
+	async updateMany(input: {
+		filters: readonly SpeciesCategoryRepositoryFilterClause[];
+		dto: SpeciesCategoryRepositoryUpdatePatchDTO;
+	}): Promise<SpeciesCategoryRepositoryUpdateManyOutputDTO> {
+		const rows = findRowsMatchingAnyClause([...this.store.speciesCategories.values()], input.filters);
+		let count = 0;
+		for (const row of rows) {
+			const updated = this.patchStored(row, input.dto);
+			this.store.speciesCategories.set(idKey(updated.id), updated);
+			count += 1;
+		}
+		return { count };
+	}
+
+	async deleteOne(input: {
+		filters: readonly SpeciesCategoryRepositoryFilterClause[];
+	}): Promise<SpeciesCategoryRepositoryDeleteOutputDTO> {
+		const row = findFirstRowMatchingAnyClause(this.store.speciesCategories.values(), input.filters);
+		if (!row) this.throwNotFoundError("SpeciesCategory", input.filters);
+		const key = idKey(row.id);
 		for (const s of this.store.species.values()) {
-			if (idKey(s.categoryId) === key) {
+			if (idKey(s.categoryId) === key && String(s.workspaceKey) === String(row.workspaceKey)) {
 				this.throwConflictError({
 					operation: "delete",
 					reason: "species-reference-category",
-					context: { categoryId: dto.id, speciesId: s.id },
+					context: { categoryId: row.id, speciesId: s.id },
 					participants: [
-						{ entity: "SpeciesCategory", role: "target", id: dto.id },
-						{ entity: "Species", role: "blocking-reference", id: s.id },
+						{ entity: "SpeciesCategory", role: "target", id: row.id as unknown as string },
+						{ entity: "Species", role: "blocking-reference", id: s.id as unknown as string },
 					],
 					message: "Cannot delete species category: species still reference it.",
 				});
 			}
 		}
 		this.store.speciesCategories.delete(key);
-		return dto.id;
+		return row.id;
 	}
 
-	async createScoped(
-		input: { dto: SpeciesCategoryRepositoryCreateInputDTO },
-	): Promise<SpeciesCategoryRepositoryCreateOutputDTO> {
-		return this.insertRow(input.dto);
-	}
-
-	async getAllScoped(input: {
-		workspaceKeys: readonly SpeciesCategoryEntity["workspaceKey"][];
-	}): Promise<SpeciesCategoryRepositoryGetAllOutputDTO> {
-		return this.listInWorkspaces(input.workspaceKeys);
-	}
-
-	async getByIdScoped(input: {
-		workspaceKey: SpeciesCategoryEntity["workspaceKey"];
-		dto: SpeciesCategoryRepositoryGetByIdInputDTO;
-	}): Promise<SpeciesCategoryRepositoryGetByIdOutputDTO> {
-		const row = this.loadById(input.dto);
-		if (String(row.workspaceKey) !== String(input.workspaceKey)) {
-			this.throwNotFoundError("SpeciesCategory", input.dto.id);
+	async deleteMany(input: {
+		filters: readonly SpeciesCategoryRepositoryFilterClause[];
+	}): Promise<SpeciesCategoryRepositoryDeleteManyOutputDTO> {
+		const rows = findRowsMatchingAnyClause([...this.store.speciesCategories.values()], input.filters);
+		let count = 0;
+		for (const row of rows) {
+			const key = idKey(row.id);
+			const blocked = [...this.store.species.values()].some(
+				(s) => idKey(s.categoryId) === key && String(s.workspaceKey) === String(row.workspaceKey),
+			);
+			if (blocked) continue;
+			if (this.store.speciesCategories.delete(key)) count += 1;
 		}
-		return row;
-	}
-
-	async updateByIdScoped(input: {
-		workspaceKey: SpeciesCategoryEntity["workspaceKey"];
-		dto: SpeciesCategoryRepositoryUpdateInputDTO;
-	}): Promise<SpeciesCategoryRepositoryUpdateOutputDTO> {
-		await this.getByIdScoped({ workspaceKey: input.workspaceKey, dto: { id: input.dto.id } });
-		return this.patchRow(input.dto);
-	}
-
-	async deleteByIdScoped(input: {
-		workspaceKey: SpeciesCategoryEntity["workspaceKey"];
-		dto: SpeciesCategoryRepositoryDeleteInputDTO;
-	}): Promise<SpeciesCategoryRepositoryDeleteOutputDTO> {
-		await this.getByIdScoped({ workspaceKey: input.workspaceKey, dto: input.dto });
-		return this.removeRow(input.dto);
+		return { count };
 	}
 }

@@ -9,14 +9,14 @@ import { workspaceRoleAssignmentId } from "@backend/infrastructure/integrations/
 import type { DependencyContainer } from "tsyringe";
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { resolveAccessRepositoryPortsV2 } from "./resolve-access-repository-ports.v2";
+import { resolveAccessRepositoryPorts } from "./resolve-access-repository-ports";
 
-export function registerWorkspaceRoleAssignmentRepositoryContractV2(
+export function registerWorkspaceRoleAssignmentRepositoryContract(
 	adapterLabel: string,
 	createContainer: () => DependencyContainer,
 ): void {
-	describe(`WorkspaceRoleAssignmentRepositoryPortV2 (${adapterLabel})`, () => {
-		let repo: ReturnType<typeof resolveAccessRepositoryPortsV2>["workspaceRoleAssignment"];
+	describe(`WorkspaceRoleAssignmentRepositoryPort (${adapterLabel})`, () => {
+		let repo: ReturnType<typeof resolveAccessRepositoryPorts>["workspaceRoleAssignment"];
 
 		const u1 = SubjectVO.user("contract-u1").toKey();
 		const u2 = SubjectVO.user("contract-u2").toKey();
@@ -27,7 +27,7 @@ export function registerWorkspaceRoleAssignmentRepositoryContractV2(
 		const wsGlobal = WorkspaceVO.globalShared().toKey();
 
 		beforeEach(() => {
-			const ports = resolveAccessRepositoryPortsV2(createContainer());
+			const ports = resolveAccessRepositoryPorts(createContainer());
 			repo = ports.workspaceRoleAssignment;
 		});
 
@@ -72,6 +72,52 @@ export function registerWorkspaceRoleAssignmentRepositoryContractV2(
 			const p = repo.createOne({ subjectKey: u1, workspaceKey: wsA, role: ACCESS_ROLE.ADMIN });
 			await expect(p).rejects.toBeInstanceOf(RepositoryConflictError);
 			await expect(p).rejects.toMatchObject({ reason: "duplicate-subject-workspace" });
+		});
+
+		it("upsertOne creates when the pair is missing", async () => {
+			const row = await repo.upsertOne({
+				subjectKey: u1,
+				workspaceKey: wsA,
+				role: ACCESS_ROLE.VIEWER,
+				grantSource: "first",
+			});
+			expect(row.role).toBe(ACCESS_ROLE.VIEWER);
+			expect(row.grantSource).toBe("first");
+			const got = await repo.getOne({ filters: [{ subjectKey: u1, workspaceKey: wsA }] });
+			expect(got.id).toEqual(row.id);
+		});
+
+		it("upsertOne updates role and grantSource when the pair exists", async () => {
+			await repo.createOne({
+				subjectKey: u1,
+				workspaceKey: wsA,
+				role: ACCESS_ROLE.VIEWER,
+				grantSource: "seed",
+			});
+			const updated = await repo.upsertOne({
+				subjectKey: u1,
+				workspaceKey: wsA,
+				role: ACCESS_ROLE.ADMIN,
+				grantSource: "promoted",
+			});
+			expect(updated.role).toBe(ACCESS_ROLE.ADMIN);
+			expect(updated.grantSource).toBe("promoted");
+		});
+
+		it("upsertOne without grantSource updates role only and preserves existing grantSource", async () => {
+			await repo.createOne({
+				subjectKey: u1,
+				workspaceKey: wsA,
+				role: ACCESS_ROLE.VIEWER,
+				grantSource: "keep-me",
+			});
+			const updated = await repo.upsertOne({
+				subjectKey: u1,
+				workspaceKey: wsA,
+				role: ACCESS_ROLE.EDITOR,
+			});
+			expect(updated.role).toBe(ACCESS_ROLE.EDITOR);
+			expect(updated.grantSource).toBe("keep-me");
 		});
 
 		it("createMany returns count and inserts distinct pairs", async () => {

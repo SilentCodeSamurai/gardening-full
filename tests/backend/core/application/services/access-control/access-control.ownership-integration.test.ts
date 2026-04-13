@@ -25,19 +25,19 @@ describe("Access control — workspace RBAC + scoped persistence (integration)",
 		const workspaceRepo = c.resolve<WorkspaceRoleAssignmentRepositoryPort>(TOKENS.WorkspaceRoleAssignmentRepositoryPort);
 		const alice = SubjectVO.user("alice");
 		const bob = SubjectVO.user("bob");
-		await workspaceRepo.upsertWorkspaceRoleAssignment({
+		await workspaceRepo.upsertOne({
 			subjectKey: alice.toKey(),
 			workspaceKey: WorkspaceVO.user("alice").toKey(),
 			role: "admin",
 			grantSource: "test",
 		});
-		await workspaceRepo.upsertWorkspaceRoleAssignment({
+		await workspaceRepo.upsertOne({
 			subjectKey: bob.toKey(),
 			workspaceKey: WorkspaceVO.user("bob").toKey(),
 			role: "admin",
 			grantSource: "test",
 		});
-		const { cultivar } = await seedMinimalCatalog(c);
+		const { cultivar } = await seedMinimalCatalog(c, WorkspaceVO.user("alice").toKey());
 
 		const create = c.resolve(PlantCreateUseCase);
 		const getById = c.resolve(PlantGetByIdUseCase);
@@ -86,13 +86,13 @@ describe("Access control — workspace RBAC + scoped persistence (integration)",
 		const c = createUseCaseTestContainer();
 		const eve = SubjectVO.user("eve");
 		const workspaceRepo = c.resolve<WorkspaceRoleAssignmentRepositoryPort>(TOKENS.WorkspaceRoleAssignmentRepositoryPort);
-		await workspaceRepo.upsertWorkspaceRoleAssignment({
+		await workspaceRepo.upsertOne({
 			subjectKey: eve.toKey(),
 			workspaceKey: WorkspaceVO.user("eve").toKey(),
 			role: "viewer",
 			grantSource: "test",
 		});
-		const { cultivar } = await seedMinimalCatalog(c);
+		const { cultivar } = await seedMinimalCatalog(c, WorkspaceVO.user("eve").toKey());
 		const create = c.resolve(PlantCreateUseCase);
 
 		await expect(
@@ -108,13 +108,13 @@ describe("Access control — workspace RBAC + scoped persistence (integration)",
 		const workspaceRepo = c.resolve<WorkspaceRoleAssignmentRepositoryPort>(TOKENS.WorkspaceRoleAssignmentRepositoryPort);
 		const owner = SubjectVO.user("owner");
 		const guest = SubjectVO.user("guest");
-		await workspaceRepo.upsertWorkspaceRoleAssignment({
+		await workspaceRepo.upsertOne({
 			subjectKey: owner.toKey(),
 			workspaceKey: WorkspaceVO.user("owner").toKey(),
 			role: "admin",
 			grantSource: "test",
 		});
-		const { cultivar } = await seedMinimalCatalog(c);
+		const { cultivar } = await seedMinimalCatalog(c, WorkspaceVO.user("owner").toKey());
 		const create = c.resolve(PlantCreateUseCase);
 		const getById = c.resolve(PlantGetByIdUseCase);
 		const update = c.resolve(PlantUpdateUseCase);
@@ -156,19 +156,19 @@ describe("Access control — workspace RBAC + scoped persistence (integration)",
 		const viewer = SubjectVO.user("viewer-del");
 		const sharedScope = WorkspaceVO.user("owner-del");
 		const wk = sharedScope.toKey();
-		await workspaceRepo.upsertWorkspaceRoleAssignment({
+		await workspaceRepo.upsertOne({
 			subjectKey: ownerAdmin.toKey(),
 			workspaceKey: wk,
 			role: "admin",
 			grantSource: "test",
 		});
-		await workspaceRepo.upsertWorkspaceRoleAssignment({
+		await workspaceRepo.upsertOne({
 			subjectKey: viewer.toKey(),
 			workspaceKey: wk,
 			role: "viewer",
 			grantSource: "test",
 		});
-		const { cultivar } = await seedMinimalCatalog(c);
+		const { cultivar } = await seedMinimalCatalog(c, wk);
 		const create = c.resolve(PlantCreateUseCase);
 		const del = c.resolve(PlantDeleteUseCase);
 		const ownerCtx: UseCaseContext = { actorSubject: ownerAdmin, activeWorkspaceScope: sharedScope };

@@ -2,11 +2,11 @@ import { WorkspaceVO } from "@backend/core/domain/access/workspace.vo";
 import type { LocationEntity, LocationEntityId } from "@backend/core/domain/gardening/entities";
 import type { ItemsContainer } from "@backend/shared/types";
 import type {
-	LocationRepositoryCreateInputDTO,
-	LocationRepositoryDeleteManyInputDTO,
-	LocationRepositoryDeleteManyOutputDTO,
 	LocationRepositoryPort,
-	LocationRepositoryUpdateInputDTO,
+	LocationRepositoryCreateInputDTO,
+	LocationRepositoryDeleteOutputDTO,
+	LocationRepositoryUpdateOutputDTO,
+	LocationRepositoryUpdatePatchDTO,
 } from "../../ports/repositories/gardening/location.repository.port";
 import { RepositoryValidationError } from "../../ports/repositories/shared/base-repository.errors";
 import type { AccessControlApplicationService } from "../../services/access-control/access-control.application-service";
@@ -27,13 +27,10 @@ export class LocationCreateUseCase implements IUseCase<LocationCreateUseCaseInpu
 
 	public async execute(input: LocationCreateUseCaseInput): Promise<LocationCreateUseCaseOutput> {
 		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "create" });
-		const created = await this.locationRepository.createScoped({
-			dto: {
-				...input.dto,
-				workspaceKey: input.context.activeWorkspaceScope.toKey(),
-			},
+		return this.locationRepository.createOne({
+			...input.dto,
+			workspaceKey: input.context.activeWorkspaceScope.toKey(),
 		});
-		return created;
 	}
 }
 
@@ -49,8 +46,8 @@ export class LocationGetByIdUseCase implements IUseCase<LocationGetByIdUseCaseIn
 	public async execute(input: LocationGetByIdUseCaseInput): Promise<LocationGetByIdUseCaseOutput> {
 		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "read" });
 		const wk = input.context.activeWorkspaceScope.toKey();
-		return this.locationRepository.getByIdScoped({ workspaceKey: wk, dto: { id: input.dto.id } });
-	}	
+		return this.locationRepository.getOne({ filters: [{ id: input.dto.id, workspaceKey: wk }] });
+	}
 }
 
 export type LocationGetAllUseCaseInput = UseCaseRequest;
@@ -67,9 +64,8 @@ export class LocationGetAllUseCase implements IUseCase<LocationGetAllUseCaseInpu
 			...input.context,
 			action: "read",
 		});
-		const all = await this.locationRepository.getAllScoped({
-			workspaceKeys: [input.context.activeWorkspaceScope.toKey()],
-		});
+		const wk = input.context.activeWorkspaceScope.toKey();
+		const all = await this.locationRepository.getMany({ filters: [{ workspaceKey: wk }] });
 		return {
 			items: all.items.map((item) => ({
 				...item,
@@ -79,7 +75,7 @@ export class LocationGetAllUseCase implements IUseCase<LocationGetAllUseCaseInpu
 	}
 }
 
-export type LocationUpdateUseCaseInput = UseCaseRequest<LocationRepositoryUpdateInputDTO>;
+export type LocationUpdateUseCaseInput = UseCaseRequest<{ id: LocationEntityId } & LocationRepositoryUpdatePatchDTO>;
 export type LocationUpdateUseCaseOutput = LocationEntity;
 
 export class LocationUpdateUseCase implements IUseCase<LocationUpdateUseCaseInput, LocationUpdateUseCaseOutput> {
@@ -91,15 +87,16 @@ export class LocationUpdateUseCase implements IUseCase<LocationUpdateUseCaseInpu
 	public async execute(input: LocationUpdateUseCaseInput): Promise<LocationUpdateUseCaseOutput> {
 		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "update" });
 		const wk = input.context.activeWorkspaceScope.toKey();
-		return this.locationRepository.updateByIdScoped({
-			workspaceKey: wk,
-			dto: input.dto,
+		const { id, ...patch } = input.dto;
+		return this.locationRepository.updateOne({
+			filters: [{ id, workspaceKey: wk }],
+			dto: patch,
 		});
 	}
 }
 
 export type LocationDeleteUseCaseInput = UseCaseRequest<{ id: LocationEntityId }>;
-export type LocationDeleteUseCaseOutput = LocationEntityId;
+export type LocationDeleteUseCaseOutput = LocationRepositoryDeleteOutputDTO;
 
 export class LocationDeleteUseCasePlacedEntityError extends BaseUseCaseError {
 	constructor(params: { id: string }) {
@@ -138,9 +135,8 @@ export class LocationDeleteUseCase implements IUseCase<LocationDeleteUseCaseInpu
 		if (placement.isPlaced) {
 			throw new LocationDeleteUseCasePlacedEntityError({ id: String(input.dto.id) });
 		}
-		const deletedId = await this.locationRepository.deleteByIdScoped({
-			workspaceKey: wk,
-			dto: { id: input.dto.id },
+		const deletedId = await this.locationRepository.deleteOne({
+			filters: [{ id: input.dto.id, workspaceKey: wk }],
 		});
 		await this.spatialOperationsService.deleteUnplacedNodeByRef({
 			ref: { entity: "location", entityId: String(deletedId) },
@@ -150,8 +146,8 @@ export class LocationDeleteUseCase implements IUseCase<LocationDeleteUseCaseInpu
 	}
 }
 
-export type LocationDeleteManyUseCaseInput = UseCaseRequest<LocationRepositoryDeleteManyInputDTO>;
-export type LocationDeleteManyUseCaseOutput = LocationRepositoryDeleteManyOutputDTO;
+export type LocationDeleteManyUseCaseInput = UseCaseRequest<{ ids: LocationEntityId[] }>;
+export type LocationDeleteManyUseCaseOutput = { deletedIds: LocationEntityId[] };
 
 export class LocationDeleteManyUseCase
 	implements IUseCase<LocationDeleteManyUseCaseInput, LocationDeleteManyUseCaseOutput>
@@ -185,16 +181,22 @@ export class LocationDeleteManyUseCase
 		if (placedIdSet.size > 0) {
 			throw new LocationDeleteManyUseCasePlacedEntityError({ ids: [...placedIdSet].sort() });
 		}
-		const { deletedIds } = await this.locationRepository.deleteManyScoped({
-			workspaceKeys: [wk],
-			dto: { ids: input.dto.ids },
-		});
-		for (const deletedId of deletedIds) {
+		const filters = input.dto.ids.map((id) => ({ id, workspaceKey: wk }));
+		const { count } = await this.locationRepository.deleteMany({ filters });
+		if (count !== input.dto.ids.length) {
+			throw new RepositoryValidationError({
+				operation: "deleteMany",
+				validationCode: "partial-delete",
+				context: { requested: input.dto.ids.length, deleted: count },
+				message: "deleteMany removed fewer rows than requested.",
+			});
+		}
+		for (const deletedId of input.dto.ids) {
 			await this.spatialOperationsService.deleteUnplacedNodeByRef({
 				ref: { entity: "location", entityId: String(deletedId) },
 				workspaceKeys: [wk],
 			});
 		}
-		return { deletedIds };
+		return { deletedIds: input.dto.ids };
 	}
 }

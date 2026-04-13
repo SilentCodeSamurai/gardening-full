@@ -23,7 +23,7 @@ describe("AccessControlApplicationService", () => {
 			const { svc, repo } = makeService();
 			const actor = SubjectVO.user("u1");
 			const scope = WorkspaceVO.org("acme");
-			await repo.upsertWorkspaceRoleAssignment({
+			await repo.upsertOne({
 				subjectKey: actor.toKey(),
 				workspaceKey: scope.toKey(),
 				role: "editor",
@@ -41,7 +41,7 @@ describe("AccessControlApplicationService", () => {
 			const { svc, repo } = makeService();
 			const actor = SubjectVO.user("u1");
 			const scope = WorkspaceVO.user("u1");
-			await repo.upsertWorkspaceRoleAssignment({
+			await repo.upsertOne({
 				subjectKey: actor.toKey(),
 				workspaceKey: scope.toKey(),
 				role: "viewer",
@@ -59,7 +59,7 @@ describe("AccessControlApplicationService", () => {
 			const { svc, repo } = makeService();
 			const actor = SubjectVO.user("u-view");
 			const scope = WorkspaceVO.user("u-view");
-			await repo.upsertWorkspaceRoleAssignment({
+			await repo.upsertOne({
 				subjectKey: actor.toKey(),
 				workspaceKey: scope.toKey(),
 				role: "viewer",
@@ -77,7 +77,7 @@ describe("AccessControlApplicationService", () => {
 			const { svc, repo } = makeService();
 			const actor = SubjectVO.user("u-c");
 			const scope = WorkspaceVO.user("u-c");
-			await repo.upsertWorkspaceRoleAssignment({
+			await repo.upsertOne({
 				subjectKey: actor.toKey(),
 				workspaceKey: scope.toKey(),
 				role: "viewer",
@@ -131,7 +131,7 @@ describe("AccessControlApplicationService", () => {
 			const adminUser = SubjectVO.user("admin");
 			const other = SubjectVO.user("other");
 			const scope = WorkspaceVO.user("admin");
-			await repo.upsertWorkspaceRoleAssignment({
+			await repo.upsertOne({
 				subjectKey: adminUser.toKey(),
 				workspaceKey: scope.toKey(),
 				role: "admin",
@@ -155,7 +155,7 @@ describe("AccessControlApplicationService", () => {
 			const editor = SubjectVO.user("editor");
 			const other = SubjectVO.user("other");
 			const scope = WorkspaceVO.user("editor");
-			await repo.upsertWorkspaceRoleAssignment({
+			await repo.upsertOne({
 				subjectKey: editor.toKey(),
 				workspaceKey: scope.toKey(),
 				role: "editor",
@@ -175,12 +175,12 @@ describe("AccessControlApplicationService", () => {
 			const adminUser = SubjectVO.user("admin");
 			const other = SubjectVO.user("other");
 			const scope = WorkspaceVO.user("admin");
-			await repo.upsertWorkspaceRoleAssignment({
+			await repo.upsertOne({
 				subjectKey: adminUser.toKey(),
 				workspaceKey: scope.toKey(),
 				role: "admin",
 			});
-			await repo.upsertWorkspaceRoleAssignment({
+			await repo.upsertOne({
 				subjectKey: other.toKey(),
 				workspaceKey: scope.toKey(),
 				role: "viewer",

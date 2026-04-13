@@ -1,25 +1,25 @@
 import type {
+	PlantRepositoryPort,
 	PlantRepositoryCreateInputDTO,
 	PlantRepositoryCreateManyInputDTO,
 	PlantRepositoryCreateManyOutputDTO,
 	PlantRepositoryCreateOutputDTO,
-	PlantRepositoryDeleteInputDTO,
-	PlantRepositoryDeleteManyInputDTO,
 	PlantRepositoryDeleteManyOutputDTO,
 	PlantRepositoryDeleteOutputDTO,
-	PlantRepositoryGetAllOutputDTO,
-	PlantRepositoryGetByCultivarIdInputDTO,
-	PlantRepositoryGetByCultivarIdOutputDTO,
-	PlantRepositoryGetByIdInputDTO,
-	PlantRepositoryGetByIdOutputDTO,
-	PlantRepositoryGetListByIdsInputDTO,
-	PlantRepositoryGetListByIdsOutputDTO,
-	PlantRepositoryPort,
-	PlantRepositoryUpdateInputDTO,
+	PlantRepositoryFilterClause,
+	PlantRepositoryGetManyOutputDTO,
+	PlantRepositoryGetOneOutputDTO,
+	PlantRepositoryUpdateManyOutputDTO,
 	PlantRepositoryUpdateOutputDTO,
+	PlantRepositoryUpdatePatchDTO,
 } from "@backend/core/application/ports/repositories/gardening/plant.repository.port";
 import { BaseRepositoryErrors } from "@backend/core/application/ports/repositories/shared/base-repository.errors";
-import type { HydratedPlantEntity, PlantEntity, PlantEntityId } from "@backend/core/domain/gardening/entities";
+import type { HydratedPlantEntity, PlantEntity } from "@backend/core/domain/gardening/entities";
+import {
+	findFirstRowMatchingAnyClause,
+	findRowsMatchingAnyClause,
+} from "@backend/infrastructure/adapters/repositories/shared/in-memory-entity-filter";
+import { workspaceKeysEqual } from "@backend/infrastructure/adapters/repositories/shared/workspace-key";
 import type { InMemoryStore } from "@backend/infrastructure/integrations/in-memory-database/client";
 import { idKey, plantId } from "@backend/infrastructure/integrations/shared/database-ids";
 
@@ -28,206 +28,149 @@ export class PlantInMemoryRepository extends BaseRepositoryErrors implements Pla
 		super();
 	}
 
-	private hydratePlant(row: PlantEntity): HydratedPlantEntity {
-		const cultivar = this.store.cultivars.get(idKey(row.cultivarId));
-		if (!cultivar) this.throwNotFoundError("Cultivar", row.cultivarId);
-		const species = this.store.species.get(idKey(cultivar.speciesId));
-		if (!species) this.throwNotFoundError("Species", cultivar.speciesId);
+	private hydrate(row: PlantEntity): HydratedPlantEntity {
+		const cultivarRow = this.store.cultivars.get(idKey(row.cultivarId));
+		if (!cultivarRow) this.throwNotFoundError("Cultivar", row.cultivarId);
+		const speciesRow = this.store.species.get(idKey(cultivarRow.speciesId));
+		if (!speciesRow) this.throwNotFoundError("Species", cultivarRow.speciesId);
 		return {
 			...row,
 			cultivar: {
-				...cultivar,
-				species,
+				...cultivarRow,
+				species: speciesRow,
 			},
 		};
 	}
 
 	private insertRow(dto: PlantRepositoryCreateInputDTO): PlantRepositoryCreateOutputDTO {
-		if (!this.store.cultivars.has(idKey(dto.cultivarId))) {
+		const cultivarRow = this.store.cultivars.get(idKey(dto.cultivarId));
+		if (!cultivarRow) {
 			this.throwNotFoundError("Cultivar", dto.cultivarId);
+		}
+		if (!workspaceKeysEqual(cultivarRow.workspaceKey, dto.workspaceKey)) {
+			this.throwValidationError({
+				operation: "create",
+				validationCode: "cultivar-workspace-mismatch",
+				context: { cultivarId: dto.cultivarId, workspaceKey: dto.workspaceKey },
+			});
 		}
 		const now = new Date();
 		const id = plantId();
 		const row: PlantEntity = {
+			...dto,
 			id,
-			workspaceKey: dto.workspaceKey,
-			title: dto.title,
-			description: dto.description,
-			cultivarId: dto.cultivarId,
 			createdAt: now,
 			updatedAt: now,
 		};
 		this.store.plants.set(idKey(id), row);
-		return this.hydratePlant(row);
+		return this.hydrate(row);
 	}
 
-	private insertManyRows(rows: PlantRepositoryCreateManyInputDTO): PlantRepositoryCreateManyOutputDTO {
-		const items: HydratedPlantEntity[] = [];
-		for (const dto of rows) {
-			if (!this.store.cultivars.has(idKey(dto.cultivarId))) {
-				this.throwNotFoundError("Cultivar", dto.cultivarId);
-			}
-			const now = new Date();
-			const id = plantId();
-			const row: PlantEntity = {
-				id,
-				workspaceKey: dto.workspaceKey,
-				title: dto.title,
-				description: dto.description,
-				cultivarId: dto.cultivarId,
-				createdAt: now,
-				updatedAt: now,
-			};
-			this.store.plants.set(idKey(id), row);
-			items.push(this.hydratePlant(row));
-		}
-		return { items };
-	}
-
-	private loadById(dto: PlantRepositoryGetByIdInputDTO): PlantRepositoryGetByIdOutputDTO {
-		const row = this.store.plants.get(idKey(dto.id));
-		if (!row) this.throwNotFoundError("Plant", dto.id);
-		return this.hydratePlant(row);
-	}
-
-	private listByIdsInWorkspaces(
-		workspaceKeys: readonly PlantEntity["workspaceKey"][],
-		dto: PlantRepositoryGetListByIdsInputDTO,
-	): PlantRepositoryGetListByIdsOutputDTO {
-		const allowed = new Set(workspaceKeys.map((key) => String(key)));
-		const items: HydratedPlantEntity[] = [];
-		for (const pid of dto.ids) {
-			const p = this.store.plants.get(idKey(pid));
-			if (p && allowed.has(String(p.workspaceKey))) items.push(this.hydratePlant(p));
-		}
-		return { items };
-	}
-
-	private listInWorkspaces(workspaceKeys: readonly PlantEntity["workspaceKey"][]): PlantRepositoryGetAllOutputDTO {
-		const allowed = new Set(workspaceKeys.map((key) => String(key)));
-		const rows = [...this.store.plants.values()].filter((x) => allowed.has(String(x.workspaceKey)));
-		return { items: rows.map((row) => this.hydratePlant(row)) };
-	}
-
-	private patchRow(dto: PlantRepositoryUpdateInputDTO): PlantRepositoryUpdateOutputDTO {
-		const key = idKey(dto.id);
-		const existing = this.store.plants.get(key);
-		if (!existing) this.throwNotFoundError("Plant", dto.id);
+	private patchStored(existing: PlantEntity, dto: PlantRepositoryUpdatePatchDTO): PlantEntity {
+		const nextWorkspaceKey = dto.workspaceKey !== undefined ? dto.workspaceKey : existing.workspaceKey;
 		const nextCultivarId = dto.cultivarId !== undefined ? dto.cultivarId : existing.cultivarId;
-		if (!this.store.cultivars.has(idKey(nextCultivarId))) {
-			this.throwNotFoundError("Cultivar", nextCultivarId);
-		}
-		const updated: PlantEntity = {
+		return {
 			...existing,
-			title: dto.title ?? existing.title,
-			description: dto.description ?? existing.description,
+			workspaceKey: nextWorkspaceKey,
+			title: dto.title !== undefined ? dto.title : existing.title,
+			description: dto.description !== undefined ? dto.description : existing.description,
 			cultivarId: nextCultivarId,
-			id: existing.id,
-			createdAt: existing.createdAt,
 			updatedAt: new Date(),
 		};
-		this.store.plants.set(key, updated);
-		return this.hydratePlant(updated);
 	}
 
-	private listByCultivarInWorkspaces(
-		workspaceKeys: readonly PlantEntity["workspaceKey"][],
-		dto: PlantRepositoryGetByCultivarIdInputDTO,
-	): PlantRepositoryGetByCultivarIdOutputDTO {
-		const allowed = new Set(workspaceKeys.map((key) => String(key)));
-		const ck = idKey(dto.cultivarId);
-		const items = [...this.store.plants.values()]
-			.filter((p) => idKey(p.cultivarId) === ck && allowed.has(String(p.workspaceKey)))
-			.map((row) => this.hydratePlant(row));
+	private assertCultivarMatchesWorkspace(
+		cultivarId: PlantEntity["cultivarId"],
+		workspaceKey: PlantEntity["workspaceKey"],
+	): void {
+		const cultivarRow = this.store.cultivars.get(idKey(cultivarId));
+		if (!cultivarRow) this.throwNotFoundError("Cultivar", cultivarId);
+		if (!workspaceKeysEqual(cultivarRow.workspaceKey, workspaceKey)) {
+			this.throwValidationError({
+				operation: "update",
+				validationCode: "cultivar-workspace-mismatch",
+				context: { cultivarId, workspaceKey },
+			});
+		}
+	}
+
+	async createOne(dto: PlantRepositoryCreateInputDTO): Promise<PlantRepositoryCreateOutputDTO> {
+		return this.insertRow(dto);
+	}
+
+	async createMany(input: PlantRepositoryCreateManyInputDTO): Promise<PlantRepositoryCreateManyOutputDTO> {
+		const items: HydratedPlantEntity[] = [];
+		for (const item of input.items) {
+			items.push(this.insertRow(item));
+		}
 		return { items };
 	}
 
-	private removeRow(dto: PlantRepositoryDeleteInputDTO): PlantRepositoryDeleteOutputDTO {
-		const key = idKey(dto.id);
-		if (!this.store.plants.has(key)) this.throwNotFoundError("Plant", dto.id);
-		this.store.unlinkAllEventsFromPlant(dto.id);
-		this.store.plants.delete(key);
-		return dto.id;
+	async getOne(input: {
+		filters: readonly PlantRepositoryFilterClause[];
+	}): Promise<PlantRepositoryGetOneOutputDTO> {
+		const row = findFirstRowMatchingAnyClause(this.store.plants.values(), input.filters);
+		if (!row) this.throwNotFoundError("Plant", input.filters);
+		return this.hydrate(row);
 	}
 
-	private removeManyInWorkspaces(
-		workspaceKeys: readonly PlantEntity["workspaceKey"][],
-		dto: PlantRepositoryDeleteManyInputDTO,
-	): PlantRepositoryDeleteManyOutputDTO {
-		const allowed = new Set(workspaceKeys.map((key) => String(key)));
-		const deletedIds: PlantEntityId[] = [];
-		for (const id of dto.ids) {
-			const key = idKey(id);
-			const row = this.store.plants.get(key);
-			if (!row || !allowed.has(String(row.workspaceKey))) continue;
-			this.store.unlinkAllEventsFromPlant(id);
-			this.store.plants.delete(key);
-			deletedIds.push(id);
+	async getMany(input?: {
+		filters?: readonly PlantRepositoryFilterClause[];
+	}): Promise<PlantRepositoryGetManyOutputDTO> {
+		if (input?.filters === undefined) {
+			return { items: [...this.store.plants.values()].map((r) => this.hydrate(r)) };
 		}
-		return { deletedIds };
+		if (input.filters.length === 0) return { items: [] };
+		const rows = findRowsMatchingAnyClause([...this.store.plants.values()], input.filters);
+		return { items: rows.map((r) => this.hydrate(r)) };
 	}
 
-	async createManyScoped(input: {
-		dto: { rows: PlantRepositoryCreateManyInputDTO };
-	}): Promise<PlantRepositoryCreateManyOutputDTO> {
-		return this.insertManyRows(input.dto.rows);
-	}
-
-	async getByCultivarIdScoped(input: {
-		workspaceKeys: readonly PlantEntity["workspaceKey"][];
-		dto: PlantRepositoryGetByCultivarIdInputDTO;
-	}): Promise<PlantRepositoryGetByCultivarIdOutputDTO> {
-		return this.listByCultivarInWorkspaces(input.workspaceKeys, input.dto);
-	}
-
-	async getListByIdsScoped(input: {
-		workspaceKeys: readonly PlantEntity["workspaceKey"][];
-		dto: PlantRepositoryGetListByIdsInputDTO;
-	}): Promise<PlantRepositoryGetListByIdsOutputDTO> {
-		return this.listByIdsInWorkspaces(input.workspaceKeys, input.dto);
-	}
-
-	async deleteManyScoped(input: {
-		workspaceKeys: readonly PlantEntity["workspaceKey"][];
-		dto: PlantRepositoryDeleteManyInputDTO;
-	}): Promise<PlantRepositoryDeleteManyOutputDTO> {
-		return this.removeManyInWorkspaces(input.workspaceKeys, input.dto);
-	}
-
-	async createScoped(input: { dto: PlantRepositoryCreateInputDTO }): Promise<PlantRepositoryCreateOutputDTO> {
-		return this.insertRow(input.dto);
-	}
-
-	async getAllScoped(input: {
-		workspaceKeys: readonly PlantEntity["workspaceKey"][];
-	}): Promise<PlantRepositoryGetAllOutputDTO> {
-		return this.listInWorkspaces(input.workspaceKeys);
-	}
-
-	async getByIdScoped(input: {
-		workspaceKey: PlantEntity["workspaceKey"];
-		dto: PlantRepositoryGetByIdInputDTO;
-	}): Promise<PlantRepositoryGetByIdOutputDTO> {
-		const row = this.loadById(input.dto);
-		if (String(row.workspaceKey) !== String(input.workspaceKey)) {
-			this.throwNotFoundError("Plant", input.dto.id);
-		}
-		return row;
-	}
-
-	async updateByIdScoped(input: {
-		workspaceKey: PlantEntity["workspaceKey"];
-		dto: PlantRepositoryUpdateInputDTO;
+	async updateOne(input: {
+		filters: readonly PlantRepositoryFilterClause[];
+		dto: PlantRepositoryUpdatePatchDTO;
 	}): Promise<PlantRepositoryUpdateOutputDTO> {
-		await this.getByIdScoped({ workspaceKey: input.workspaceKey, dto: { id: input.dto.id } });
-		return this.patchRow(input.dto);
+		const row = findFirstRowMatchingAnyClause(this.store.plants.values(), input.filters);
+		if (!row) this.throwNotFoundError("Plant", input.filters);
+		const updated = this.patchStored(row, input.dto);
+		this.assertCultivarMatchesWorkspace(updated.cultivarId, updated.workspaceKey);
+		this.store.plants.set(idKey(updated.id), updated);
+		return this.hydrate(updated);
 	}
 
-	async deleteByIdScoped(input: {
-		workspaceKey: PlantEntity["workspaceKey"];
-		dto: PlantRepositoryDeleteInputDTO;
+	async updateMany(input: {
+		filters: readonly PlantRepositoryFilterClause[];
+		dto: PlantRepositoryUpdatePatchDTO;
+	}): Promise<PlantRepositoryUpdateManyOutputDTO> {
+		const rows = findRowsMatchingAnyClause([...this.store.plants.values()], input.filters);
+		let count = 0;
+		for (const row of rows) {
+			const updated = this.patchStored(row, input.dto);
+			this.assertCultivarMatchesWorkspace(updated.cultivarId, updated.workspaceKey);
+			this.store.plants.set(idKey(updated.id), updated);
+			count += 1;
+		}
+		return { count };
+	}
+
+	async deleteOne(input: {
+		filters: readonly PlantRepositoryFilterClause[];
 	}): Promise<PlantRepositoryDeleteOutputDTO> {
-		await this.getByIdScoped({ workspaceKey: input.workspaceKey, dto: input.dto });
-		return this.removeRow(input.dto);
+		const row = findFirstRowMatchingAnyClause(this.store.plants.values(), input.filters);
+		if (!row) this.throwNotFoundError("Plant", input.filters);
+		this.store.unlinkAllEventsFromPlant(row.id);
+		this.store.plants.delete(idKey(row.id));
+		return row.id;
+	}
+
+	async deleteMany(input: {
+		filters: readonly PlantRepositoryFilterClause[];
+	}): Promise<PlantRepositoryDeleteManyOutputDTO> {
+		const rows = findRowsMatchingAnyClause([...this.store.plants.values()], input.filters);
+		let count = 0;
+		for (const row of rows) {
+			this.store.unlinkAllEventsFromPlant(row.id);
+			if (this.store.plants.delete(idKey(row.id))) count += 1;
+		}
+		return { count };
 	}
 }

@@ -21,9 +21,8 @@ export class SpatialOperationsService {
 		const { ref, workspaceKeys } = params;
 		let node: SpatialNodeEntity | null = null;
 		try {
-			node = await this.spatialRepo.getByRefScoped({
-				workspaceKeys,
-				dto: { ref },
+			node = await this.spatialRepo.getOneByRef({
+				filters: workspaceKeys.map((workspaceKey) => ({ ref, workspaceKey })),
 			});
 		} catch (e) {
 			if (!(e instanceof RepositoryNotFoundError)) throw e;
@@ -31,7 +30,9 @@ export class SpatialOperationsService {
 		if (!node) {
 			return { node: null, isPlaced: false };
 		}
-		const all = await this.spatialRepo.getAllScoped({ workspaceKeys });
+		const all = await this.spatialRepo.getMany({
+			filters: workspaceKeys.map((workspaceKey) => ({ workspaceKey })),
+		});
 		const hasChildren = all.items.some((item) => String(item.parentId) === String(node.id));
 		const isPlaced = node.parentId !== null || hasChildren;
 		return { node, isPlaced };
@@ -43,9 +44,8 @@ export class SpatialOperationsService {
 	}): Promise<void> {
 		const placement = await this.getPlacementStatusByRef(params);
 		if (!placement.node || placement.isPlaced) return;
-		await this.spatialRepo.deleteByIdScoped({
-			workspaceKey: placement.node.workspaceKey,
-			dto: { id: placement.node.id },
+		await this.spatialRepo.deleteOne({
+			filters: [{ id: placement.node.id, workspaceKey: placement.node.workspaceKey }],
 		});
 	}
 
@@ -55,22 +55,19 @@ export class SpatialOperationsService {
 		parentId: SpatialNodeEntityId | null;
 		rect: SpatialRect;
 	}): Promise<SpatialNodeEntity> {
-		const existing = await this.spatialRepo.getByIdScoped({
-			workspaceKey: input.workspaceKey,
-			dto: { id: input.id },
+		const existing = await this.spatialRepo.getOne({
+			filters: [{ id: input.id, workspaceKey: input.workspaceKey }],
 		});
 
 		if (input.parentId !== null) {
 			if (String(input.parentId) === String(existing.id)) {
 				throw new Error("SpatialOperationsService: a node cannot be reparented under itself.");
 			}
-			await this.spatialRepo.getByIdScoped({
-				workspaceKey: input.workspaceKey,
-				dto: { id: input.parentId },
+			await this.spatialRepo.getOne({
+				filters: [{ id: input.parentId, workspaceKey: input.workspaceKey }],
 			});
-			const subtree = await this.spatialRepo.getTreeForRootIdScoped({
-				workspaceKey: input.workspaceKey,
-				dto: { id: input.id },
+			const subtree = await this.spatialRepo.getTreeForRootOne({
+				filters: [{ id: input.id, workspaceKey: input.workspaceKey }],
 			});
 			const contains = (node: SpatialNodeTreeNode, targetId: SpatialNodeEntityId): boolean => {
 				if (String(node.id) === String(targetId)) return true;
@@ -84,14 +81,12 @@ export class SpatialOperationsService {
 			}
 		}
 
-		return this.spatialRepo.updateByIdScoped({
-			workspaceKey: input.workspaceKey,
+		return this.spatialRepo.updateOne({
+			filters: [{ id: input.id, workspaceKey: input.workspaceKey }],
 			dto: {
-				id: input.id,
 				parentId: input.parentId,
 				rect: input.rect,
 			},
 		});
 	}
 }
- 

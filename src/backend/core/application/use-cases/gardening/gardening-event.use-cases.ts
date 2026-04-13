@@ -27,9 +27,8 @@ export class GardeningEventGetAllUseCase
 
 	public async execute(input: GardeningEventGetAllUseCaseInput): Promise<GardeningEventGetAllUseCaseOutput> {
 		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "read" });
-		return await this.gardeningEventRepository.getAllScoped({
-			workspaceKeys: [input.context.activeWorkspaceScope.toKey()],
-		});
+		const wk = input.context.activeWorkspaceScope.toKey();
+		return this.gardeningEventRepository.getMany({ filters: [{ workspaceKey: wk }] });
 	}
 }
 
@@ -47,7 +46,7 @@ export class GardeningEventGetByIdUseCase
 	public async execute(input: GardeningEventGetByIdUseCaseInput): Promise<GardeningEventGetByIdUseCaseOutput> {
 		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "read" });
 		const wk = input.context.activeWorkspaceScope.toKey();
-		return this.gardeningEventRepository.getByIdScoped({ workspaceKey: wk, dto: { id: input.dto.id } });
+		return this.gardeningEventRepository.getOne({ filters: [{ id: input.dto.id, workspaceKey: wk }] });
 	}
 }
 
@@ -68,9 +67,10 @@ export class GardeningEventUpdateUseCase
 	public async execute(input: GardeningEventUpdateUseCaseInput): Promise<GardeningEventUpdateUseCaseOutput> {
 		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "update" });
 		const wk = input.context.activeWorkspaceScope.toKey();
-		return this.gardeningEventRepository.updateByIdScoped({
-			workspaceKey: wk,
-			dto: input.dto,
+		const { id, ...patch } = input.dto;
+		return this.gardeningEventRepository.updateOne({
+			filters: [{ id, workspaceKey: wk }],
+			dto: patch,
 		});
 	}
 }
@@ -89,9 +89,8 @@ export class GardeningEventDeleteUseCase
 	public async execute(input: GardeningEventDeleteUseCaseInput): Promise<GardeningEventDeleteUseCaseOutput> {
 		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "delete" });
 		const wk = input.context.activeWorkspaceScope.toKey();
-		return this.gardeningEventRepository.deleteByIdScoped({
-			workspaceKey: wk,
-			dto: { id: input.dto.id },
+		return this.gardeningEventRepository.deleteOne({
+			filters: [{ id: input.dto.id, workspaceKey: wk }],
 		});
 	}
 }
@@ -111,13 +110,10 @@ export class GardeningEventCreateUseCase
 
 	public async execute(input: GardeningEventCreateUseCaseInput): Promise<GardeningEventCreateUseCaseOutput> {
 		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "create" });
-		const gardeningEvent = await this.gardeningEventRepository.createScoped({
-			dto: {
-				action: input.dto.action,
-				workspaceKey: input.context.activeWorkspaceScope.toKey(),
-			},
+		return this.gardeningEventRepository.createOne({
+			action: input.dto.action,
+			workspaceKey: input.context.activeWorkspaceScope.toKey(),
 		});
-		return gardeningEvent;
 	}
 }
 
@@ -144,22 +140,22 @@ export class GardeningEventCreateForLocationUseCase
 		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "create" });
 		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "read" });
 		const wk = input.context.activeWorkspaceScope.toKey();
-		await this.locationRepository.getByIdScoped({ workspaceKey: wk, dto: { id: input.dto.locationId } });
-		const gardeningEvent = await this.gardeningEventRepository.createScoped({
-			dto: {
-				action: input.dto.action,
-				workspaceKey: input.context.activeWorkspaceScope.toKey(),
-			},
+		await this.locationRepository.getOne({ filters: [{ id: input.dto.locationId, workspaceKey: wk }] });
+		const gardeningEvent = await this.gardeningEventRepository.createOne({
+			action: input.dto.action,
+			workspaceKey: input.context.activeWorkspaceScope.toKey(),
 		});
 		const activeKey = input.context.activeWorkspaceScope.toKey();
 		try {
-			const locationNode = await this.spatialNodeRepository.getByRefScoped({
-				workspaceKeys: [activeKey],
-				dto: { ref: { entity: "location", entityId: String(input.dto.locationId) } },
+			const locationNode = await this.spatialNodeRepository.getOneByRef({
+				filters: [
+					{
+						ref: { entity: "location", entityId: String(input.dto.locationId) },
+						workspaceKey: activeKey,
+					},
+				],
 			});
-			const allNodes = await this.spatialNodeRepository.getAllScoped({
-				workspaceKeys: [activeKey],
-			});
+			const allNodes = await this.spatialNodeRepository.getMany({ filters: [{ workspaceKey: activeKey }] });
 			const directPlantIds = allNodes.items
 				.filter(
 					(n) =>
@@ -168,30 +164,26 @@ export class GardeningEventCreateForLocationUseCase
 						String(n.parentId) === String(locationNode.id),
 				)
 				.map((n) => n.ref.entityId as PlantEntityId);
-			const plants = await this.plantRepository.getListByIdsScoped({
-				workspaceKeys: [activeKey],
-				dto: { ids: directPlantIds },
-			});
+			const plants =
+				directPlantIds.length > 0
+					? await this.plantRepository.getMany({
+							filters: directPlantIds.map((id) => ({ id, workspaceKey: activeKey })),
+						})
+					: { items: [] };
 			await Promise.all(
 				plants.items.map((plant) =>
-					this.gardeningEventRepository.bindToPlantScoped({
-						workspaceKey: gardeningEvent.workspaceKey,
-						dto: {
-							id: gardeningEvent.id,
-							plantId: plant.id,
-						},
+					this.gardeningEventRepository.bindToPlantOne({
+						filters: [{ id: gardeningEvent.id, workspaceKey: gardeningEvent.workspaceKey }],
+						plantId: plant.id,
 					}),
 				),
 			);
 		} catch {
 			// Spatial mapping is optional during bootstrap/reset states.
 		}
-		await this.gardeningEventRepository.bindToLocationScoped({
-			workspaceKey: gardeningEvent.workspaceKey,
-			dto: {
-				id: gardeningEvent.id,
-				locationId: input.dto.locationId,
-			},
+		await this.gardeningEventRepository.bindToLocationOne({
+			filters: [{ id: gardeningEvent.id, workspaceKey: gardeningEvent.workspaceKey }],
+			locationId: input.dto.locationId,
 		});
 		return gardeningEvent;
 	}
@@ -217,26 +209,20 @@ export class GardeningEventCreateForPlantListUseCase
 	): Promise<GardeningEventCreateForPlantListUseCaseOutput> {
 		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "create" });
 		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "read" });
-		const gardeningEvent = await this.gardeningEventRepository.createScoped({
-			dto: {
-				action: input.dto.action,
-				workspaceKey: input.context.activeWorkspaceScope.toKey(),
-			},
+		const gardeningEvent = await this.gardeningEventRepository.createOne({
+			action: input.dto.action,
+			workspaceKey: input.context.activeWorkspaceScope.toKey(),
 		});
-		const activeKeys = [input.context.activeWorkspaceScope.toKey()] as const;
-		const plants = await this.plantRepository.getListByIdsScoped({
-			workspaceKeys: activeKeys,
-			dto: { ids: input.dto.plantIds },
+		const activeKey = input.context.activeWorkspaceScope.toKey();
+		const plants = await this.plantRepository.getMany({
+			filters: input.dto.plantIds.map((id) => ({ id, workspaceKey: activeKey })),
 		});
 		const promises = [];
 		for (const plant of plants.items) {
 			promises.push(
-				this.gardeningEventRepository.bindToPlantScoped({
-					workspaceKey: gardeningEvent.workspaceKey,
-					dto: {
-						id: gardeningEvent.id,
-						plantId: plant.id,
-					},
+				this.gardeningEventRepository.bindToPlantOne({
+					filters: [{ id: gardeningEvent.id, workspaceKey: gardeningEvent.workspaceKey }],
+					plantId: plant.id,
 				}),
 			);
 		}
@@ -261,16 +247,11 @@ export class GardeningEventGetForPlantUseCase
 		input: GardeningEventGetForPlantUseCaseInput,
 	): Promise<GardeningEventGetForPlantUseCaseOutput> {
 		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "read" });
-		const activeKeys = [input.context.activeWorkspaceScope.toKey()] as const;
-		await this.plantRepository.getByIdScoped({
-			workspaceKey: activeKeys[0],
-			dto: { id: input.dto.plantId },
+		const activeKey = input.context.activeWorkspaceScope.toKey();
+		await this.plantRepository.getOne({ filters: [{ id: input.dto.plantId, workspaceKey: activeKey }] });
+		return this.gardeningEventRepository.getManyForPlant({
+			filters: [{ plantId: input.dto.plantId, workspaceKey: activeKey }],
 		});
-		const raw = await this.gardeningEventRepository.getForPlantScoped({
-			workspaceKeys: activeKeys,
-			dto: { plantId: input.dto.plantId },
-		});
-		return { items: raw.items };
 	}
 }
 
@@ -290,16 +271,11 @@ export class GardeningEventGetForLocationUseCase
 		input: GardeningEventGetForLocationUseCaseInput,
 	): Promise<GardeningEventGetForLocationUseCaseOutput> {
 		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "read" });
-		const activeKeys = [input.context.activeWorkspaceScope.toKey()] as const;
-		await this.locationRepository.getByIdScoped({
-			workspaceKey: activeKeys[0],
-			dto: { id: input.dto.locationId },
+		const activeKey = input.context.activeWorkspaceScope.toKey();
+		await this.locationRepository.getOne({ filters: [{ id: input.dto.locationId, workspaceKey: activeKey }] });
+		return this.gardeningEventRepository.getManyForLocation({
+			filters: [{ locationId: input.dto.locationId, workspaceKey: activeKey }],
 		});
-		const raw = await this.gardeningEventRepository.getForLocationScoped({
-			workspaceKeys: activeKeys,
-			dto: { locationId: input.dto.locationId },
-		});
-		return { items: raw.items };
 	}
 }
 
@@ -322,10 +298,9 @@ export class GardeningEventGetBindingsForEventUseCase
 	): Promise<GardeningEventGetBindingsForEventUseCaseOutput> {
 		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "read" });
 		const wk = input.context.activeWorkspaceScope.toKey();
-		await this.gardeningEventRepository.getByIdScoped({ workspaceKey: wk, dto: { id: input.dto.id } });
-		return this.gardeningEventRepository.getBindingsForEventScoped({
-			workspaceKey: wk,
-			dto: { id: input.dto.id },
+		await this.gardeningEventRepository.getOne({ filters: [{ id: input.dto.id, workspaceKey: wk }] });
+		return this.gardeningEventRepository.getBindingsOne({
+			filters: [{ id: input.dto.id, workspaceKey: wk }],
 		});
 	}
 }

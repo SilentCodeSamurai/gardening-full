@@ -2,16 +2,14 @@ import { WorkspaceVO } from "@backend/core/domain/access/workspace.vo";
 import type {
 	HydratedCultivarEntity,
 	HydratedPlantEntity,
+	PlantEntityId,
 } from "@backend/core/domain/gardening/entities";
 import type {
-	PlantRepositoryCreateInputDTO,
-	PlantRepositoryDeleteInputDTO,
-	PlantRepositoryDeleteManyInputDTO,
-	PlantRepositoryDeleteManyOutputDTO,
-	PlantRepositoryDeleteOutputDTO,
-	PlantRepositoryGetByIdInputDTO,
 	PlantRepositoryPort,
-	PlantRepositoryUpdateInputDTO,
+	PlantRepositoryCreateInputDTO,
+	PlantRepositoryDeleteOutputDTO,
+	PlantRepositoryUpdateOutputDTO,
+	PlantRepositoryUpdatePatchDTO,
 } from "../../ports/repositories/gardening/plant.repository.port";
 import { RepositoryValidationError } from "../../ports/repositories/shared/base-repository.errors";
 import type { AccessControlApplicationService } from "../../services/access-control/access-control.application-service";
@@ -36,7 +34,10 @@ function enrichPlantSpeciesCatalogFlags(plant: HydratedPlantEntity): PlantHydrat
 		...plant,
 		cultivar: {
 			...plant.cultivar,
-			species: { ...plant.cultivar.species, systemCatalog: WorkspaceVO.isGlobalSharedKey(plant.cultivar.species.workspaceKey) },
+			species: {
+				...plant.cultivar.species,
+				systemCatalog: WorkspaceVO.isGlobalSharedKey(plant.cultivar.species.workspaceKey),
+			},
 		},
 	};
 }
@@ -52,11 +53,9 @@ export class PlantCreateUseCase implements IUseCase<PlantCreateUseCaseInput, Pla
 
 	public async execute(input: PlantCreateUseCaseInput): Promise<PlantCreateUseCaseOutput> {
 		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "create" });
-		const created = await this.plantRepository.createScoped({
-			dto: {
-				...input.dto,
-				workspaceKey: input.context.activeWorkspaceScope.toKey(),
-			},
+		const created = await this.plantRepository.createOne({
+			...input.dto,
+			workspaceKey: input.context.activeWorkspaceScope.toKey(),
 		});
 		return enrichPlantSpeciesCatalogFlags(created);
 	}
@@ -84,13 +83,12 @@ export class PlantCreateManyUseCase implements IUseCase<PlantCreateManyUseCaseIn
 				message: "createMany rows must be at least 1.",
 			});
 		}
-		const created = await this.plantRepository.createManyScoped({
-			dto: {
-				rows: input.dto.rows.map((row) => ({
-					...row,
-					workspaceKey: input.context.activeWorkspaceScope.toKey(),
-				})),
-			},
+		const wk = input.context.activeWorkspaceScope.toKey();
+		const created = await this.plantRepository.createMany({
+			items: input.dto.rows.map((row) => ({
+				...row,
+				workspaceKey: wk,
+			})),
 		});
 		return { items: created.items.map(enrichPlantSpeciesCatalogFlags) };
 	}
@@ -106,16 +104,15 @@ export class PlantGetAllUseCase implements IUseCase<PlantGetAllUseCaseInput, Pla
 	) {}
 	public async execute(input: PlantGetAllUseCaseInput): Promise<PlantGetAllUseCaseOutput> {
 		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "read" });
-		const all = await this.plantRepository.getAllScoped({
-			workspaceKeys: [input.context.activeWorkspaceScope.toKey()],
-		});
+		const wk = input.context.activeWorkspaceScope.toKey();
+		const all = await this.plantRepository.getMany({ filters: [{ workspaceKey: wk }] });
 		return {
 			items: all.items.map(enrichPlantSpeciesCatalogFlags),
 		};
 	}
 }
 
-export type PlantGetByIdUseCaseInput = UseCaseRequest<PlantRepositoryGetByIdInputDTO>;
+export type PlantGetByIdUseCaseInput = UseCaseRequest<{ id: PlantEntityId }>;
 export type PlantGetByIdUseCaseOutput = PlantHydratedWithCatalogSpecies;
 
 export class PlantGetByIdUseCase implements IUseCase<PlantGetByIdUseCaseInput, PlantGetByIdUseCaseOutput> {
@@ -126,12 +123,12 @@ export class PlantGetByIdUseCase implements IUseCase<PlantGetByIdUseCaseInput, P
 	public async execute(input: PlantGetByIdUseCaseInput): Promise<PlantGetByIdUseCaseOutput> {
 		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "read" });
 		const wk = input.context.activeWorkspaceScope.toKey();
-		const row = await this.plantRepository.getByIdScoped({ workspaceKey: wk, dto: input.dto });
+		const row = await this.plantRepository.getOne({ filters: [{ id: input.dto.id, workspaceKey: wk }] });
 		return enrichPlantSpeciesCatalogFlags(row);
 	}
 }
 
-export type PlantUpdateUseCaseInput = UseCaseRequest<PlantRepositoryUpdateInputDTO>;
+export type PlantUpdateUseCaseInput = UseCaseRequest<{ id: PlantEntityId } & PlantRepositoryUpdatePatchDTO>;
 export type PlantUpdateUseCaseOutput = PlantHydratedWithCatalogSpecies;
 
 export class PlantUpdateUseCase implements IUseCase<PlantUpdateUseCaseInput, PlantUpdateUseCaseOutput> {
@@ -142,15 +139,16 @@ export class PlantUpdateUseCase implements IUseCase<PlantUpdateUseCaseInput, Pla
 	public async execute(input: PlantUpdateUseCaseInput): Promise<PlantUpdateUseCaseOutput> {
 		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "update" });
 		const wk = input.context.activeWorkspaceScope.toKey();
-		const updated = await this.plantRepository.updateByIdScoped({
-			workspaceKey: wk,
-			dto: input.dto,
+		const { id, ...patch } = input.dto;
+		const updated = await this.plantRepository.updateOne({
+			filters: [{ id, workspaceKey: wk }],
+			dto: patch,
 		});
 		return enrichPlantSpeciesCatalogFlags(updated);
 	}
 }
 
-export type PlantDeleteUseCaseInput = UseCaseRequest<PlantRepositoryDeleteInputDTO>;
+export type PlantDeleteUseCaseInput = UseCaseRequest<{ id: PlantEntityId }>;
 export type PlantDeleteUseCaseOutput = PlantRepositoryDeleteOutputDTO;
 
 export class PlantDeleteUseCasePlacedEntityError extends BaseUseCaseError {
@@ -189,9 +187,8 @@ export class PlantDeleteUseCase implements IUseCase<PlantDeleteUseCaseInput, Pla
 		if (placement.isPlaced) {
 			throw new PlantDeleteUseCasePlacedEntityError({ id: String(input.dto.id) });
 		}
-		const deletedId = await this.plantRepository.deleteByIdScoped({
-			workspaceKey: wk,
-			dto: input.dto,
+		const deletedId = await this.plantRepository.deleteOne({
+			filters: [{ id: input.dto.id, workspaceKey: wk }],
 		});
 		await this.spatialOperationsService.deleteUnplacedNodeByRef({
 			ref: { entity: "plant", entityId: String(deletedId) },
@@ -201,8 +198,8 @@ export class PlantDeleteUseCase implements IUseCase<PlantDeleteUseCaseInput, Pla
 	}
 }
 
-export type PlantDeleteManyUseCaseInput = UseCaseRequest<PlantRepositoryDeleteManyInputDTO>;
-export type PlantDeleteManyUseCaseOutput = PlantRepositoryDeleteManyOutputDTO;
+export type PlantDeleteManyUseCaseInput = UseCaseRequest<{ ids: PlantEntityId[] }>;
+export type PlantDeleteManyUseCaseOutput = { deletedIds: PlantEntityId[] };
 
 export class PlantDeleteManyUseCase implements IUseCase<PlantDeleteManyUseCaseInput, PlantDeleteManyUseCaseOutput> {
 	constructor(
@@ -234,16 +231,22 @@ export class PlantDeleteManyUseCase implements IUseCase<PlantDeleteManyUseCaseIn
 		if (placedIdSet.size > 0) {
 			throw new PlantDeleteManyUseCasePlacedEntityError({ ids: [...placedIdSet].sort() });
 		}
-		const { deletedIds } = await this.plantRepository.deleteManyScoped({
-			workspaceKeys: [wk],
-			dto: { ids: input.dto.ids },
-		});
-		for (const deletedId of deletedIds) {
+		const filters = input.dto.ids.map((id) => ({ id, workspaceKey: wk }));
+		const { count } = await this.plantRepository.deleteMany({ filters });
+		if (count !== input.dto.ids.length) {
+			throw new RepositoryValidationError({
+				operation: "deleteMany",
+				validationCode: "partial-delete",
+				context: { requested: input.dto.ids.length, deleted: count },
+				message: "deleteMany removed fewer rows than requested.",
+			});
+		}
+		for (const deletedId of input.dto.ids) {
 			await this.spatialOperationsService.deleteUnplacedNodeByRef({
 				ref: { entity: "plant", entityId: String(deletedId) },
 				workspaceKeys: [wk],
 			});
 		}
-		return { deletedIds };
+		return { deletedIds: input.dto.ids };
 	}
 }

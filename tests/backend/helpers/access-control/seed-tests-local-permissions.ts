@@ -1,28 +1,39 @@
-import { WorkspaceVO } from "@backend/core/domain/access/workspace.vo";
+import type { WorkspaceRoleAssignmentEntity } from "@backend/core/domain/access/entities";
+import type { SubjectKey } from "@backend/core/domain/access/subject.vo";
+import { WorkspaceVO, type WorkspaceKey } from "@backend/core/domain/access/workspace.vo";
 import { testsLocalServiceAccount } from "../../core/application/use-cases/service-accounts";
 import { TOKENS } from "@backend/di/tokens";
-import { WorkspaceRoleAssignmentInMemoryRepository } from "@backend/infrastructure/adapters/repositories/access/in-memory/workspace-role-assignment.repository.in-memory";
+import type { InMemoryStore } from "@backend/infrastructure/integrations/in-memory-database/client";
+import { workspaceRoleAssignmentId } from "@backend/infrastructure/integrations/shared/database-ids";
 import type { DependencyContainer } from "tsyringe";
+
+function compositeKey(subjectKey: SubjectKey, workspaceKey: WorkspaceKey): `${SubjectKey}|${WorkspaceKey}` {
+	return `${subjectKey}|${workspaceKey}` as const;
+}
 
 /**
  * Broad workspace admin for `tests-local` service account. Call after `registerAccessControlPorts` from test composition roots only.
  */
 export function seedTestsLocalAccessPermissions(c: DependencyContainer): void {
-	const workspaceRepo = c.resolve(TOKENS.WorkspaceRoleAssignmentRepositoryPort);
-	if (!(workspaceRepo instanceof WorkspaceRoleAssignmentInMemoryRepository)) {
-		throw new Error("seedTestsLocalAccessPermissions requires WorkspaceRoleAssignmentInMemoryRepository");
-	}
+	const store = c.resolve<InMemoryStore>(TOKENS.InMemoryStore);
 	const subjectKey = testsLocalServiceAccount.toKey();
-	workspaceRepo.putWorkspaceRoleAssignmentSync({
-		subjectKey,
-		workspaceKey: WorkspaceVO.org("workspace").toKey(),
-		role: "admin",
-		grantSource: "seed-tests-local-workspace-root",
-	});
-	workspaceRepo.putWorkspaceRoleAssignmentSync({
-		subjectKey,
-		workspaceKey: WorkspaceVO.globalShared().toKey(),
-		role: "admin",
-		grantSource: "seed-tests-local-system",
-	});
+	const now = new Date();
+	const seeds: readonly { workspaceKey: WorkspaceKey; grantSource: string }[] = [
+		{ workspaceKey: WorkspaceVO.org("workspace").toKey(), grantSource: "seed-tests-local-workspace-root" },
+		{ workspaceKey: WorkspaceVO.globalShared().toKey(), grantSource: "seed-tests-local-system" },
+	];
+	for (const { workspaceKey, grantSource } of seeds) {
+		const mapKey = compositeKey(subjectKey, workspaceKey);
+		const id = workspaceRoleAssignmentId();
+		const row: WorkspaceRoleAssignmentEntity = {
+			id,
+			subjectKey,
+			workspaceKey,
+			role: "admin",
+			grantSource,
+			createdAt: now,
+			updatedAt: now,
+		};
+		store.workspaceRoleAssignments.set(mapKey, row);
+	}
 }
