@@ -1,5 +1,5 @@
 import { WorkspaceVO } from "@backend/core/domain/access/workspace.vo";
-import type { HydratedPlantEntity } from "@backend/core/domain/gardening/entities";
+import type { HydratedCultivarEntity, HydratedPlantEntity } from "@backend/core/domain/gardening/entities";
 import type { SpatialNodeEntity, SpatialNodeTreeNode } from "@backend/core/domain/spatial/entities";
 import type { ItemsContainer } from "@backend/shared/types";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -39,16 +39,18 @@ import { setSpatialItemsAndRebuildTrees } from "./spatial-delete-plan";
 function getHydratedCultivar(
 	queryClient: ReturnType<typeof useQueryClient>,
 	cultivarId: string,
-): HydratedPlantEntity["cultivar"] | null {
+): HydratedCultivarEntity | null {
 	const cultivar = queryClient
 		.getQueryData<CachedCultivarList>(queryKeys.cultivar.all.queryKey)
 		?.items.find((c) => String(c.id) === String(cultivarId));
 	if (!cultivar) return null;
+	if (cultivar.speciesId === null) {
+		return { ...cultivar, species: null };
+	}
 	const species = queryClient
 		.getQueryData<CachedSpeciesList>(queryKeys.species.all.queryKey)
 		?.items.find((s) => String(s.id) === String(cultivar.speciesId));
-	if (!species) return null;
-	return { ...cultivar, species };
+	return { ...cultivar, species: species ?? null };
 }
 
 export function usePlantCreateMutation() {
@@ -60,8 +62,11 @@ export function usePlantCreateMutation() {
 			onMutate: async (variables) => {
 				await cancelQueriesByKeys(queryClient, [queryKeys.plant.all.queryKey]);
 				const snapshots = snapshotQueries(queryClient, [queryKeys.plant.all.queryKey]);
-				const cultivar = getHydratedCultivar(queryClient, String(variables.cultivarId));
-				if (!cultivar || !workspaceKey) return { snapshots };
+				if (!workspaceKey) return { snapshots };
+				const cultivar =
+					variables.cultivarId === null
+						? null
+						: getHydratedCultivar(queryClient, String(variables.cultivarId));
 				const pendingId = makePendingId("plant");
 				const pending: CachedHydratedPlant = {
 					workspace: WorkspaceVO.fromKey(workspaceKey),
@@ -126,8 +131,8 @@ export function usePlantCreateManyMutation() {
 				if (!workspaceKey) return { snapshots, pendingIds: [] as string[] };
 				for (let i = 0; i < variables.rows.length; i++) {
 					const row = variables.rows[i];
-					const cultivar = getHydratedCultivar(queryClient, String(row.cultivarId));
-					if (!cultivar) continue;
+					const cultivar =
+						row.cultivarId === null ? null : getHydratedCultivar(queryClient, String(row.cultivarId));
 					const pendingId = makePendingId(`plant-many-${i}`);
 					pendingItems.push({
 						workspace: WorkspaceVO.fromKey(workspaceKey),
@@ -186,16 +191,18 @@ export function usePlantUpdateMutation() {
 					previousAll?.items.find((item) => String(item.id) === String(variables.id)) ??
 					null;
 				if (existing && !isQueryObjectPending(existing)) {
-					const cultivar =
-						variables.cultivarId !== undefined
-							? getHydratedCultivar(queryClient, String(variables.cultivarId))
-							: existing.cultivar;
+					const nextCultivar =
+						variables.cultivarId === undefined
+							? existing.cultivar
+							: variables.cultivarId === null
+								? null
+								: (getHydratedCultivar(queryClient, String(variables.cultivarId)) ?? null);
 					const optimistic = markQueryObjectPending({
 						...existing,
 						...variables,
 						id: existing.id,
 						cultivarId: (variables.cultivarId ?? existing.cultivarId) as HydratedPlantEntity["cultivarId"],
-						cultivar: cultivar ?? existing.cultivar,
+						cultivar: nextCultivar,
 						updatedAt: new Date(),
 					});
 					queryClient.setQueryData<CachedHydratedPlantList>(queryKeys.plant.all.queryKey, (prev) =>

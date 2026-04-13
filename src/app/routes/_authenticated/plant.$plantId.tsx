@@ -51,7 +51,7 @@ function PlantDetailPage() {
 	}
 
 	const title = getPlantDisplayTitle(data);
-	const { cultivar } = data;
+	const cultivar = data.cultivar;
 	const events = eventsData?.items ?? [];
 	const isPlaced = getSpatialPlacementStatusByRef(spatialData?.items ?? [], {
 		entity: "plant",
@@ -62,7 +62,7 @@ function PlantDetailPage() {
 		<div className="flex min-h-0 flex-1 flex-col overflow-hidden">
 			<DashboardPageHeading className="min-w-0 flex-wrap" collection="plant">
 				<div className="flex min-w-0 flex-wrap items-center gap-3">
-					<ItemPresentationIcon presentation={cultivar.presentation} />
+					<ItemPresentationIcon presentation={cultivar?.presentation} />
 					<h1 className="font-heading font-medium text-lg">{title}</h1>
 				</div>
 				<div className="auto flex shrink-0 items-center gap-1">
@@ -130,29 +130,37 @@ function PlantDetailPage() {
 						<dl className="grid gap-x-4 gap-y-3 text-sm sm:grid-cols-[minmax(9rem,auto)_1fr]">
 							<div className="contents">
 								<dt className="text-muted-foreground">{m.collections_cultivar_title()}</dt>
-								<dd className="wrap-break-word min-w-0">{cultivar.characteristics.name}</dd>
+								<dd className="wrap-break-word min-w-0">
+									{cultivar?.characteristics.name ?? m.filtering_catalogNoCultivar()}
+								</dd>
 							</div>
 							<div className="contents">
 								<dt className="text-muted-foreground">
 									{`${m.collections_cultivar_title()} ${m.common_record().toLowerCase()}`}
 								</dt>
 								<dd className="wrap-break-word min-w-0">
-									<Link
-										to="/catalog/cultivar/$cultivarId"
-										params={{ cultivarId: String(data.cultivarId) }}
-										className="text-primary underline-offset-4 hover:underline"
-									>
-										{`${m.common_open()} ${m.collections_cultivar_title().toLowerCase()}`}
-									</Link>
+									{data.cultivarId ? (
+										<Link
+											to="/catalog/cultivar/$cultivarId"
+											params={{ cultivarId: String(data.cultivarId) }}
+											className="text-primary underline-offset-4 hover:underline"
+										>
+											{`${m.common_open()} ${m.collections_cultivar_title().toLowerCase()}`}
+										</Link>
+									) : (
+										<span className="text-muted-foreground">—</span>
+									)}
 								</dd>
 							</div>
 							<div className="contents">
 								<dt className="text-muted-foreground">{m.collections_species_title()}</dt>
 								<dd className="wrap-break-word min-w-0">
-									{translateCatalogField(
-										cultivar.species.characteristics.name,
-										cultivar.species.systemCatalog,
-									)}
+									{cultivar?.species
+										? translateCatalogField(
+												cultivar.species.characteristics.name,
+												cultivar.species.systemCatalog,
+											)
+										: m.filtering_catalogNoSpecies()}
 								</dd>
 							</div>
 							<div className="contents">
@@ -160,14 +168,20 @@ function PlantDetailPage() {
 									{`${m.collections_species_title()} ${m.common_record().toLowerCase()}`}
 								</dt>
 								<dd className="wrap-break-word min-w-0">
-									<Link
-										to="/catalog/species-detail/$speciesId"
-										params={{ speciesId: String(cultivar.speciesId) }}
-										search={{ category: String(cultivar.species.categoryId) }}
-										className="text-primary underline-offset-4 hover:underline"
-									>
-										{`${m.common_open()} ${m.collections_species_title().toLowerCase()}`}
-									</Link>
+									{cultivar?.speciesId && cultivar.species ? (
+										<Link
+											to="/catalog/species-detail/$speciesId"
+											params={{ speciesId: String(cultivar.speciesId) }}
+											search={{
+												category: String(cultivar.species.categoryId ?? ""),
+											}}
+											className="text-primary underline-offset-4 hover:underline"
+										>
+											{`${m.common_open()} ${m.collections_species_title().toLowerCase()}`}
+										</Link>
+									) : (
+										<span className="text-muted-foreground">—</span>
+									)}
 								</dd>
 							</div>
 

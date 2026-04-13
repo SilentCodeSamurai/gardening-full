@@ -14,7 +14,7 @@ import type {
 	PlantRepositoryUpdatePatchDTO,
 } from "@backend/core/application/ports/repositories/gardening/plant.repository.port";
 import { BaseRepositoryErrors } from "@backend/core/application/ports/repositories/shared/base-repository.errors";
-import type { HydratedPlantEntity, PlantEntity } from "@backend/core/domain/gardening/entities";
+import type { HydratedPlantEntity, PlantEntity, SpeciesEntity } from "@backend/core/domain/gardening/entities";
 import {
 	findFirstRowMatchingAnyClause,
 	findRowsMatchingAnyClause,
@@ -34,10 +34,17 @@ export class PlantInMemoryRepository extends BaseRepositoryErrors implements Pla
 	}
 
 	private hydrate(row: PlantEntity): HydratedPlantEntity {
+		if (row.cultivarId === null) {
+			return { ...row, cultivar: null };
+		}
 		const cultivarRow = this.store.cultivars.get(idKey(row.cultivarId));
 		if (!cultivarRow) this.throwNotFoundError("Cultivar", row.cultivarId);
-		const speciesRow = this.store.species.get(idKey(cultivarRow.speciesId));
-		if (!speciesRow) this.throwNotFoundError("Species", cultivarRow.speciesId);
+		let speciesRow: SpeciesEntity | null = null;
+		if (cultivarRow.speciesId !== null) {
+			const s = this.store.species.get(idKey(cultivarRow.speciesId));
+			if (!s) this.throwNotFoundError("Species", cultivarRow.speciesId);
+			speciesRow = s;
+		}
 		return {
 			...row,
 			cultivar: {
@@ -48,7 +55,7 @@ export class PlantInMemoryRepository extends BaseRepositoryErrors implements Pla
 	}
 
 	private insertRow(dto: PlantRepositoryCreateInputDTO): PlantRepositoryCreateOutputDTO {
-		this.requireCultivarRow(dto.cultivarId);
+		if (dto.cultivarId !== null) this.requireCultivarRow(dto.cultivarId);
 		const now = new Date();
 		const id = plantId();
 		const row: PlantEntity = {
@@ -61,7 +68,7 @@ export class PlantInMemoryRepository extends BaseRepositoryErrors implements Pla
 		return this.hydrate(row);
 	}
 
-	private requireCultivarRow(cultivarId: PlantEntity["cultivarId"]): void {
+	private requireCultivarRow(cultivarId: NonNullable<PlantEntity["cultivarId"]>): void {
 		const cultivar = this.store.cultivars.get(idKey(cultivarId));
 		if (!cultivar) {
 			this.throwNotFoundError("Cultivar", [{ id: cultivarId }]);
@@ -117,7 +124,7 @@ export class PlantInMemoryRepository extends BaseRepositoryErrors implements Pla
 		const row = findFirstRowMatchingAnyClause(this.store.plants.values(), input.filters);
 		if (!row) this.throwNotFoundError("Plant", input.filters);
 		const updated = this.patchStored(row, input.dto);
-		this.requireCultivarRow(updated.cultivarId);
+		if (updated.cultivarId !== null) this.requireCultivarRow(updated.cultivarId);
 		this.store.plants.set(idKey(updated.id), updated);
 		return this.hydrate(updated);
 	}
@@ -130,7 +137,7 @@ export class PlantInMemoryRepository extends BaseRepositoryErrors implements Pla
 		let count = 0;
 		for (const row of rows) {
 			const updated = this.patchStored(row, input.dto);
-			this.requireCultivarRow(updated.cultivarId);
+			if (updated.cultivarId !== null) this.requireCultivarRow(updated.cultivarId);
 			this.store.plants.set(idKey(updated.id), updated);
 			count += 1;
 		}

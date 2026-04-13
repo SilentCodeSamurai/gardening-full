@@ -10,6 +10,7 @@ import { useActiveWorkspaceKey } from "@/store/active-workspace-key";
 import { appendToItemsContainer, removeFromItemsContainer, upsertInItemsContainer } from "@/store/cache-utils";
 import { queryKeys } from "@/store/keys";
 import type {
+	CachedPlantHydratedWithCatalogSpecies,
 	CachedPlantHydratedWithCatalogSpeciesList,
 	CachedSpeciesList,
 	CachedSpeciesWithSystemCatalog,
@@ -98,7 +99,9 @@ export function useSpeciesUpdateMutation() {
 						...base,
 						...variables,
 						id: base.id,
-						categoryId: (variables.categoryId ?? base.categoryId) as SpeciesWithSystemCatalog["categoryId"],
+						categoryId: (variables.categoryId !== undefined
+							? variables.categoryId
+							: base.categoryId) as SpeciesWithSystemCatalog["categoryId"],
 						updatedAt: new Date(),
 					});
 					queryClient.setQueryData<CachedSpeciesList>(queryKeys.species.all.queryKey, (prev) =>
@@ -123,19 +126,27 @@ export function useSpeciesUpdateMutation() {
 					queryKeys.plant.all.queryKey,
 					(prev) => {
 						if (!prev) return prev;
+						const species: SpeciesWithSystemCatalog = {
+							...entity,
+							systemCatalog: WorkspaceVO.isGlobalShared(entity.workspace),
+						};
 						return {
 							...prev,
-							items: prev.items.map((plant) =>
-								String(plant.cultivar.species.id) === String(entity.id)
-									? {
-											...plant,
-											cultivar: {
-												...plant.cultivar,
-												species: entity,
-											},
-										}
-									: plant,
-							),
+							items: prev.items.map((plant): CachedPlantHydratedWithCatalogSpecies => {
+								if (
+									!plant.cultivar?.species ||
+									String(plant.cultivar.species.id) !== String(entity.id)
+								) {
+									return plant;
+								}
+								return {
+									...plant,
+									cultivar: {
+										...plant.cultivar,
+										species,
+									},
+								};
+							}),
 						};
 					},
 				);

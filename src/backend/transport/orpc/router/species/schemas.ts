@@ -8,7 +8,7 @@ import {
 } from "../../shared/schemas";
 
 export const CreateSpeciesInputSchema = z.object({
-	categoryId: SpeciesCategoryEntityIdSchema,
+	categoryId: SpeciesCategoryEntityIdSchema.nullable(),
 	characteristics: SpeciesCharacteristicsSchema,
 	presentation: ItemPresentationSchema,
 });
@@ -17,7 +17,7 @@ export const GetSpeciesByIdInputSchema = z.object({
 });
 export const UpdateSpeciesInputSchema = z.object({
 	id: SpeciesEntityIdSchema,
-	categoryId: SpeciesCategoryEntityIdSchema.optional(),
+	categoryId: z.union([SpeciesCategoryEntityIdSchema, z.null()]).optional(),
 	characteristics: SpeciesCharacteristicsSchema.optional(),
 	presentation: ItemPresentationSchema,
 });

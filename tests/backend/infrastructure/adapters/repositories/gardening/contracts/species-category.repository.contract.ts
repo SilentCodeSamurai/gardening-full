@@ -1,7 +1,4 @@
-import {
-	RepositoryConflictError,
-	RepositoryNotFoundError,
-} from "@backend/core/application/ports/repositories/shared/base-repository.errors";
+import { RepositoryNotFoundError } from "@backend/core/application/ports/repositories/shared/base-repository.errors";
 import { speciesCategoryId } from "@backend/infrastructure/integrations/shared/database-ids";
 import type { DependencyContainer } from "tsyringe";
 import { beforeEach, describe, expect, it } from "vitest";
@@ -155,16 +152,29 @@ export function registerSpeciesCategoryRepositoryContract(
 			expect(u.presentation?.backgroundColor).toBe("#333");
 		});
 
-		it("deleteOne blocks when species reference category", async () => {
+		it("deleteOne unbinds linked species by setting categoryId to null", async () => {
 			const cat = await speciesCategory.createOne({ workspace: wk, title: "C" });
 			await species.createOne({
 				workspace: wk,
 				categoryId: cat.id,
 				characteristics: { name: "S", description: null },
 			});
-			const p = speciesCategory.deleteOne({ filters: [{ id: cat.id }] });
-			await expect(p).rejects.toBeInstanceOf(RepositoryConflictError);
-			await expect(p).rejects.toMatchObject({ reason: "species-reference-category" });
+			await speciesCategory.deleteOne({ filters: [{ id: cat.id }] });
+			const { items } = await species.getMany();
+			expect(items.some((x) => x.categoryId === null)).toBe(true);
+		});
+
+		it("deleteOne allows category when species have null categoryId", async () => {
+			const cat = await speciesCategory.createOne({ workspace: wk, title: "UnusedCat" });
+			await species.createOne({
+				workspace: wk,
+				categoryId: null,
+				characteristics: { name: "Floating", description: null },
+			});
+			await speciesCategory.deleteOne({ filters: [{ id: cat.id }] });
+			await expect(speciesCategory.getOne({ filters: [{ id: cat.id }] })).rejects.toBeInstanceOf(
+				RepositoryNotFoundError,
+			);
 		});
 
 		it("deleteOne throws when target missing", async () => {
@@ -175,7 +185,7 @@ export function registerSpeciesCategoryRepositoryContract(
 			).rejects.toBeInstanceOf(RepositoryNotFoundError);
 		});
 
-		it("deleteMany removes all matching rows; skips categories blocked by species", async () => {
+		it("deleteMany removes all matching rows and unbinds linked species", async () => {
 			const free = await speciesCategory.createOne({ workspace: wk, title: "free" });
 			const blocked = await speciesCategory.createOne({ workspace: wk, title: "blocked" });
 			await species.createOne({
@@ -186,11 +196,15 @@ export function registerSpeciesCategoryRepositoryContract(
 			const { count } = await speciesCategory.deleteMany({
 				filters: [{ id: free.id }, { id: blocked.id }],
 			});
-			expect(count).toBe(1);
+			expect(count).toBe(2);
 			await expect(speciesCategory.getOne({ filters: [{ id: free.id }] })).rejects.toBeInstanceOf(
 				RepositoryNotFoundError,
 			);
-			await speciesCategory.getOne({ filters: [{ id: blocked.id }] });
+			await expect(speciesCategory.getOne({ filters: [{ id: blocked.id }] })).rejects.toBeInstanceOf(
+				RepositoryNotFoundError,
+			);
+			const { items } = await species.getMany();
+			expect(items.some((x) => x.categoryId === null)).toBe(true);
 		});
 
 		it("deleteMany returns 0 when filters match nothing", async () => {
@@ -263,7 +277,7 @@ export function registerSpeciesCategoryRepositoryContract(
 			const a = await speciesCategory.createOne({ workspace: wk, title: "dm-a" });
 			const b = await speciesCategory.createOne({ workspace: wk, title: "dm-b" });
 			const { count } = await speciesCategory.deleteMany({
-				filters: [{ id: a.id }, { title: "dm-b", workspace: wk }],
+				filters: [{ id: a.id }, { id: b.id }],
 			});
 			expect(count).toBe(2);
 		});

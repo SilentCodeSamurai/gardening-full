@@ -161,7 +161,12 @@ export function useSpatialLayoutApplyOperationsMutation() {
 							c.type === "restore" && String(c.op.id) === String(op.id),
 					);
 					if (restoreCommand) {
+						const workspace =
+							[...byId.values()].find((n) => n.workspace)?.workspace ??
+							previousAllNodes.items[0]?.workspace;
+						if (!workspace) continue;
 						byId.set(String(op.id), {
+							workspace,
 							id: op.id as unknown as SpatialNodeEntityId,
 							parentId: op.parentId as SpatialNodeEntityId | null,
 							rect: op.rect,

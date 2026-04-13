@@ -70,6 +70,18 @@ describe("Plant use-cases", () => {
     expect(res.items.map((p) => p.title)).toEqual(["A", "B"]);
   });
 
+  it("create and getById with null cultivar", async () => {
+    const create = c.resolve(PlantCreateUseCase);
+    const getById = c.resolve(PlantGetByIdUseCase);
+    const p = await create.run({
+      context,
+      dto: { cultivarId: null, title: "Wild", description: null },
+    });
+    expect(p.cultivar).toBeNull();
+    const got = await getById.run({ context, dto: { id: p.id } });
+    expect(got.cultivar).toBeNull();
+  });
+
   it("delete throws when plant is placed in spatial layout", async () => {
     const { cultivar } = await seedMinimalCatalog(c);
     const createPlant = c.resolve(PlantCreateUseCase);

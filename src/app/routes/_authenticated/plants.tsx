@@ -61,6 +61,7 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { CATALOG_FILTER_NO_VALUE } from "@/lib/catalog-filter-sentinel";
 import { getPlantPlacementSummary, plantPlacementFilterToken } from "@/lib/spatial-placement-summary";
 import { renderError } from "@/lib/render-error";
 import { tableSelectionBulkTooltip } from "@/lib/table-selection-tooltips";
@@ -91,10 +92,11 @@ function humanizeToken(value: string): string {
 function resolveSpeciesDisplayName(rawSpeciesName: string): string {
 	const trimmed = rawSpeciesName.trim();
 	if (trimmed === "") return trimmed;
-	if (!trimmed.includes(".")) return trimmed;
 
 	const fn = (m as Record<string, unknown>)[trimmed];
 	if (typeof fn === "function") return (fn as () => string)();
+
+	if (!trimmed.includes(".")) return trimmed;
 
 	if (trimmed.endsWith(".name")) {
 		const parts = trimmed.split(".");
@@ -106,7 +108,31 @@ function resolveSpeciesDisplayName(rawSpeciesName: string): string {
 
 function getPlantDisplayTitle(plant: CachedHydratedPlant): string {
 	if (plant.title?.trim()) return plant.title.trim();
-	return plant.cultivar.characteristics.name || m.items_untitled();
+	return plant.cultivar?.characteristics.name || m.items_untitled();
+}
+
+function plantCategoryFilterKey(plant: CachedHydratedPlant, speciesCategoryById: Map<string, string>): string {
+	const sp = plant.cultivar?.species;
+	if (!sp) return CATALOG_FILTER_NO_VALUE;
+	const cat = speciesCategoryById.get(String(sp.id)) ?? "";
+	return cat === "" ? CATALOG_FILTER_NO_VALUE : cat;
+}
+
+function plantSpeciesFilterKey(plant: CachedHydratedPlant): string {
+	if (!plant.cultivar?.species) return CATALOG_FILTER_NO_VALUE;
+	return String(plant.cultivar.species.id);
+}
+
+function plantCultivarFilterKey(plant: CachedHydratedPlant): string {
+	if (!plant.cultivar) return CATALOG_FILTER_NO_VALUE;
+	return String(plant.cultivar.id);
+}
+
+function matchesCatalogColumnFilter(cellValue: string, filterValue: unknown): boolean {
+	const f = String(filterValue ?? "");
+	if (f === "") return true;
+	if (f === CATALOG_FILTER_NO_VALUE) return cellValue === CATALOG_FILTER_NO_VALUE;
+	return cellValue === f;
 }
 
 function applyUpdater<T>(updater: Updater<T>, prev: T): T {
@@ -135,9 +161,9 @@ function reconcilePlantsColumnFilters(
 	}
 
 	const cultivarId = get("cultivar", working);
-	if (cultivarId) {
+	if (cultivarId && cultivarId !== CATALOG_FILTER_NO_VALUE) {
 		const cultivarEntity = cultivarById.get(cultivarId);
-		const cultivarSpeciesId = cultivarEntity ? String(cultivarEntity.speciesId) : "";
+		const cultivarSpeciesId = cultivarEntity?.speciesId != null ? String(cultivarEntity.speciesId) : "";
 		const cultivarCategoryId = cultivarSpeciesId ? String(speciesCategoryById.get(cultivarSpeciesId) ?? "") : "";
 		if (cultivarCategoryId && !get("category", working)) {
 			working = [...working.filter((f) => f.id !== "category"), { id: "category", value: cultivarCategoryId }];
@@ -154,7 +180,7 @@ function reconcilePlantsColumnFilters(
 	}
 
 	const speciesId = get("species", working);
-	if (speciesId) {
+	if (speciesId && speciesId !== CATALOG_FILTER_NO_VALUE) {
 		const speciesCategoryId = String(speciesCategoryById.get(speciesId) ?? "");
 		if (speciesCategoryId && !get("category", working)) {
 			working = [...working.filter((f) => f.id !== "category"), { id: "category", value: speciesCategoryId }];
@@ -166,13 +192,6 @@ function reconcilePlantsColumnFilters(
 
 	return working;
 }
-
-type SpeciesOption = {
-	value: string;
-	label: string;
-	presentation?: ItemPresentationValueObject;
-	categoryId: string;
-};
 
 type CultivarOption = {
 	value: string;
@@ -202,7 +221,7 @@ function PlantsPage() {
 	const speciesCategoryById = useMemo(() => {
 		const map = new Map<string, string>();
 		for (const s of speciesData?.items ?? []) {
-			map.set(String(s.id), String(s.categoryId));
+			map.set(String(s.id), s.categoryId != null ? String(s.categoryId) : "");
 		}
 		return map;
 	}, [speciesData?.items]);
@@ -237,63 +256,55 @@ function PlantsPage() {
 	}, [categoryData?.items]);
 
 	const cultivarComboboxOptions = useMemo(() => {
-		const categoryIdsInPlants = new Set<string>();
-		for (const plant of items) {
-			const speciesId = String(plant.cultivar.species.id);
-			const categoryId = speciesCategoryById.get(speciesId);
-			if (categoryId) {
-				categoryIdsInPlants.add(categoryId);
-			}
-		}
-
-		const speciesMap = new Map<string, SpeciesOption>();
 		const cultivarMap = new Map<string, CultivarOption>();
 		for (const plant of items) {
-			const speciesId = String(plant.cultivar.species.id);
-			if (!speciesMap.has(speciesId)) {
-				const speciesEntity = speciesById.get(speciesId);
-				speciesMap.set(speciesId, {
-					value: speciesId,
-					label:
-						speciesEntity?.characteristics?.name != null
-							? (translateCatalogField(speciesEntity.characteristics.name, speciesEntity.systemCatalog) ??
-								plant.cultivar.species.characteristics.name)
-							: plant.cultivar.species.characteristics.name,
-					presentation: speciesEntity?.presentation,
-					categoryId: speciesEntity ? String(speciesEntity.categoryId) : "",
-				});
-			}
+			if (!plant.cultivar) continue;
 			const cultivarId = String(plant.cultivar.id);
 			if (!cultivarMap.has(cultivarId)) {
 				const cultivarEntity = cultivarById.get(cultivarId);
+				const speciesId =
+					cultivarEntity?.speciesId != null
+						? String(cultivarEntity.speciesId)
+						: plant.cultivar.species
+							? String(plant.cultivar.species.id)
+							: "";
+				const categoryId = speciesId !== "" ? String(speciesCategoryById.get(speciesId) ?? "") : "";
 				cultivarMap.set(cultivarId, {
 					value: cultivarId,
 					label: cultivarEntity?.characteristics?.name ?? plant.cultivar.characteristics.name,
 					presentation: cultivarEntity?.presentation,
-					speciesId: cultivarEntity ? String(cultivarEntity.speciesId) : "",
-					categoryId: cultivarEntity
-						? String(speciesCategoryById.get(String(cultivarEntity.speciesId)) ?? "")
-						: "",
+					speciesId,
+					categoryId,
 				});
 			}
 		}
 
 		return [...cultivarMap.values()];
-	}, [cultivarById, items, speciesById, speciesCategoryById]);
+	}, [cultivarById, items, speciesCategoryById]);
 
 	const plantCategoryFilterOptions = useMemo(() => {
 		const ids = new Set<string>();
+		let anyNoCategory = false;
 		for (const plant of items) {
-			const cat = speciesCategoryById.get(String(plant.cultivar.species.id));
-			if (cat) ids.add(cat);
+			const key = plantCategoryFilterKey(plant, speciesCategoryById);
+			if (key === CATALOG_FILTER_NO_VALUE) anyNoCategory = true;
+			else ids.add(key);
 		}
-		return [...ids]
+		const opts = [...ids]
 			.map((id) => ({
 				value: id,
 				label: categoryLabelById.get(id) ?? id,
 				presentation: categoryData?.items.find((c) => String(c.id) === id)?.presentation,
 			}))
 			.sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: "base" }));
+		if (anyNoCategory) {
+			opts.unshift({
+				value: CATALOG_FILTER_NO_VALUE,
+				label: m.filtering_catalogNoCategory(),
+				presentation: undefined,
+			});
+		}
+		return opts;
 	}, [items, speciesCategoryById, categoryLabelById, categoryData?.items]);
 
 	const plantSpeciesFilterOptions = useMemo(() => {
@@ -306,7 +317,12 @@ function PlantsPage() {
 				categoryId: string;
 			}
 		>();
+		let anyNoSpecies = false;
 		for (const plant of items) {
+			if (!plant.cultivar?.species) {
+				anyNoSpecies = true;
+				continue;
+			}
 			const sid = String(plant.cultivar.species.id);
 			if (seen.has(sid)) continue;
 			const speciesEntity = speciesById.get(sid);
@@ -319,11 +335,22 @@ function PlantsPage() {
 				value: sid,
 				label,
 				presentation: speciesEntity?.presentation ?? plant.cultivar.species.presentation,
-				categoryId: speciesCategoryById.get(sid) ?? "",
+				categoryId: speciesEntity ? String(speciesEntity.categoryId ?? "") : "",
 			});
 		}
-		return [...seen.values()].sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: "base" }));
-	}, [items, speciesById, speciesCategoryById]);
+		const opts = [...seen.values()].sort((a, b) =>
+			a.label.localeCompare(b.label, undefined, { sensitivity: "base" }),
+		);
+		if (anyNoSpecies) {
+			opts.unshift({
+				value: CATALOG_FILTER_NO_VALUE,
+				label: m.filtering_catalogNoSpecies(),
+				presentation: undefined,
+				categoryId: "",
+			});
+		}
+		return opts;
+	}, [items, speciesById]);
 
 	const [sorting, setSorting] = useState<SortingState>([{ id: "title", desc: false }]);
 	const [globalFilter, setGlobalFilter] = useState("");
@@ -417,10 +444,14 @@ function PlantsPage() {
 				(p) => {
 					const title = getPlantDisplayTitle(p);
 					const desc = p.description ?? "";
-					const cv = p.cultivar.characteristics.name;
-					const sp = resolveSpeciesDisplayName(p.cultivar.species.characteristics.name);
-					const catId = speciesCategoryById.get(String(p.cultivar.species.id)) ?? "";
-					const cat = categoryLabelById.get(catId) ?? "";
+					const cv = p.cultivar?.characteristics.name ?? "";
+					const sp = p.cultivar?.species
+						? resolveSpeciesDisplayName(p.cultivar.species.characteristics.name)
+						: "";
+					const catId = p.cultivar?.species
+						? (speciesCategoryById.get(String(p.cultivar.species.id)) ?? "")
+						: "";
+					const cat = catId ? (categoryLabelById.get(catId) ?? "") : "";
 					return `${title} ${desc} ${cv} ${sp} ${cat}`;
 				},
 				{
@@ -447,33 +478,32 @@ function PlantsPage() {
 							params={{ plantId: String(plant.id) }}
 							className="flex min-w-0 items-center gap-2 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
 						>
-							<ItemPresentationIcon presentation={plant.cultivar.presentation} />
+							<ItemPresentationIcon presentation={plant.cultivar?.presentation} />
 							<p className="truncate font-medium">{title}</p>
 						</Link>
 					);
 				},
 			}),
-			columnHelper.accessor((p) => speciesCategoryById.get(String(p.cultivar.species.id)) ?? "", {
+			columnHelper.accessor((p) => plantCategoryFilterKey(p, speciesCategoryById), {
 				id: "category",
 				header: ({ column }) => (
 					<DataTableColumnHeader column={column} title={m.collections_speciesCategory_title()} />
 				),
 				sortingFn: (rowA, rowB) => {
+					const keyA = plantCategoryFilterKey(rowA.original, speciesCategoryById);
+					const keyB = plantCategoryFilterKey(rowB.original, speciesCategoryById);
 					const a =
-						categoryLabelById.get(
-							speciesCategoryById.get(String(rowA.original.cultivar.species.id)) ?? "",
-						) ?? "";
+						keyA === CATALOG_FILTER_NO_VALUE
+							? m.filtering_catalogNoCategory()
+							: (categoryLabelById.get(keyA) ?? "");
 					const b =
-						categoryLabelById.get(
-							speciesCategoryById.get(String(rowB.original.cultivar.species.id)) ?? "",
-						) ?? "";
+						keyB === CATALOG_FILTER_NO_VALUE
+							? m.filtering_catalogNoCategory()
+							: (categoryLabelById.get(keyB) ?? "");
 					return a.localeCompare(b, undefined, { sensitivity: "base" });
 				},
-				filterFn: (row, _columnId, filterValue) => {
-					if (filterValue == null || filterValue === "") return true;
-					const cat = speciesCategoryById.get(String(row.original.cultivar.species.id)) ?? "";
-					return cat === String(filterValue);
-				},
+				filterFn: (row, _columnId, filterValue) =>
+					matchesCatalogColumnFilter(plantCategoryFilterKey(row.original, speciesCategoryById), filterValue),
 				enableGlobalFilter: false,
 				meta: {
 					filter: ({ column }: { column: Column<CachedHydratedPlant, unknown> }) => {
@@ -519,23 +549,28 @@ function PlantsPage() {
 					},
 				},
 				cell: ({ row }) => {
-					const catId = speciesCategoryById.get(String(row.original.cultivar.species.id)) ?? "";
-					return <span className="text-muted-foreground text-xs">{categoryLabelById.get(catId) ?? "-"}</span>;
+					const key = plantCategoryFilterKey(row.original, speciesCategoryById);
+					const label =
+						key === CATALOG_FILTER_NO_VALUE
+							? m.filtering_catalogNoCategory()
+							: (categoryLabelById.get(key) ?? "—");
+					return <span className="text-muted-foreground text-xs">{label}</span>;
 				},
 			}),
-			columnHelper.accessor((p) => String(p.cultivar.species.id), {
+			columnHelper.accessor((p) => plantSpeciesFilterKey(p), {
 				id: "species",
 				header: ({ column }) => <DataTableColumnHeader column={column} title={m.collections_species_title()} />,
-				sortingFn: (rowA, rowB) =>
-					resolveSpeciesDisplayName(rowA.original.cultivar.species.characteristics.name).localeCompare(
-						resolveSpeciesDisplayName(rowB.original.cultivar.species.characteristics.name),
-						undefined,
-						{ sensitivity: "base" },
-					),
-				filterFn: (row, _columnId, filterValue) => {
-					if (filterValue == null || filterValue === "") return true;
-					return String(row.original.cultivar.species.id) === String(filterValue);
+				sortingFn: (rowA, rowB) => {
+					const a = rowA.original.cultivar?.species
+						? resolveSpeciesDisplayName(rowA.original.cultivar.species.characteristics.name)
+						: "\uffff";
+					const b = rowB.original.cultivar?.species
+						? resolveSpeciesDisplayName(rowB.original.cultivar.species.characteristics.name)
+						: "\uffff";
+					return a.localeCompare(b, undefined, { sensitivity: "base" });
 				},
+				filterFn: (row, _columnId, filterValue) =>
+					matchesCatalogColumnFilter(plantSpeciesFilterKey(row.original), filterValue),
 				enableGlobalFilter: false,
 				meta: {
 					filter: ({
@@ -546,11 +581,16 @@ function PlantsPage() {
 						table: Table<CachedHydratedPlant>;
 					}) => {
 						const categoryFilter = String(table.getColumn("category")?.getFilterValue() ?? "");
-						const filteredSpeciesOptions = categoryFilter
-							? plantSpeciesFilterOptions.filter((opt) => opt.categoryId === categoryFilter)
-							: plantSpeciesFilterOptions;
+						const filteredSpeciesOptions =
+							categoryFilter === CATALOG_FILTER_NO_VALUE
+								? plantSpeciesFilterOptions.filter(
+										(opt) => opt.value === CATALOG_FILTER_NO_VALUE || opt.categoryId === "",
+									)
+								: categoryFilter
+									? plantSpeciesFilterOptions.filter((opt) => opt.categoryId === categoryFilter)
+									: plantSpeciesFilterOptions;
 						const value = String(column.getFilterValue() ?? "");
-						const selected = plantSpeciesFilterOptions.find((opt) => opt.value === value) ?? null;
+						const selected = filteredSpeciesOptions.find((opt) => opt.value === value) ?? null;
 						return (
 							<Combobox
 								items={filteredSpeciesOptions}
@@ -592,25 +632,24 @@ function PlantsPage() {
 				},
 				cell: ({ row }) => (
 					<span className="text-muted-foreground text-xs">
-						{resolveSpeciesDisplayName(row.original.cultivar.species.characteristics.name)}
+						{row.original.cultivar?.species
+							? resolveSpeciesDisplayName(row.original.cultivar.species.characteristics.name)
+							: m.filtering_catalogNoSpecies()}
 					</span>
 				),
 			}),
-			columnHelper.accessor((p) => String(p.cultivar.id), {
+			columnHelper.accessor((p) => plantCultivarFilterKey(p), {
 				id: "cultivar",
 				header: ({ column }) => (
 					<DataTableColumnHeader column={column} title={m.collections_cultivar_title()} />
 				),
-				sortingFn: (rowA, rowB) =>
-					rowA.original.cultivar.characteristics.name.localeCompare(
-						rowB.original.cultivar.characteristics.name,
-						undefined,
-						{ sensitivity: "base" },
-					),
-				filterFn: (row, _columnId, filterValue) => {
-					if (filterValue == null || filterValue === "") return true;
-					return String(row.original.cultivar.id) === String(filterValue);
+				sortingFn: (rowA, rowB) => {
+					const a = rowA.original.cultivar?.characteristics.name ?? "\uffff";
+					const b = rowB.original.cultivar?.characteristics.name ?? "\uffff";
+					return a.localeCompare(b, undefined, { sensitivity: "base" });
 				},
+				filterFn: (row, _columnId, filterValue) =>
+					matchesCatalogColumnFilter(plantCultivarFilterKey(row.original), filterValue),
 				enableGlobalFilter: false,
 				meta: {
 					filter: ({
@@ -622,16 +661,38 @@ function PlantsPage() {
 					}) => {
 						const categoryFilter = String(table.getColumn("category")?.getFilterValue() ?? "");
 						const speciesFilter = String(table.getColumn("species")?.getFilterValue() ?? "");
-						const filteredCultivarOptions = speciesFilter
-							? cultivarComboboxOptions.filter((opt) => opt.speciesId === speciesFilter)
-							: categoryFilter
-								? cultivarComboboxOptions.filter((opt) => opt.categoryId === categoryFilter)
-								: cultivarComboboxOptions;
+						let filteredCultivarOptions = cultivarComboboxOptions;
+						if (speciesFilter === CATALOG_FILTER_NO_VALUE) {
+							filteredCultivarOptions = cultivarComboboxOptions.filter((opt) => opt.speciesId === "");
+						} else if (speciesFilter) {
+							filteredCultivarOptions = cultivarComboboxOptions.filter(
+								(opt) => opt.speciesId === speciesFilter,
+							);
+						} else if (categoryFilter === CATALOG_FILTER_NO_VALUE) {
+							filteredCultivarOptions = cultivarComboboxOptions.filter((opt) => opt.categoryId === "");
+						} else if (categoryFilter) {
+							filteredCultivarOptions = cultivarComboboxOptions.filter(
+								(opt) => opt.categoryId === categoryFilter,
+							);
+						}
+						const anyNoCultivar = items.some((p) => !p.cultivar);
+						const cultivarFilterItems: CultivarOption[] = anyNoCultivar
+							? [
+									{
+										value: CATALOG_FILTER_NO_VALUE,
+										label: m.filtering_catalogNoCultivar(),
+										presentation: undefined,
+										speciesId: "",
+										categoryId: "",
+									},
+									...filteredCultivarOptions,
+								]
+							: filteredCultivarOptions;
 						const value = String(column.getFilterValue() ?? "");
-						const selected = cultivarComboboxOptions.find((opt) => opt.value === value) ?? null;
+						const selected = cultivarFilterItems.find((opt) => opt.value === value) ?? null;
 						return (
 							<Combobox
-								items={filteredCultivarOptions}
+								items={cultivarFilterItems}
 								value={selected}
 								onValueChange={(item) => column.setFilterValue(item?.value ?? "")}
 								itemToStringLabel={(o) => o.label}
@@ -669,7 +730,9 @@ function PlantsPage() {
 					},
 				},
 				cell: ({ row }) => (
-					<span className="text-muted-foreground text-xs">{row.original.cultivar.characteristics.name}</span>
+					<span className="text-muted-foreground text-xs">
+						{row.original.cultivar?.characteristics.name ?? m.filtering_catalogNoCultivar()}
+					</span>
 				),
 			}),
 			columnHelper.accessor((p) => p.description ?? "", {
@@ -774,6 +837,7 @@ function PlantsPage() {
 			categoryLabelById,
 			columnHelper,
 			cultivarComboboxOptions,
+			items,
 			placedPlantIds,
 			plantCategoryFilterOptions,
 			plantPlacementFilterItems,

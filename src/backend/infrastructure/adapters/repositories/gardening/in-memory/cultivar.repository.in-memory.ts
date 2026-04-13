@@ -15,7 +15,7 @@ import type {
 	CultivarRepositoryUpdatePatchDTO,
 } from "@backend/core/application/ports/repositories/gardening/cultivar.repository.port";
 import { BaseRepositoryErrors } from "@backend/core/application/ports/repositories/shared/base-repository.errors";
-import type { CultivarEntity, HydratedCultivarEntity, SpeciesEntity } from "@backend/core/domain/gardening/entities";
+import type { CultivarEntity, HydratedCultivarEntity } from "@backend/core/domain/gardening/entities";
 import {
 	findFirstRowMatchingAnyClause,
 	findRowsMatchingAnyClause,
@@ -35,17 +35,19 @@ export class CultivarInMemoryRepository extends BaseRepositoryErrors implements 
 	}
 
 	private hydrate(row: CultivarEntity): HydratedCultivarEntity {
+		if (row.speciesId === null) {
+			return { ...row, species: null };
+		}
 		const speciesRow = this.store.species.get(idKey(row.speciesId));
 		if (!speciesRow) this.throwNotFoundError("Species", row.speciesId);
-		const species: SpeciesEntity = speciesRow;
 		return {
 			...row,
-			species,
+			species: speciesRow,
 		};
 	}
 
 	private insertRow(dto: CultivarRepositoryCreateInputDTO): CultivarRepositoryCreateOutputDTO {
-		this.requireSpeciesRow(dto.speciesId);
+		if (dto.speciesId !== null) this.requireSpeciesRow(dto.speciesId);
 		const now = new Date();
 		const id = cultivarId();
 		const row: CultivarEntity = {
@@ -58,7 +60,7 @@ export class CultivarInMemoryRepository extends BaseRepositoryErrors implements 
 		return row;
 	}
 
-	private requireSpeciesRow(speciesId: CultivarEntity["speciesId"]): void {
+	private requireSpeciesRow(speciesId: NonNullable<CultivarEntity["speciesId"]>): void {
 		const species = this.store.species.get(idKey(speciesId));
 		if (!species) {
 			this.throwNotFoundError("Species", [{ id: speciesId }]);
@@ -125,7 +127,7 @@ export class CultivarInMemoryRepository extends BaseRepositoryErrors implements 
 		const row = findFirstRowMatchingAnyClause(this.store.cultivars.values(), input.filters);
 		if (!row) this.throwNotFoundError("Cultivar", input.filters);
 		const updated = this.patchStored(row, input.dto);
-		this.requireSpeciesRow(updated.speciesId);
+		if (updated.speciesId !== null) this.requireSpeciesRow(updated.speciesId);
 		this.store.cultivars.set(idKey(updated.id), updated);
 		return updated;
 	}
@@ -138,7 +140,7 @@ export class CultivarInMemoryRepository extends BaseRepositoryErrors implements 
 		let count = 0;
 		for (const row of rows) {
 			const updated = this.patchStored(row, input.dto);
-			this.requireSpeciesRow(updated.speciesId);
+			if (updated.speciesId !== null) this.requireSpeciesRow(updated.speciesId);
 			this.store.cultivars.set(idKey(updated.id), updated);
 			count += 1;
 		}
@@ -152,17 +154,11 @@ export class CultivarInMemoryRepository extends BaseRepositoryErrors implements 
 		if (!row) this.throwNotFoundError("Cultivar", input.filters);
 		const key = idKey(row.id);
 		for (const plant of this.store.plants.values()) {
-			if (idKey(plant.cultivarId) === key) {
-				this.throwConflictError({
-					operation: "delete",
-					reason: "plant-reference-cultivar",
-					i18nMessageKey: "errors_application_repository_conflict_cultivar_delete_plant_reference",
-					context: { cultivarId: row.id, plantId: plant.id },
-					participants: [
-						{ entity: "Cultivar", role: "target", id: row.id as unknown as string },
-						{ entity: "Plant", role: "blocking-reference", id: plant.id as unknown as string },
-					],
-					message: "Cannot delete cultivar: plants still reference it.",
+			if (plant.cultivarId !== null && idKey(plant.cultivarId) === key) {
+				this.store.plants.set(idKey(plant.id), {
+					...plant,
+					cultivarId: null,
+					updatedAt: new Date(),
 				});
 			}
 		}
@@ -177,8 +173,15 @@ export class CultivarInMemoryRepository extends BaseRepositoryErrors implements 
 		let count = 0;
 		for (const row of rows) {
 			const key = idKey(row.id);
-			const blocked = [...this.store.plants.values()].some((p) => idKey(p.cultivarId) === key);
-			if (blocked) continue;
+			for (const plant of this.store.plants.values()) {
+				if (plant.cultivarId !== null && idKey(plant.cultivarId) === key) {
+					this.store.plants.set(idKey(plant.id), {
+						...plant,
+						cultivarId: null,
+						updatedAt: new Date(),
+					});
+				}
+			}
 			if (this.store.cultivars.delete(key)) count += 1;
 		}
 		return { count };

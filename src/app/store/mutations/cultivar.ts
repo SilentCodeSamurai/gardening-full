@@ -109,7 +109,9 @@ export function useCultivarUpdateMutation() {
 						...base,
 						...variables,
 						id: base.id,
-						speciesId: (variables.speciesId ?? base.speciesId) as CultivarEntity["speciesId"],
+						speciesId: (variables.speciesId !== undefined
+							? variables.speciesId
+							: base.speciesId) as CultivarEntity["speciesId"],
 						updatedAt: new Date(),
 					});
 					queryClient.setQueryData<CachedCultivarList>(queryKeys.cultivar.all.queryKey, (prev) =>
@@ -140,8 +142,11 @@ export function useCultivarUpdateMutation() {
 					return {
 						...prev,
 						items: prev.items.map((plant) => {
-							if (String(plant.cultivar.id) !== String(entity.id)) return plant;
-							const nextSpecies = speciesById.get(String(entity.speciesId)) ?? plant.cultivar.species;
+							if (!plant.cultivar || String(plant.cultivar.id) !== String(entity.id)) return plant;
+							const nextSpecies =
+								entity.speciesId === null
+									? null
+									: (speciesById.get(String(entity.speciesId)) ?? plant.cultivar.species);
 							return {
 								...plant,
 								cultivar: {

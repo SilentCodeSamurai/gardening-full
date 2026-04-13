@@ -56,7 +56,7 @@ export function CultivarCreateDialog({ open, onOpenChange }: Props) {
 			backgroundColor: "",
 		} satisfies FormValues as FormValues,
 		onSubmit: async ({ value }) => {
-			if (value.speciesId === SELECT_NONE || !value.name.trim()) return;
+			if (!value.name.trim()) return;
 			const presentation = normalizePresentationInput({
 				iconKey: value.iconKey === SELECT_NONE ? "" : value.iconKey,
 				iconColor: value.iconColor,
@@ -64,7 +64,7 @@ export function CultivarCreateDialog({ open, onOpenChange }: Props) {
 			});
 			onOpenChange(false);
 			await mut.mutateAsync({
-				speciesId: value.speciesId as SpeciesEntityId,
+				speciesId: value.speciesId === SELECT_NONE ? null : (value.speciesId as SpeciesEntityId),
 				characteristics: {
 					name: value.name.trim(),
 					description: value.description.trim() || null,
@@ -100,13 +100,7 @@ export function CultivarCreateDialog({ open, onOpenChange }: Props) {
 							void form.handleSubmit();
 						}}
 					>
-						<form.AppField
-							name="speciesId"
-							validators={{
-								onSubmit: ({ value }) =>
-									!value || value === SELECT_NONE ? m.fields_selectRequired() : undefined,
-							}}
-						>
+						<form.AppField name="speciesId">
 							{(field) => (
 								<field.CatalogCombobox
 									label={m.collections_species_title()}

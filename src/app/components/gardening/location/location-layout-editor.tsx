@@ -164,8 +164,8 @@ function spatialToLayoutNode(args: {
 	}
 	return {
 		...base,
-		label: args.entity.value.title ?? args.entity.value.cultivar.characteristics.name,
-		presentation: args.entity.value.cultivar.presentation,
+		label: args.entity.value.title ?? args.entity.value.cultivar?.characteristics.name ?? "",
+		presentation: args.entity.value.cultivar?.presentation,
 	};
 }
 
@@ -474,8 +474,8 @@ export function LocationLayoutEditor({ rootLocation, className, highlightLocatio
 				: null;
 			result.push({
 				id: String(plant.id),
-				label: plant.title ?? plant.cultivar.characteristics.name,
-				presentation: plant.cultivar.presentation,
+				label: plant.title ?? plant.cultivar?.characteristics.name ?? "",
+				presentation: plant.cultivar?.presentation,
 				nodeType: "plant" as const,
 				existingNode,
 			});
@@ -1068,7 +1068,7 @@ export function LocationLayoutEditor({ rootLocation, className, highlightLocatio
 						if (!open) setDuplicatePlantContext(null);
 					}}
 					initialTitle={duplicatePlantContext.duplicate.label}
-					defaultCultivarId={duplicatePlantContext.source.cultivarId}
+					defaultCultivarId={duplicatePlantContext.source.cultivarId ?? undefined}
 					initialDescription={duplicatePlantContext.source.description}
 					initialPlacement={{
 						parentSpatialNodeId: duplicatePlantContext.duplicate

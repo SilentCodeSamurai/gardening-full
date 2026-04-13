@@ -125,17 +125,11 @@ export class SpeciesCategoryInMemoryRepository extends BaseRepositoryErrors impl
 		if (!row) this.throwNotFoundError("SpeciesCategory", input.filters);
 		const key = idKey(row.id);
 		for (const s of this.store.species.values()) {
-			if (idKey(s.categoryId) === key) {
-				this.throwConflictError({
-					operation: "delete",
-					reason: "species-reference-category",
-					i18nMessageKey: "errors_application_repository_conflict_species_category_delete_species_reference",
-					context: { categoryId: row.id, speciesId: s.id },
-					participants: [
-						{ entity: "SpeciesCategory", role: "target", id: row.id as unknown as string },
-						{ entity: "Species", role: "blocking-reference", id: s.id as unknown as string },
-					],
-					message: "Cannot delete species category: species still reference it.",
+			if (s.categoryId !== null && idKey(s.categoryId) === key) {
+				this.store.species.set(idKey(s.id), {
+					...s,
+					categoryId: null,
+					updatedAt: new Date(),
 				});
 			}
 		}
@@ -150,8 +144,15 @@ export class SpeciesCategoryInMemoryRepository extends BaseRepositoryErrors impl
 		let count = 0;
 		for (const row of rows) {
 			const key = idKey(row.id);
-			const blocked = [...this.store.species.values()].some((s) => idKey(s.categoryId) === key);
-			if (blocked) continue;
+			for (const s of this.store.species.values()) {
+				if (s.categoryId !== null && idKey(s.categoryId) === key) {
+					this.store.species.set(idKey(s.id), {
+						...s,
+						categoryId: null,
+						updatedAt: new Date(),
+					});
+				}
+			}
 			if (this.store.speciesCategories.delete(key)) count += 1;
 		}
 		return { count };

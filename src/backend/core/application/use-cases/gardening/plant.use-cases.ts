@@ -1,9 +1,5 @@
 import { WorkspaceVO } from "@backend/core/domain/access/workspace.vo";
-import type {
-	HydratedCultivarEntity,
-	HydratedPlantEntity,
-	PlantEntityId,
-} from "@backend/core/domain/gardening/entities";
+import type { HydratedPlantEntity, PlantEntityId } from "@backend/core/domain/gardening/entities";
 import { inject, injectable } from "tsyringe";
 import {
 	type TransactionManagerPort,
@@ -26,9 +22,13 @@ import type { UseCaseRequest } from "../use-case-context";
 
 import type { SpeciesWithSystemCatalog } from "./species.use-cases";
 
-/** Hydrated plant as returned by use-cases: species includes `systemCatalog` for UI/i18n. */
-export type PlantHydratedWithCatalogSpecies = HydratedPlantEntity & {
-	cultivar: HydratedCultivarEntity & { species: SpeciesWithSystemCatalog };
+/** Hydrated plant as returned by use-cases: when cultivar/species exist, species includes `systemCatalog` for UI/i18n. */
+export type PlantHydratedWithCatalogSpecies = Omit<HydratedPlantEntity, "cultivar"> & {
+	cultivar:
+		| (Omit<NonNullable<HydratedPlantEntity["cultivar"]>, "species"> & {
+				species: SpeciesWithSystemCatalog | null;
+		  })
+		| null;
 };
 
 type PlantCreatePayload = ExcludeWorkspace<PlantRepositoryCreateInputDTO>;
@@ -36,14 +36,15 @@ export type PlantCreateUseCaseInput = UseCaseRequest<PlantCreatePayload>;
 export type PlantCreateUseCaseOutput = PlantHydratedWithCatalogSpecies;
 
 function enrichPlantSpeciesCatalogFlags(plant: HydratedPlantEntity): PlantHydratedWithCatalogSpecies {
+	if (!plant.cultivar) {
+		return { ...plant, cultivar: null };
+	}
+	const species = plant.cultivar.species;
 	return {
 		...plant,
 		cultivar: {
 			...plant.cultivar,
-			species: {
-				...plant.cultivar.species,
-				systemCatalog: WorkspaceVO.isGlobalShared(plant.cultivar.species.workspace),
-			},
+			species: species ? { ...species, systemCatalog: WorkspaceVO.isGlobalShared(species.workspace) } : null,
 		},
 	};
 }

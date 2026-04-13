@@ -50,7 +50,7 @@ export function SpeciesUpdateDialog({ species, open, onOpenChange }: Props) {
 
 	const form = useAppForm({
 		defaultValues: {
-			categoryId: String(species.categoryId),
+			categoryId: species.categoryId != null ? String(species.categoryId) : SELECT_NONE,
 			name: species.characteristics.name,
 			description: species.characteristics.description ?? "",
 			iconKey: species.presentation?.iconKey ?? SELECT_NONE,
@@ -58,7 +58,7 @@ export function SpeciesUpdateDialog({ species, open, onOpenChange }: Props) {
 			backgroundColor: species.presentation?.backgroundColor ?? "",
 		} satisfies FormValues as FormValues,
 		onSubmit: async ({ value }) => {
-			if (value.categoryId === SELECT_NONE || !value.name.trim()) return;
+			if (!value.name.trim()) return;
 			const presentation = normalizePresentationInput({
 				iconKey: value.iconKey === SELECT_NONE ? "" : value.iconKey,
 				iconColor: value.iconColor,
@@ -67,7 +67,7 @@ export function SpeciesUpdateDialog({ species, open, onOpenChange }: Props) {
 			onOpenChange(false);
 			await mut.mutateAsync({
 				id: species.id,
-				categoryId: value.categoryId as SpeciesCategoryEntityId,
+				categoryId: value.categoryId === SELECT_NONE ? null : (value.categoryId as SpeciesCategoryEntityId),
 				characteristics: {
 					name: value.name.trim(),
 					description: value.description.trim() || null,
@@ -80,7 +80,7 @@ export function SpeciesUpdateDialog({ species, open, onOpenChange }: Props) {
 	useEffect(() => {
 		if (!open) return;
 		form.reset({
-			categoryId: String(species.categoryId),
+			categoryId: species.categoryId != null ? String(species.categoryId) : SELECT_NONE,
 			name: species.characteristics.name,
 			description: species.characteristics.description ?? "",
 			iconKey: species.presentation?.iconKey ?? SELECT_NONE,
@@ -114,13 +114,7 @@ export function SpeciesUpdateDialog({ species, open, onOpenChange }: Props) {
 							void form.handleSubmit();
 						}}
 					>
-						<form.AppField
-							name="categoryId"
-							validators={{
-								onSubmit: ({ value }) =>
-									!value || value === SELECT_NONE ? m.fields_selectRequired() : undefined,
-							}}
-						>
+						<form.AppField name="categoryId">
 							{(field) => (
 								<field.CatalogCombobox
 									label={m.collections_speciesCategory_title()}

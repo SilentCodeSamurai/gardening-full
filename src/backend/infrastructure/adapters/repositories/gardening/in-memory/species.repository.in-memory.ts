@@ -34,7 +34,7 @@ export class SpeciesInMemoryRepository extends BaseRepositoryErrors implements S
 	}
 
 	private insertRow(dto: SpeciesRepositoryCreateInputDTO): SpeciesRepositoryCreateOutputDTO {
-		this.requireCategoryRow(dto.categoryId);
+		if (dto.categoryId !== null) this.requireCategoryRow(dto.categoryId);
 		const now = new Date();
 		const id = speciesId();
 		const row: SpeciesEntity = {
@@ -47,7 +47,7 @@ export class SpeciesInMemoryRepository extends BaseRepositoryErrors implements S
 		return row;
 	}
 
-	private requireCategoryRow(categoryId: SpeciesEntity["categoryId"]): void {
+	private requireCategoryRow(categoryId: NonNullable<SpeciesEntity["categoryId"]>): void {
 		const category = this.store.speciesCategories.get(idKey(categoryId));
 		if (!category) {
 			this.throwNotFoundError("SpeciesCategory", [{ id: categoryId }]);
@@ -106,7 +106,7 @@ export class SpeciesInMemoryRepository extends BaseRepositoryErrors implements S
 		const row = findFirstRowMatchingAnyClause(this.store.species.values(), input.filters);
 		if (!row) this.throwNotFoundError("Species", input.filters);
 		const updated = this.patchStored(row, input.dto);
-		this.requireCategoryRow(updated.categoryId);
+		if (updated.categoryId !== null) this.requireCategoryRow(updated.categoryId);
 		this.store.species.set(idKey(updated.id), updated);
 		return updated;
 	}
@@ -119,7 +119,7 @@ export class SpeciesInMemoryRepository extends BaseRepositoryErrors implements S
 		let count = 0;
 		for (const row of rows) {
 			const updated = this.patchStored(row, input.dto);
-			this.requireCategoryRow(updated.categoryId);
+			if (updated.categoryId !== null) this.requireCategoryRow(updated.categoryId);
 			this.store.species.set(idKey(updated.id), updated);
 			count += 1;
 		}
@@ -133,17 +133,11 @@ export class SpeciesInMemoryRepository extends BaseRepositoryErrors implements S
 		if (!row) this.throwNotFoundError("Species", input.filters);
 		const key = idKey(row.id);
 		for (const c of this.store.cultivars.values()) {
-			if (idKey(c.speciesId) === key) {
-				this.throwConflictError({
-					operation: "delete",
-					reason: "cultivar-reference-species",
-					i18nMessageKey: "errors_application_repository_conflict_species_delete_cultivar_reference",
-					context: { speciesId: row.id, cultivarId: c.id },
-					participants: [
-						{ entity: "Species", role: "target", id: row.id as unknown as string },
-						{ entity: "Cultivar", role: "blocking-reference", id: c.id as unknown as string },
-					],
-					message: "Cannot delete species: cultivars still reference it.",
+			if (c.speciesId !== null && idKey(c.speciesId) === key) {
+				this.store.cultivars.set(idKey(c.id), {
+					...c,
+					speciesId: null,
+					updatedAt: new Date(),
 				});
 			}
 		}
@@ -158,8 +152,15 @@ export class SpeciesInMemoryRepository extends BaseRepositoryErrors implements S
 		let count = 0;
 		for (const row of rows) {
 			const key = idKey(row.id);
-			const blocked = [...this.store.cultivars.values()].some((c) => idKey(c.speciesId) === key);
-			if (blocked) continue;
+			for (const c of this.store.cultivars.values()) {
+				if (c.speciesId !== null && idKey(c.speciesId) === key) {
+					this.store.cultivars.set(idKey(c.id), {
+						...c,
+						speciesId: null,
+						updatedAt: new Date(),
+					});
+				}
+			}
 			if (this.store.species.delete(key)) count += 1;
 		}
 		return { count };

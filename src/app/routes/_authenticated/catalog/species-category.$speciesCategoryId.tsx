@@ -29,6 +29,7 @@ function SpeciesCategoryDetailPage() {
 	const { data, isPending, isError } = useQuery({
 		...queryKeys.speciesCategory.detail(speciesCategoryId as SpeciesCategoryEntityId),
 	});
+	const { data: speciesData } = useQuery({ ...queryKeys.species.all });
 
 	if (isPending) {
 		return <div className="text-muted-foreground text-sm">{m.common_loading()}</div>;
@@ -42,6 +43,8 @@ function SpeciesCategoryDetailPage() {
 	}
 
 	const title = translateCatalogField(data.title, data.systemCatalog);
+	const linkedSpeciesCount =
+		speciesData?.items.filter((species) => String(species.categoryId ?? "") === String(data.id)).length ?? 0;
 
 	return (
 		<div className="flex min-h-0 flex-1 flex-col overflow-hidden">
@@ -81,6 +84,15 @@ function SpeciesCategoryDetailPage() {
 								onOpenChange={setDeleteOpen}
 								title={m.collections_speciesCategory_delete()}
 								description={title ?? ""}
+								warningDescription={
+									linkedSpeciesCount > 0
+										? linkedSpeciesCount === 1
+											? m.collections_speciesCategory_deleteLinkedSingle()
+											: m.collections_speciesCategory_deleteLinkedMany({
+													count: String(linkedSpeciesCount),
+												})
+										: undefined
+								}
 								isPending={del.isPending}
 								onConfirm={async () => {
 									setDeleteOpen(false);

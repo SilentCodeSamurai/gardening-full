@@ -122,7 +122,7 @@ export function GardeningEventCreateDialog({ open, onOpenChange, initialValues }
 			(plantData?.items ?? []).map((plant) => ({
 				value: String(plant.id),
 				label: getPlantDisplayTitle(plant),
-				presentation: plant.cultivar.presentation,
+				presentation: plant.cultivar?.presentation,
 			})),
 		[plantData?.items],
 	);

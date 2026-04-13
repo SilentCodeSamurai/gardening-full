@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import { ExternalLinkIcon, PencilIcon, PencilOffIcon, Trash2Icon } from "lucide-react";
 import { useState } from "react";
 import { DeleteConfirmDialog } from "@/components/gardening/shared/delete-confirm-dialog";
@@ -18,6 +19,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { translateCatalogField } from "@/lib/translate-catalog-field";
 import { cn } from "@/lib/utils";
 import * as m from "@/paraglide/messages.js";
+import { queryKeys } from "@/store/keys";
 import { useSpeciesCategoryDeleteMutation } from "@/store/mutations";
 import type { CachedSpeciesCategoryWithSystemCatalog } from "@/store/query-cache-types";
 import { isQueryObjectPending } from "@/store/query-object-status";
@@ -30,6 +32,7 @@ export function SpeciesCategoryListCard({ category }: Props) {
 	const [editOpen, setEditOpen] = useState(false);
 	const [deleteOpen, setDeleteOpen] = useState(false);
 	const del = useSpeciesCategoryDeleteMutation();
+	const { data: speciesData } = useQuery({ ...queryKeys.species.all });
 	const label = translateCatalogField(category.title, category.systemCatalog);
 	const syncPending = isQueryObjectPending(category);
 	const catalogLocked = category.systemCatalog || syncPending;
@@ -38,6 +41,8 @@ export function SpeciesCategoryListCard({ category }: Props) {
 		: syncPending
 			? m.common_editDisabledPendingSync()
 			: m.common_edit();
+	const linkedSpeciesCount =
+		speciesData?.items.filter((species) => String(species.categoryId ?? "") === String(category.id)).length ?? 0;
 
 	return (
 		<Card
@@ -109,6 +114,15 @@ export function SpeciesCategoryListCard({ category }: Props) {
 						onOpenChange={setDeleteOpen}
 						title={m.collections_speciesCategory_delete()}
 						description={label ?? ""}
+						warningDescription={
+							linkedSpeciesCount > 0
+								? linkedSpeciesCount === 1
+									? m.collections_speciesCategory_deleteLinkedSingle()
+									: m.collections_speciesCategory_deleteLinkedMany({
+											count: String(linkedSpeciesCount),
+										})
+								: undefined
+						}
 						isPending={del.isPending}
 						onConfirm={async () => {
 							setDeleteOpen(false);

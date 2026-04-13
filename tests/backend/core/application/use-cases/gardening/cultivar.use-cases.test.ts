@@ -7,11 +7,8 @@ import {
   CultivarGetFullByIdUseCase,
   CultivarUpdateUseCase,
 } from "@backend/core/application/use-cases/gardening/cultivar.use-cases";
-import {
-  RepositoryConflictError,
-  RepositoryNotFoundError,
-} from "@backend/core/application/ports/repositories/shared/base-repository.errors";
-import { PlantCreateUseCase } from "@backend/core/application/use-cases/gardening/plant.use-cases";
+import { RepositoryNotFoundError } from "@backend/core/application/ports/repositories/shared/base-repository.errors";
+import { PlantCreateUseCase, PlantGetAllUseCase } from "@backend/core/application/use-cases/gardening/plant.use-cases";
 import { createTestUseCaseContext } from "../create-test-use-case-context";
 import { beforeEach, describe, expect, it } from "vitest";
 
@@ -61,7 +58,8 @@ describe("Cultivar use-cases", () => {
   it("getFullById returns embedded species", async () => {
     const { species, cultivar } = await seedMinimalCatalog(c);
     const full = await c.resolve(CultivarGetFullByIdUseCase).run({ context, dto: { id: cultivar.id } });
-    expect(full.species.id).toEqual(species.id);
+    expect(full.species).not.toBeNull();
+    expect(full.species!.id).toEqual(species.id);
     expect(full.id).toEqual(cultivar.id);
   });
 
@@ -109,18 +107,17 @@ describe("Cultivar use-cases", () => {
     ).rejects.toBeInstanceOf(RepositoryNotFoundError);
   });
 
-  it("delete throws when plants still reference cultivar", async () => {
+  it("delete unbinds plants that still reference cultivar", async () => {
     const { cultivar } = await seedMinimalCatalog(c);
-    await c.resolve(PlantCreateUseCase).run({
+    const linkedPlant = await c.resolve(PlantCreateUseCase).run({
       context,
       dto: { cultivarId: cultivar.id, title: null, description: null },
     });
-    const conflict = c.resolve(CultivarDeleteUseCase).run({ context, dto: { id: cultivar.id } });
-    await expect(conflict).rejects.toBeInstanceOf(RepositoryConflictError);
-    await expect(conflict).rejects.toMatchObject({
-      reason: "plant-reference-cultivar",
-      context: { cultivarId: cultivar.id },
-    });
+    await c.resolve(CultivarDeleteUseCase).run({ context, dto: { id: cultivar.id } });
+
+    const plants = await c.resolve(PlantGetAllUseCase).run({ context });
+    const updatedLinkedPlant = plants.items.find((plant) => plant.id === linkedPlant.id);
+    expect(updatedLinkedPlant?.cultivarId).toBeNull();
   });
 
   it("deleteMany removes requested cultivars", async () => {

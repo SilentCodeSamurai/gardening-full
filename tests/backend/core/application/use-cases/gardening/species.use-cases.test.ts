@@ -6,8 +6,8 @@ import {
   SpeciesGetByIdUseCase,
   SpeciesUpdateUseCase,
 } from "#/backend/core/application/use-cases/gardening/species.use-cases";
+import { CultivarGetAllUseCase } from "@backend/core/application/use-cases/gardening/cultivar.use-cases";
 import {
-  RepositoryConflictError,
   RepositoryNotFoundError,
 } from "@backend/core/application/ports/repositories/shared/base-repository.errors";
 import { bootstrapPopulateServiceAccount } from "#/backend/core/application/service-accounts";
@@ -130,16 +130,19 @@ describe("Species use-cases", () => {
     await expect(deleteMissing).rejects.toBeInstanceOf(RepositoryNotFoundError);
   });
 
-  it("delete throws when cultivars still reference species", async () => {
+  it("delete unbinds cultivars that still reference species", async () => {
     const { species } = await seedMinimalCatalog(c);
+    const linkedCultivar = (await c.resolve(CultivarGetAllUseCase).run({ context })).items.find(
+      (cultivar) => cultivar.speciesId === species.id,
+    );
+    expect(linkedCultivar).toBeDefined();
+
     const del = c.resolve(SpeciesDeleteUseCase);
-    const conflict = del.run({ context, dto: { id: species.id } });
-    await expect(conflict).rejects.toBeInstanceOf(RepositoryConflictError);
-    await expect(conflict).rejects.toMatchObject({
-      operation: "delete",
-      reason: "cultivar-reference-species",
-      context: { speciesId: species.id },
-    });
+    await del.run({ context, dto: { id: species.id } });
+
+    const allCultivars = await c.resolve(CultivarGetAllUseCase).run({ context });
+    const updatedLinkedCultivar = allCultivars.items.find((cultivar) => cultivar.id === linkedCultivar?.id);
+    expect(updatedLinkedCultivar?.speciesId).toBeNull();
   });
 
   it("update allows populated catalog species in simplified workspace model", async () => {

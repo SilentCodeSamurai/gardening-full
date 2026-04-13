@@ -1,9 +1,5 @@
 import { WorkspaceVO } from "@backend/core/domain/access/workspace.vo";
-import type {
-	SpatialNodeEntity,
-	SpatialNodeEntityId,
-	SpatialNodeTreeNode,
-} from "@backend/core/domain/spatial/entities";
+import type { SpatialNodeEntityId, SpatialNodeTreeNode } from "@backend/core/domain/spatial/entities";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { orpc } from "@/orpc/client";
 

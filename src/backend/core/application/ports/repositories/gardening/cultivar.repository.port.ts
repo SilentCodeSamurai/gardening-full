@@ -1,4 +1,4 @@
-import type { CultivarEntity, CultivarEntityId, SpeciesEntity } from "@backend/core/domain/gardening/entities";
+import type { CultivarEntity, CultivarEntityId, HydratedCultivarEntity } from "@backend/core/domain/gardening/entities";
 import type { ItemsContainer } from "@backend/shared/types";
 import type { InjectionToken } from "tsyringe";
 import type {
@@ -39,9 +39,7 @@ export type CultivarRepositoryDeleteOutputDTO = CultivarEntityId;
 
 export type CultivarRepositoryDeleteManyOutputDTO = { count: number };
 
-export type CultivarRepositoryGetFullOutputDTO = CultivarEntity & {
-	species: SpeciesEntity;
-};
+export type CultivarRepositoryGetFullOutputDTO = HydratedCultivarEntity;
 
 /**
  * Cultivar persistence (v2): standard segregated ports plus {@link CultivarRepositoryPort#getFullOne} for species-hydrated reads.

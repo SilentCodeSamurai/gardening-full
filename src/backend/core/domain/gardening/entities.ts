@@ -28,31 +28,31 @@ export type SpeciesCategoryEntity = BaseEntity<SpeciesCategoryEntityId> & {
 /**
  * Live catalog entry for a species: identity and current presentation (name, description).
  *
- * `categoryId` - link to the {@link SpeciesCategoryEntity} that this species belongs to.
+ * `categoryId` - optional link to the {@link SpeciesCategoryEntity} that this species belongs to.
  *
  * Edits here should propagate to linked plants.
  */
 export type SpeciesEntity = BaseEntity<SpeciesEntityId> & {
 	workspace: WorkspaceVO;
-	categoryId: SpeciesCategoryEntityId;
+	categoryId: SpeciesCategoryEntityId | null;
 	characteristics: SpeciesCharacteristics;
 	presentation?: ItemPresentationValueObject;
 };
 
 /**
- * Live catalog entry for a cultivar under a species.
+ * Live catalog entry for a cultivar, optionally under a species.
  *
- * `speciesId` - link to the {@link SpeciesEntity} that this cultivar belongs to.
+ * `speciesId` - optional link to the {@link SpeciesEntity} that this cultivar belongs to.
  */
 export type CultivarEntity = BaseEntity<CultivarEntityId> & {
 	workspace: WorkspaceVO;
-	speciesId: SpeciesEntityId;
+	speciesId: SpeciesEntityId | null;
 	characteristics: CultivarCharacteristics;
 	presentation?: ItemPresentationValueObject;
 };
 
 export type HydratedCultivarEntity = CultivarEntity & {
-	species: SpeciesEntity;
+	species: SpeciesEntity | null;
 };
 
 /**
@@ -66,19 +66,17 @@ export type GardeningEventEntity = BaseEntity<GardeningEventEntityId> & {
 };
 
 /**
- * A physical plant persisted with a cultivar link.
- *
- * `locationId` - link to the {@link LocationEntity} that this plant is placed in. May be null when the plant is not placed in a location.
+ * A physical plant persisted in a workspace, optionally linked to a catalog cultivar.
  */
 export type PlantEntity = BaseEntity<PlantEntityId> & {
 	workspace: WorkspaceVO;
 	title: string | null;
 	description: string | null;
-	cultivarId: CultivarEntityId;
+	cultivarId: CultivarEntityId | null;
 };
 
 export type HydratedPlantEntity = PlantEntity & {
-	cultivar: HydratedCultivarEntity;
+	cultivar: HydratedCultivarEntity | null;
 };
 
 /**

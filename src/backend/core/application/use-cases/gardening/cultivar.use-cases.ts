@@ -20,8 +20,8 @@ import type { UseCaseRequest } from "../use-case-context";
 
 import type { SpeciesWithSystemCatalog } from "./species.use-cases";
 
-export type CultivarGetFullByIdUseCaseOutput = CultivarRepositoryGetFullOutputDTO & {
-	species: SpeciesWithSystemCatalog;
+export type CultivarGetFullByIdUseCaseOutput = Omit<CultivarRepositoryGetFullOutputDTO, "species"> & {
+	species: SpeciesWithSystemCatalog | null;
 };
 
 type CultivarCreatePayload = ExcludeWorkspace<CultivarRepositoryCreateInputDTO>;
@@ -83,10 +83,9 @@ export class CultivarGetFullByIdUseCase extends BaseUseCase<
 		const item = await this.cultivarRepository.getFullOne({ filters: [{ id: input.dto.id, workspace: scope }] });
 		return {
 			...item,
-			species: {
-				...item.species,
-				systemCatalog: WorkspaceVO.isGlobalShared(item.species.workspace),
-			},
+			species: item.species
+				? { ...item.species, systemCatalog: WorkspaceVO.isGlobalShared(item.species.workspace) }
+				: null,
 		};
 	}
 }

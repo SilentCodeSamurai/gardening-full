@@ -37,13 +37,14 @@ function SpeciesDetailPage() {
 		...queryKeys.species.detail(speciesId as SpeciesEntityId),
 	});
 	const { data: categories } = useQuery({ ...queryKeys.speciesCategory.all });
+	const { data: cultivarsData } = useQuery({ ...queryKeys.cultivar.all });
 
 	if (isPending) {
 		return <div className="text-muted-foreground text-sm">{m.common_loading()}</div>;
 	}
 	if (isError || !species) {
 		return (
-			<div className="text-destructive text-sm">{"${m.collections_species_title()} ${m.common_notFound()}"}</div>
+			<div className="text-destructive text-sm">{`${m.collections_species_title()} ${m.common_notFound()}`}</div>
 		);
 	}
 
@@ -54,6 +55,8 @@ function SpeciesDetailPage() {
 
 	const name = translateCatalogField(species.characteristics.name, species.systemCatalog);
 	const desc = translateCatalogField(species.characteristics.description, species.systemCatalog);
+	const linkedCultivarsCount =
+		cultivarsData?.items.filter((cultivar) => String(cultivar.speciesId ?? "") === String(species.id)).length ?? 0;
 
 	return (
 		<div className="flex min-h-0 flex-1 flex-col overflow-hidden">
@@ -93,6 +96,15 @@ function SpeciesDetailPage() {
 								onOpenChange={setDeleteOpen}
 								title={m.collections_species_delete()}
 								description={name ?? ""}
+								warningDescription={
+									linkedCultivarsCount > 0
+										? linkedCultivarsCount === 1
+											? m.collections_species_deleteLinkedSingle()
+											: m.collections_species_deleteLinkedMany({
+													count: String(linkedCultivarsCount),
+												})
+										: undefined
+								}
 								isPending={del.isPending}
 								onConfirm={async () => {
 									setDeleteOpen(false);

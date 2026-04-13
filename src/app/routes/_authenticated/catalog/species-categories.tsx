@@ -303,7 +303,10 @@ function SpeciesCategoryRowActions({ category }: { category: SpeciesCategoryWith
 	const [editOpen, setEditOpen] = useState(false);
 	const [deleteOpen, setDeleteOpen] = useState(false);
 	const del = useSpeciesCategoryDeleteMutation();
+	const { data: speciesData } = useQuery({ ...queryKeys.species.all });
 	const label = translateCatalogField(category.title, category.systemCatalog);
+	const linkedSpeciesCount =
+		speciesData?.items.filter((species) => String(species.categoryId ?? "") === String(category.id)).length ?? 0;
 	const editTitle = category.systemCatalog ? m.common_editDisabledDefaultCatalog() : m.common_edit();
 	const deleteTitle = category.systemCatalog ? m.common_editDisabledDefaultCatalog() : m.common_delete();
 	const linkedTitle = m.common_related();
@@ -398,6 +401,13 @@ function SpeciesCategoryRowActions({ category }: { category: SpeciesCategoryWith
 				onOpenChange={setDeleteOpen}
 				title={m.collections_speciesCategory_delete()}
 				description={label ?? ""}
+				warningDescription={
+					linkedSpeciesCount > 0
+						? linkedSpeciesCount === 1
+							? m.collections_speciesCategory_deleteLinkedSingle()
+							: m.collections_speciesCategory_deleteLinkedMany({ count: String(linkedSpeciesCount) })
+						: undefined
+				}
 				isPending={del.isPending}
 				onConfirm={async () => {
 					setDeleteOpen(false);

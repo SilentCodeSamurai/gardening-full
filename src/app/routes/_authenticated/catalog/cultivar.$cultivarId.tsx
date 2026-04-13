@@ -29,6 +29,7 @@ function CultivarDetailPage() {
 	const { data, isPending, isError } = useQuery({
 		...queryKeys.cultivar.fullById(cultivarId as CultivarEntityId),
 	});
+	const { data: plantsData } = useQuery({ ...queryKeys.plant.all });
 
 	if (isPending) {
 		return <div className="text-muted-foreground text-sm">{m.common_loading()}</div>;
@@ -39,7 +40,9 @@ function CultivarDetailPage() {
 		);
 	}
 
-	const { species } = data;
+	const species = data.species;
+	const linkedPlantsCount =
+		plantsData?.items.filter((plant) => String(plant.cultivarId ?? "") === String(data.id)).length ?? 0;
 
 	return (
 		<div className="flex min-h-0 flex-1 flex-col overflow-hidden">
@@ -77,6 +80,13 @@ function CultivarDetailPage() {
 						onOpenChange={setDeleteOpen}
 						title={m.collections_cultivar_delete()}
 						description={data.characteristics.name}
+						warningDescription={
+							linkedPlantsCount > 0
+								? linkedPlantsCount === 1
+									? m.collections_cultivar_deleteLinkedSingle()
+									: m.collections_cultivar_deleteLinkedMany({ count: String(linkedPlantsCount) })
+								: undefined
+						}
 						isPending={del.isPending}
 						onConfirm={async () => {
 							setDeleteOpen(false);
@@ -84,8 +94,8 @@ function CultivarDetailPage() {
 							await navigate({
 								to: "/catalog/cultivars",
 								search: {
-									category: String(species.categoryId),
-									species: String(species.id),
+									category: species ? String(species.categoryId ?? "") : "",
+									species: species ? String(species.id) : "",
 								},
 							});
 						}}
@@ -109,14 +119,18 @@ function CultivarDetailPage() {
 						<div className="contents">
 							<dt className="text-muted-foreground">{m.collections_species_title()}</dt>
 							<dd className="wrap-break-word min-w-0">
-								<Link
-									to="/catalog/species-detail/$speciesId"
-									params={{ speciesId: String(data.speciesId) }}
-									search={{ category: String(species.categoryId) }}
-									className="text-primary underline-offset-4 hover:underline"
-								>
-									{translateCatalogField(species.characteristics.name, species.systemCatalog)}
-								</Link>
+								{species && data.speciesId ? (
+									<Link
+										to="/catalog/species-detail/$speciesId"
+										params={{ speciesId: String(data.speciesId) }}
+										search={{ category: String(species.categoryId ?? "") }}
+										className="text-primary underline-offset-4 hover:underline"
+									>
+										{translateCatalogField(species.characteristics.name, species.systemCatalog)}
+									</Link>
+								) : (
+									m.filtering_catalogNoSpecies()
+								)}
 							</dd>
 						</div>
 

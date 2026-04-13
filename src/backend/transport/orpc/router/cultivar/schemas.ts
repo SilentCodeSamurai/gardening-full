@@ -8,7 +8,7 @@ import {
 } from "../../shared/schemas";
 
 export const CreateCultivarInputSchema = z.object({
-	speciesId: SpeciesEntityIdSchema,
+	speciesId: SpeciesEntityIdSchema.nullable(),
 	characteristics: CultivarCharacteristicsSchema,
 	presentation: ItemPresentationSchema,
 });
@@ -20,7 +20,7 @@ export const GetCultivarFullByIdInputSchema = z.object({
 });
 export const UpdateCultivarInputSchema = z.object({
 	id: CultivarEntityIdSchema,
-	speciesId: SpeciesEntityIdSchema.optional(),
+	speciesId: z.union([SpeciesEntityIdSchema, z.null()]).optional(),
 	characteristics: CultivarCharacteristicsSchema.optional(),
 	presentation: ItemPresentationSchema,
 });

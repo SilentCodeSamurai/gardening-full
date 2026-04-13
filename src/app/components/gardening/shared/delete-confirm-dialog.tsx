@@ -14,6 +14,7 @@ type Props = {
 	onOpenChange: (open: boolean) => void;
 	title: string;
 	description: string;
+	warningDescription?: string;
 	confirmLabel?: string;
 	isPending?: boolean;
 	onConfirm: () => Promise<void> | void;
@@ -24,6 +25,7 @@ export function DeleteConfirmDialog({
 	onOpenChange,
 	title,
 	description,
+	warningDescription,
 	confirmLabel,
 	isPending = false,
 	onConfirm,
@@ -34,6 +36,9 @@ export function DeleteConfirmDialog({
 				<DialogHeader>
 					<DialogTitle>{title}</DialogTitle>
 					<DialogDescription>{description}</DialogDescription>
+					{warningDescription ? (
+						<p className="text-amber-600 text-sm dark:text-amber-400">{warningDescription}</p>
+					) : null}
 				</DialogHeader>
 				<DialogFooter>
 					<Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

@@ -44,16 +44,15 @@ export function PlantUpdateDialog({ plant, open, onOpenChange }: Props) {
 
 	const form = useAppForm({
 		defaultValues: {
-			cultivarId: String(plant.cultivarId),
+			cultivarId: plant.cultivarId != null ? String(plant.cultivarId) : SELECT_NONE,
 			title: plant.title ?? "",
 			description: plant.description ?? "",
 		} satisfies FormValues as FormValues,
 		onSubmit: async ({ value }) => {
-			if (value.cultivarId === SELECT_NONE) return;
 			onOpenChange(false);
 			await mut.mutateAsync({
 				id: plant.id,
-				cultivarId: value.cultivarId as CultivarEntityId,
+				cultivarId: value.cultivarId === SELECT_NONE ? null : (value.cultivarId as CultivarEntityId),
 				title: value.title.trim() || null,
 				description: value.description.trim() || null,
 			});
@@ -63,7 +62,7 @@ export function PlantUpdateDialog({ plant, open, onOpenChange }: Props) {
 	useEffect(() => {
 		if (!open) return;
 		form.reset({
-			cultivarId: String(plant.cultivarId),
+			cultivarId: plant.cultivarId != null ? String(plant.cultivarId) : SELECT_NONE,
 			title: plant.title ?? "",
 			description: plant.description ?? "",
 		});
@@ -89,13 +88,7 @@ export function PlantUpdateDialog({ plant, open, onOpenChange }: Props) {
 							void form.handleSubmit();
 						}}
 					>
-						<form.AppField
-							name="cultivarId"
-							validators={{
-								onSubmit: ({ value }) =>
-									!value || value === SELECT_NONE ? m.fields_selectRequired() : undefined,
-							}}
-						>
+						<form.AppField name="cultivarId">
 							{(field) => (
 								<field.CatalogCombobox
 									label={m.collections_cultivar_title()}

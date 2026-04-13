@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import { ExternalLinkIcon, PencilIcon, PencilOffIcon, Trash2Icon } from "lucide-react";
 import { useState } from "react";
 import { DeleteConfirmDialog } from "@/components/gardening/shared/delete-confirm-dialog";
@@ -18,6 +19,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { translateCatalogField } from "@/lib/translate-catalog-field";
 import { cn } from "@/lib/utils";
 import * as m from "@/paraglide/messages.js";
+import { queryKeys } from "@/store/keys";
 import { useSpeciesDeleteMutation } from "@/store/mutations";
 import type { CachedSpeciesWithSystemCatalog } from "@/store/query-cache-types";
 import { isQueryObjectPending } from "@/store/query-object-status";
@@ -32,6 +34,7 @@ export function SpeciesListCard({ species, categoryId, categoryLabel }: Props) {
 	const [editOpen, setEditOpen] = useState(false);
 	const [deleteOpen, setDeleteOpen] = useState(false);
 	const del = useSpeciesDeleteMutation();
+	const { data: cultivarsData } = useQuery({ ...queryKeys.cultivar.all });
 
 	const name = translateCatalogField(species.characteristics.name, species.systemCatalog);
 	const desc = translateCatalogField(species.characteristics.description, species.systemCatalog);
@@ -42,6 +45,8 @@ export function SpeciesListCard({ species, categoryId, categoryLabel }: Props) {
 		: syncPending
 			? m.common_editDisabledPendingSync()
 			: m.common_edit();
+	const linkedCultivarsCount =
+		cultivarsData?.items.filter((cultivar) => String(cultivar.speciesId ?? "") === String(species.id)).length ?? 0;
 
 	return (
 		<Card
@@ -121,6 +126,13 @@ export function SpeciesListCard({ species, categoryId, categoryLabel }: Props) {
 						onOpenChange={setDeleteOpen}
 						title={m.collections_species_delete()}
 						description={name ?? ""}
+						warningDescription={
+							linkedCultivarsCount > 0
+								? linkedCultivarsCount === 1
+									? m.collections_species_deleteLinkedSingle()
+									: m.collections_species_deleteLinkedMany({ count: String(linkedCultivarsCount) })
+								: undefined
+						}
 						isPending={del.isPending}
 						onConfirm={async () => {
 							setDeleteOpen(false);

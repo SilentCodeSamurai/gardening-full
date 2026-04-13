@@ -56,7 +56,7 @@ export function SpeciesCreateDialog({ open, onOpenChange }: Props) {
 			backgroundColor: "",
 		} satisfies FormValues as FormValues,
 		onSubmit: async ({ value }) => {
-			if (value.categoryId === SELECT_NONE || !value.name.trim()) return;
+			if (!value.name.trim()) return;
 			const presentation = normalizePresentationInput({
 				iconKey: value.iconKey === SELECT_NONE ? "" : value.iconKey,
 				iconColor: value.iconColor,
@@ -64,7 +64,7 @@ export function SpeciesCreateDialog({ open, onOpenChange }: Props) {
 			});
 			onOpenChange(false);
 			await mut.mutateAsync({
-				categoryId: value.categoryId as SpeciesCategoryEntityId,
+				categoryId: value.categoryId === SELECT_NONE ? null : (value.categoryId as SpeciesCategoryEntityId),
 				characteristics: {
 					name: value.name.trim(),
 					description: value.description.trim() || null,
@@ -100,13 +100,7 @@ export function SpeciesCreateDialog({ open, onOpenChange }: Props) {
 							void form.handleSubmit();
 						}}
 					>
-						<form.AppField
-							name="categoryId"
-							validators={{
-								onSubmit: ({ value }) =>
-									!value || value === SELECT_NONE ? m.fields_selectRequired() : undefined,
-							}}
-						>
+						<form.AppField name="categoryId">
 							{(field) => (
 								<field.CatalogCombobox
 									label={m.collections_speciesCategory_title()}

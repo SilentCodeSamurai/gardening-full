@@ -1,7 +1,4 @@
-import {
-	RepositoryConflictError,
-	RepositoryNotFoundError,
-} from "@backend/core/application/ports/repositories/shared/base-repository.errors";
+import { RepositoryNotFoundError } from "@backend/core/application/ports/repositories/shared/base-repository.errors";
 import { cultivarId, speciesId } from "@backend/infrastructure/integrations/shared/database-ids";
 import type { DependencyContainer } from "tsyringe";
 import { beforeEach, describe, expect, it } from "vitest";
@@ -82,7 +79,8 @@ export function registerCultivarRepositoryContract(
 			const one = await cultivar.getOne({ filters: [{ id: cv.id }] });
 			expect(one.characteristics.name).toBe("Genovese");
 			const full = await cultivar.getFullOne({ filters: [{ id: cv.id }] });
-			expect(full.species.id).toEqual(sp.id);
+			expect(full.species).not.toBeNull();
+			expect(full.species!.id).toEqual(sp.id);
 		});
 
 		it("getFullOne OR filters", async () => {
@@ -102,6 +100,17 @@ export function registerCultivarRepositoryContract(
 			await expect(
 				cultivar.getFullOne({ filters: [{ id: cultivarId("00000000-0000-4000-8000-00000000nope") }] }),
 			).rejects.toBeInstanceOf(RepositoryNotFoundError);
+		});
+
+		it("getFullOne with null speciesId returns species null", async () => {
+			const cv = await cultivar.createOne({
+				workspace: wk,
+				speciesId: null,
+				characteristics: fixtureCultivarCharacteristics({ name: "no-species" }),
+			});
+			const full = await cultivar.getFullOne({ filters: [{ id: cv.id }] });
+			expect(full.speciesId).toBeNull();
+			expect(full.species).toBeNull();
 		});
 
 		it("getMany without filters and with [] / OR", async () => {
@@ -187,7 +196,7 @@ export function registerCultivarRepositoryContract(
 			await expect(cultivar.getOne({ filters: [{ id: cv.id }] })).rejects.toBeInstanceOf(RepositoryNotFoundError);
 		});
 
-		it("deleteOne blocks when plants reference cultivar", async () => {
+		it("deleteOne unbinds linked plants by setting cultivarId to null", async () => {
 			const sp = await seedSpecies();
 			const cv = await cultivar.createOne({
 				workspace: wk,
@@ -200,12 +209,13 @@ export function registerCultivarRepositoryContract(
 				description: null,
 				cultivarId: cv.id,
 			});
-			const conflict = cultivar.deleteOne({ filters: [{ id: cv.id }] });
-			await expect(conflict).rejects.toBeInstanceOf(RepositoryConflictError);
-			await expect(conflict).rejects.toMatchObject({ reason: "plant-reference-cultivar" });
+			await cultivar.deleteOne({ filters: [{ id: cv.id }] });
+			const { items } = await plant.getMany();
+			const linkedPlant = items.find((p) => p.cultivarId === null);
+			expect(linkedPlant).toBeTruthy();
 		});
 
-		it("deleteMany removes only unblocked cultivars", async () => {
+		it("deleteMany removes matching cultivars and unbinds linked plants", async () => {
 			const sp = await seedSpecies();
 			const free = await cultivar.createOne({
 				workspace: wk,
@@ -224,8 +234,12 @@ export function registerCultivarRepositoryContract(
 				cultivarId: blocked.id,
 			});
 			const { count } = await cultivar.deleteMany({ filters: [{ id: free.id }, { id: blocked.id }] });
-			expect(count).toBe(1);
-			await cultivar.getOne({ filters: [{ id: blocked.id }] });
+			expect(count).toBe(2);
+			await expect(cultivar.getOne({ filters: [{ id: blocked.id }] })).rejects.toBeInstanceOf(
+				RepositoryNotFoundError,
+			);
+			const { items } = await plant.getMany();
+			expect(items.some((p) => p.cultivarId === null)).toBe(true);
 		});
 
 		it("getOne OR filters", async () => {
@@ -355,7 +369,7 @@ export function registerCultivarRepositoryContract(
 				characteristics: fixtureCultivarCharacteristics({ name: "dm-cv-b" }),
 			});
 			const { count } = await cultivar.deleteMany({
-				filters: [{ id: a.id }, { characteristics: fixtureCultivarCharacteristics({ name: "dm-cv-b" }), workspace: wk }],
+				filters: [{ id: a.id }, { id: b.id }],
 			});
 			expect(count).toBe(2);
 			const z = await cultivar.deleteMany({

@@ -70,7 +70,7 @@ export function registerPlantRepositoryContract(
 			});
 			expect(items).toHaveLength(2);
 			expect(new Set(items.map((p) => p.id as string)).size).toBe(2);
-			expect(items.every((p) => p.cultivar.id === cv.id)).toBe(true);
+			expect(items.every((p) => p.cultivar != null && p.cultivar.id === cv.id)).toBe(true);
 		});
 
 		it("getMany without filters lists all plants", async () => {
@@ -249,7 +249,21 @@ export function registerPlantRepositoryContract(
 				cultivarId: cv.id,
 			});
 			expect(p.title).toBe("created-ok");
-			expect(p.cultivar.id).toEqual(cv.id);
+			expect(p.cultivar).not.toBeNull();
+			expect(p.cultivar!.id).toEqual(cv.id);
+		});
+
+		it("createOne allows null cultivar", async () => {
+			const p = await plant.createOne({
+				workspace: wk,
+				title: "no-cv",
+				description: null,
+				cultivarId: null,
+			});
+			expect(p.cultivarId).toBeNull();
+			expect(p.cultivar).toBeNull();
+			const got = await plant.getOne({ filters: [{ id: p.id }] });
+			expect(got.cultivar).toBeNull();
 		});
 
 		it("getMany single-field filter by id", async () => {
@@ -336,7 +350,7 @@ export function registerPlantRepositoryContract(
 				cultivarId: cv.id,
 			});
 			const { count } = await plant.deleteMany({
-				filters: [{ id: a.id }, { title: "dmb", workspace: wk }],
+				filters: [{ id: a.id }, { id: b.id }],
 			});
 			expect(count).toBe(2);
 		});

@@ -9,7 +9,6 @@ import {
   SpeciesCategoryUpdateUseCase,
 } from "#/backend/core/application/use-cases/gardening/species-category.use-cases";
 import {
-  RepositoryConflictError,
   RepositoryNotFoundError,
 } from "@backend/core/application/ports/repositories/shared/base-repository.errors";
 import { bootstrapPopulateServiceAccount } from "#/backend/core/application/service-accounts";
@@ -22,6 +21,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { userUseCaseContext } from "../../../../helpers/use-case-context";
 import { createUseCaseTestContainer } from "./create-use-case-test-container";
 import { seedMinimalCatalog } from "../../../../helpers/gardening/seed-minimal-catalog";
+import { SpeciesGetAllUseCase } from "@backend/core/application/use-cases/gardening/species.use-cases";
 
 describe("Species category use-cases", () => {
   let c: ReturnType<typeof createUseCaseTestContainer>;
@@ -107,16 +107,19 @@ describe("Species category use-cases", () => {
     await expect(deleteMissing).rejects.toBeInstanceOf(RepositoryNotFoundError);
   });
 
-  it("delete throws when species still reference category", async () => {
+  it("delete unbinds species that still reference category", async () => {
     const { category } = await seedMinimalCatalog(c);
+    const linkedSpecies = (await c.resolve(SpeciesGetAllUseCase).run({ context })).items.find(
+      (species) => species.categoryId === category.id,
+    );
+    expect(linkedSpecies).toBeDefined();
+
     const del = c.resolve(SpeciesCategoryDeleteUseCase);
-    const conflict = del.run({ context, dto: { id: category.id } });
-    await expect(conflict).rejects.toBeInstanceOf(RepositoryConflictError);
-    await expect(conflict).rejects.toMatchObject({
-      operation: "delete",
-      reason: "species-reference-category",
-      context: { categoryId: category.id },
-    });
+    await del.run({ context, dto: { id: category.id } });
+
+    const allSpecies = await c.resolve(SpeciesGetAllUseCase).run({ context });
+    const updatedLinkedSpecies = allSpecies.items.find((species) => species.id === linkedSpecies?.id);
+    expect(updatedLinkedSpecies?.categoryId).toBeNull();
   });
 
   it("update allows populated catalog row in simplified workspace model", async () => {

@@ -28,7 +28,7 @@ type Props = {
 		height: number;
 	};
 	onSubmit?: (input: {
-		cultivarId: CultivarEntityId;
+		cultivarId: CultivarEntityId | null;
 		title: string | null;
 		description: string | null;
 		parentSpatialNodeId: SpatialNodeEntityId | null;
@@ -88,9 +88,8 @@ export function PlantCreateDialog({
 			description: "",
 		} satisfies FormValues as FormValues,
 		onSubmit: async ({ value }) => {
-			if (value.cultivarId === SELECT_NONE) return;
 			const payload = {
-				cultivarId: value.cultivarId as CultivarEntityId,
+				cultivarId: value.cultivarId === SELECT_NONE ? null : (value.cultivarId as CultivarEntityId),
 				title: value.title.trim() || null,
 				description: value.description.trim() || null,
 				parentSpatialNodeId: initialPlacement?.parentSpatialNodeId ?? null,
@@ -166,13 +165,7 @@ export function PlantCreateDialog({
 							void form.handleSubmit();
 						}}
 					>
-						<form.AppField
-							name="cultivarId"
-							validators={{
-								onSubmit: ({ value }) =>
-									!value || value === SELECT_NONE ? m.fields_selectRequired() : undefined,
-							}}
-						>
+						<form.AppField name="cultivarId">
 							{(field) => (
 								<field.CatalogCombobox
 									label={m.collections_cultivar_title()}

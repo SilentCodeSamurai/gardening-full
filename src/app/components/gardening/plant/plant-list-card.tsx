@@ -42,7 +42,7 @@ function resolveSpeciesDisplayName(rawSpeciesName: string): string {
 export function getPlantDisplayTitle(plant: HydratedPlantEntity | CachedHydratedPlant): string {
 	if (plant.title?.trim()) return plant.title.trim();
 
-	return plant.cultivar.characteristics.name || m.items_untitled();
+	return plant.cultivar?.characteristics.name || m.items_untitled();
 }
 
 type Props = {
@@ -54,7 +54,10 @@ export function PlantListCard({ plant, isPlaced = false }: Props) {
 	const [editOpen, setEditOpen] = useState(false);
 	const [deleteOpen, setDeleteOpen] = useState(false);
 	const del = usePlantDeleteMutation();
-	const speciesLabel = resolveSpeciesDisplayName(plant.cultivar.species.characteristics.name);
+	const speciesLabel = plant.cultivar?.species
+		? resolveSpeciesDisplayName(plant.cultivar.species.characteristics.name)
+		: "";
+	const cultivarName = plant.cultivar?.characteristics.name ?? "";
 	const title = getPlantDisplayTitle(plant);
 	const syncPending = isQueryObjectPending(plant);
 	const deleteDisabled = isPlaced || syncPending;
@@ -83,11 +86,13 @@ export function PlantListCard({ plant, isPlaced = false }: Props) {
 					aria-label={`${title} — ${m.common_open()} ${m.common_details().toLowerCase()}`}
 				/>
 				<div className="pointer-events-none relative z-10 flex min-w-0 flex-1 flex-row items-center gap-2">
-					<ItemPresentationIcon presentation={plant.cultivar.presentation} />
+					<ItemPresentationIcon presentation={plant.cultivar?.presentation} />
 					<div className="flex min-w-0 flex-col items-start justify-center">
 						<span className="truncate font-medium">{title}</span>
 						<span className="text-muted-foreground text-xs">
-							{speciesLabel} · {plant.cultivar.characteristics.name}
+							{speciesLabel && cultivarName
+								? `${speciesLabel} · ${cultivarName}`
+								: cultivarName || speciesLabel || m.filtering_catalogNoCultivar()}
 						</span>
 					</div>
 					{plant.description ? (
