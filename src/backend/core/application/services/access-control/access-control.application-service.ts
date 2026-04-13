@@ -3,8 +3,12 @@ import type { SubjectVO } from "@backend/core/domain/access/subject.vo";
 import type { AccessAction, AccessDecision, AccessRole } from "@backend/core/domain/access/types";
 import { accessRoleAllows, accessRoleOrder } from "@backend/core/domain/access/types";
 import type { WorkspaceVO } from "@backend/core/domain/access/workspace.vo";
-import type { AccessAuditPort } from "../../ports/access/access-audit.port";
-import type { WorkspaceRoleAssignmentRepositoryPort } from "../../ports/repositories/access/workspace-role-assignment.repository.port";
+import { inject, injectable } from "tsyringe";
+import { type AccessAuditPort, AccessAuditPortToken } from "../../ports/access/access-audit.port";
+import {
+	type WorkspaceRoleAssignmentRepositoryPort,
+	WorkspaceRoleAssignmentRepositoryPortToken,
+} from "../../ports/repositories/access/workspace-role-assignment.repository.port";
 import { AccessForbiddenApplicationError } from "./access-control.errors";
 
 export type AccessControlApplicationServiceAssignWorkspaceRoleInputDTO = {
@@ -37,10 +41,13 @@ export type AccessControlApplicationServiceAssertCanPerformActionOnWorkspaceInpu
 
 export type AccessControlApplicationServiceAssertCanPerformActionOnWorkspaceOutputDTO = AccessDecision;
 
+@injectable()
 export class AccessControlApplicationService {
 	constructor(
+		@inject(WorkspaceRoleAssignmentRepositoryPortToken)
 		private readonly workspaceRoleRepository: WorkspaceRoleAssignmentRepositoryPort,
-		private readonly audit?: AccessAuditPort,
+		@inject(AccessAuditPortToken)
+		private readonly audit: AccessAuditPort,
 	) {}
 
 	public async assignWorkspaceRole(
@@ -65,7 +72,7 @@ export class AccessControlApplicationService {
 			role: input.role,
 			grantSource,
 		});
-		this.audit?.recordRoleAssigned({
+		this.audit.recordRoleAssigned({
 			actorSubject: input.actorSubject,
 			targetSubject: input.targetSubject,
 			workspace: assignment.workspace,
@@ -98,7 +105,7 @@ export class AccessControlApplicationService {
 				},
 			],
 		});
-		this.audit?.recordRoleRevoked({
+		this.audit.recordRoleRevoked({
 			actorSubject: input.actorSubject,
 			targetSubject: input.targetSubject,
 			workspace: input.activeWorkspaceScope,

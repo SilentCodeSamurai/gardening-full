@@ -24,7 +24,7 @@ export async function populateData(options: PopulateDataOptions) {
 		actorSubject: options.actorSubject,
 		activeWorkspaceScope: WorkspaceVO.globalShared(),
 	};
-	return useCase.execute({
+	return useCase.run({
 		context,
 		dto: {
 			catalog: options?.catalog ?? DEFAULT_CATALOG,

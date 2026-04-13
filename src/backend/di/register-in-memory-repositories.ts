@@ -1,4 +1,13 @@
-import type { DependencyContainer } from "tsyringe";
+import { Lifecycle, type DependencyContainer } from "tsyringe";
+import { WorkspaceRoleAssignmentRepositoryPortToken } from "../core/application/ports/repositories/access/workspace-role-assignment.repository.port";
+import { CultivarRepositoryPortToken } from "../core/application/ports/repositories/gardening/cultivar.repository.port";
+import { GardeningEventRepositoryPortToken } from "../core/application/ports/repositories/gardening/gardening-event.repository.port";
+import { LocationRepositoryPortToken } from "../core/application/ports/repositories/gardening/location.repository.port";
+import { PlantRepositoryPortToken } from "../core/application/ports/repositories/gardening/plant.repository.port";
+import { SpeciesRepositoryPortToken } from "../core/application/ports/repositories/gardening/species.repository.port";
+import { SpeciesCategoryRepositoryPortToken } from "../core/application/ports/repositories/gardening/species-category.repository.port";
+import { SpatialNodeRepositoryPortToken } from "../core/application/ports/repositories/spatial/spatial-node.repository.port";
+
 import { WorkspaceRoleAssignmentInMemoryRepository } from "../infrastructure/adapters/repositories/access/in-memory/workspace-role-assignment.repository.in-memory";
 import { CultivarInMemoryRepository } from "../infrastructure/adapters/repositories/gardening/in-memory/cultivar.repository.in-memory";
 import { GardeningEventInMemoryRepository } from "../infrastructure/adapters/repositories/gardening/in-memory/gardening-event.repository.in-memory";
@@ -7,39 +16,49 @@ import { PlantInMemoryRepository } from "../infrastructure/adapters/repositories
 import { SpeciesInMemoryRepository } from "../infrastructure/adapters/repositories/gardening/in-memory/species.repository.in-memory";
 import { SpeciesCategoryInMemoryRepository } from "../infrastructure/adapters/repositories/gardening/in-memory/species-category.repository.in-memory";
 import { SpatialNodeInMemoryRepository } from "../infrastructure/adapters/repositories/spatial/in-memory/spatial-node.repository.in-memory";
-import { InMemoryStore } from "../infrastructure/integrations/in-memory-database/client";
-import { TOKENS } from "./tokens";
+import {
+	InMemoryDatabaseClient,
+	InMemoryDatabaseClientToken,
+	InMemoryStoreToken,
+} from "../infrastructure/integrations/in-memory-database/client";
 
 /**
  * Binds the in-memory store and all repository ports on the given container.
  * Used by the app root container and by per-test child containers.
  */
 export function registerInMemoryRepositories(c: DependencyContainer): void {
-	c.register(TOKENS.InMemoryStore, {
-		useValue: new InMemoryStore(),
+	c.register(
+		InMemoryDatabaseClientToken,
+		{
+			useClass: InMemoryDatabaseClient,
+		},
+		{ lifecycle: Lifecycle.Singleton },
+	);
+	c.register(InMemoryStoreToken, {
+		useFactory: (cc) => cc.resolve(InMemoryDatabaseClientToken).getStore(),
 	});
-	c.register(TOKENS.CultivarRepositoryPort, {
-		useFactory: (cx) => new CultivarInMemoryRepository(cx.resolve(TOKENS.InMemoryStore)),
+	c.register(CultivarRepositoryPortToken, {
+		useClass: CultivarInMemoryRepository,
 	});
-	c.register(TOKENS.PlantRepositoryPort, {
-		useFactory: (cx) => new PlantInMemoryRepository(cx.resolve(TOKENS.InMemoryStore)),
+	c.register(PlantRepositoryPortToken, {
+		useClass: PlantInMemoryRepository,
 	});
-	c.register(TOKENS.SpeciesRepositoryPort, {
-		useFactory: (cx) => new SpeciesInMemoryRepository(cx.resolve(TOKENS.InMemoryStore)),
+	c.register(SpeciesRepositoryPortToken, {
+		useClass: SpeciesInMemoryRepository,
 	});
-	c.register(TOKENS.SpeciesCategoryRepositoryPort, {
-		useFactory: (cx) => new SpeciesCategoryInMemoryRepository(cx.resolve(TOKENS.InMemoryStore)),
+	c.register(SpeciesCategoryRepositoryPortToken, {
+		useClass: SpeciesCategoryInMemoryRepository,
 	});
-	c.register(TOKENS.LocationRepositoryPort, {
-		useFactory: (cx) => new LocationInMemoryRepository(cx.resolve(TOKENS.InMemoryStore)),
+	c.register(LocationRepositoryPortToken, {
+		useClass: LocationInMemoryRepository,
 	});
-	c.register(TOKENS.GardeningEventRepositoryPort, {
-		useFactory: (cx) => new GardeningEventInMemoryRepository(cx.resolve(TOKENS.InMemoryStore)),
+	c.register(GardeningEventRepositoryPortToken, {
+		useClass: GardeningEventInMemoryRepository,
 	});
-	c.register(TOKENS.SpatialNodeRepositoryPort, {
-		useFactory: (cx) => new SpatialNodeInMemoryRepository(cx.resolve(TOKENS.InMemoryStore)),
+	c.register(SpatialNodeRepositoryPortToken, {
+		useClass: SpatialNodeInMemoryRepository,
 	});
-	c.register(TOKENS.WorkspaceRoleAssignmentRepositoryPort, {
-		useFactory: (cx) => new WorkspaceRoleAssignmentInMemoryRepository(cx.resolve(TOKENS.InMemoryStore)),
+	c.register(WorkspaceRoleAssignmentRepositoryPortToken, {
+		useClass: WorkspaceRoleAssignmentInMemoryRepository,
 	});
 }

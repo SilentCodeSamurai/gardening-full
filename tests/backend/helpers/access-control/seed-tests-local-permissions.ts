@@ -2,8 +2,7 @@ import type { WorkspaceRoleAssignmentEntity } from "@backend/core/domain/access/
 import type { SubjectKey } from "@backend/core/domain/access/subject.vo";
 import { WorkspaceVO, type WorkspaceKey } from "@backend/core/domain/access/workspace.vo";
 import { testsLocalServiceAccount } from "../../core/application/use-cases/service-accounts";
-import { TOKENS } from "@backend/di/tokens";
-import type { InMemoryStore } from "@backend/infrastructure/integrations/in-memory-database/client";
+import { InMemoryStoreToken } from "@backend/infrastructure/integrations/in-memory-database/client";
 import { workspaceRoleAssignmentId } from "@backend/infrastructure/integrations/shared/database-ids";
 import type { DependencyContainer } from "tsyringe";
 
@@ -12,10 +11,10 @@ function compositeKey(subjectKey: SubjectKey, workspaceKey: WorkspaceKey): `${Su
 }
 
 /**
- * Broad workspace admin for `tests-local` service account. Call after `registerAccessControlPorts` from test composition roots only.
+ * Broad workspace admin for `tests-local` service account. Call after `registerAdapters` from test composition roots only.
  */
 export function seedTestsLocalAccessPermissions(c: DependencyContainer): void {
-	const store = c.resolve<InMemoryStore>(TOKENS.InMemoryStore);
+	const store = c.resolve(InMemoryStoreToken);
 	const subject = testsLocalServiceAccount;
 	const subjectKey = subject.toKey();
 	const now = new Date();

@@ -4,6 +4,7 @@ import type {
 	SpatialNodeTreeNode,
 } from "@backend/core/domain/spatial/entities";
 import type { ItemsContainer } from "@backend/shared/types";
+import type { InjectionToken } from "tsyringe";
 import type {
 	RepositoryCreateManyPort,
 	RepositoryCreateOnePort,
@@ -45,14 +46,16 @@ export type SpatialNodeRepositoryDeleteOutputDTO = SpatialNodeEntityId;
 
 export type SpatialNodeRepositoryDeleteManyOutputDTO = { count: number };
 
-/** OR branch to resolve a node by domain `ref` scoped to a workspace. */
-export type SpatialNodeRepositoryGetByRefFilterClause = Pick<SpatialNodeEntity, "ref" | "workspace">;
+/** OR branch to resolve a node by domain `ref`. */
+export type SpatialNodeRepositoryGetByRefFilterClause = Pick<SpatialNodeEntity, "ref">;
 
 /** Restore payload (includes `id` — not a pure filter-only API). */
-export type SpatialNodeRepositoryRestoreInputDTO = { id: SpatialNodeEntityId } & BaseRepositoryCreateInputDTO<SpatialNodeEntity>;
+export type SpatialNodeRepositoryRestoreInputDTO = {
+	id: SpatialNodeEntityId;
+} & BaseRepositoryCreateInputDTO<SpatialNodeEntity>;
 
-/** OR branch: root id and workspace for tree materialization. */
-export type SpatialNodeRepositoryTreeRootFilterClause = Pick<SpatialNodeEntity, "id" | "workspace">;
+/** OR branch: root id for tree materialization. */
+export type SpatialNodeRepositoryTreeRootFilterClause = Pick<SpatialNodeEntity, "id">;
 
 /**
  * Spatial node persistence (v2): standard segregated ports plus ref lookup, soft-restore, and tree read.
@@ -102,3 +105,6 @@ export interface SpatialNodeRepositoryPort
 		input: WithRequiredRepositoryFilters<SpatialNodeRepositoryTreeRootFilterClause>,
 	): Promise<SpatialNodeTreeNode>;
 }
+
+export const SpatialNodeRepositoryPortToken: InjectionToken<SpatialNodeRepositoryPort> =
+	Symbol.for("SpatialNodeRepositoryPort");

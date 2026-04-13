@@ -1,5 +1,4 @@
 import type {
-	GardeningEventRepositoryPort,
 	GardeningEventRepositoryCreateInputDTO,
 	GardeningEventRepositoryCreateManyInputDTO,
 	GardeningEventRepositoryCreateManyOutputDTO,
@@ -12,22 +11,28 @@ import type {
 	GardeningEventRepositoryGetBindingsOutputDTO,
 	GardeningEventRepositoryGetManyOutputDTO,
 	GardeningEventRepositoryGetOneOutputDTO,
+	GardeningEventRepositoryPort,
 	GardeningEventRepositoryUpdateManyOutputDTO,
 	GardeningEventRepositoryUpdateOutputDTO,
 	GardeningEventRepositoryUpdatePatchDTO,
 } from "@backend/core/application/ports/repositories/gardening/gardening-event.repository.port";
 import { BaseRepositoryErrors } from "@backend/core/application/ports/repositories/shared/base-repository.errors";
 import type { GardeningEventEntity, LocationEntityId, PlantEntityId } from "@backend/core/domain/gardening/entities";
-import { workspacesEqual } from "@backend/infrastructure/adapters/repositories/shared/workspace-key";
 import {
 	findFirstRowMatchingAnyClause,
 	findRowsMatchingAnyClause,
 } from "@backend/infrastructure/adapters/repositories/shared/in-memory-entity-filter";
+import { InMemoryTransactionManagerAdapter } from "@backend/infrastructure/adapters/transaction/in-memory-transaction-manager.adapter";
 import type { InMemoryStore } from "@backend/infrastructure/integrations/in-memory-database/client";
 import { gardeningEventId, idKey } from "@backend/infrastructure/integrations/shared/database-ids";
+import { inject, injectable } from "tsyringe";
 
+@injectable()
 export class GardeningEventInMemoryRepository extends BaseRepositoryErrors implements GardeningEventRepositoryPort {
-	constructor(private readonly store: InMemoryStore) {
+	constructor(
+		@inject(InMemoryTransactionManagerAdapter)
+		private readonly transactionManager: InMemoryTransactionManagerAdapter,
+	) {
 		super();
 	}
 
@@ -56,9 +61,7 @@ export class GardeningEventInMemoryRepository extends BaseRepositoryErrors imple
 		};
 	}
 
-	private resolveStoredFromFilters(
-		filters: readonly GardeningEventRepositoryFilterClause[],
-	): GardeningEventEntity {
+	private resolveStoredFromFilters(filters: readonly GardeningEventRepositoryFilterClause[]): GardeningEventEntity {
 		const row = findFirstRowMatchingAnyClause(this.store.gardeningEvents.values(), filters);
 		if (!row) this.throwNotFoundError("GardeningEvent", filters);
 		return row;
@@ -151,7 +154,6 @@ export class GardeningEventInMemoryRepository extends BaseRepositoryErrors imple
 			for (const eid of eventIds) {
 				const row = this.store.gardeningEvents.get(eid);
 				if (!row) continue;
-				if (!workspacesEqual(row.workspace, clause.workspace)) continue;
 				const k = idKey(row.id);
 				if (seen.has(k)) continue;
 				seen.add(k);
@@ -172,7 +174,6 @@ export class GardeningEventInMemoryRepository extends BaseRepositoryErrors imple
 			for (const eid of eventIds) {
 				const row = this.store.gardeningEvents.get(eid);
 				if (!row) continue;
-				if (!workspacesEqual(row.workspace, clause.workspace)) continue;
 				const k = idKey(row.id);
 				if (seen.has(k)) continue;
 				seen.add(k);
@@ -190,13 +191,6 @@ export class GardeningEventInMemoryRepository extends BaseRepositoryErrors imple
 		const row = this.resolveStoredFromFilters(input.filters);
 		const plant = this.store.plants.get(idKey(input.plantId));
 		if (!plant) this.throwNotFoundError("Plant", input.plantId);
-		if (!workspacesEqual(plant.workspace, row.workspace)) {
-			this.throwValidationError({
-				operation: "bindToPlant",
-				validationCode: "plant-workspace-mismatch",
-				context: { plantId: input.plantId, eventWorkspaceKey: row.workspace.toKey() },
-			});
-		}
 		this.store.linkEventToPlant(row.id, input.plantId);
 		return row;
 	}
@@ -208,13 +202,6 @@ export class GardeningEventInMemoryRepository extends BaseRepositoryErrors imple
 		const row = this.resolveStoredFromFilters(input.filters);
 		const location = this.store.locations.get(idKey(input.locationId));
 		if (!location) this.throwNotFoundError("Location", input.locationId);
-		if (!workspacesEqual(location.workspace, row.workspace)) {
-			this.throwValidationError({
-				operation: "bindToLocation",
-				validationCode: "location-workspace-mismatch",
-				context: { locationId: input.locationId, eventWorkspaceKey: row.workspace.toKey() },
-			});
-		}
 		this.store.linkEventToLocation(row.id, input.locationId);
 		return row;
 	}
@@ -224,5 +211,9 @@ export class GardeningEventInMemoryRepository extends BaseRepositoryErrors imple
 	}): Promise<GardeningEventRepositoryGetBindingsOutputDTO> {
 		const row = this.resolveStoredFromFilters(input.filters);
 		return this.store.getBindingsForEvent(row.id);
+	}
+
+	private get store(): InMemoryStore {
+		return this.transactionManager.session;
 	}
 }

@@ -1,5 +1,6 @@
 import type { SubjectVO } from "@backend/core/domain/access/subject.vo";
 import type { WorkspaceVO } from "@backend/core/domain/access/workspace.vo";
+import type { InjectionToken } from "tsyringe";
 import type { AccessRole } from "#/backend/core/domain/access/types";
 
 export type WorkspaceAccessRoleAssignedAuditEvent = {
@@ -21,3 +22,5 @@ export interface AccessAuditPort {
 	recordRoleAssigned(event: WorkspaceAccessRoleAssignedAuditEvent): void;
 	recordRoleRevoked(event: WorkspaceAccessRoleRevokedAuditEvent): void;
 }
+
+export const AccessAuditPortToken: InjectionToken<AccessAuditPort> = Symbol.for("AccessAuditPort");

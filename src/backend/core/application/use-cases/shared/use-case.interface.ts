@@ -12,5 +12,5 @@ export interface IUseCase<TInput = void, TOutput = void> {
 	 * @returns The output of the use case.
 	 */
 	// eslint-disable-next-line @typescript-eslint/no-invalid-void-type
-	execute(...args: TInput extends void ? [] : [input: TInput]): Promise<TOutput>;
+	run(...args: TInput extends void ? [] : [input: TInput]): Promise<TOutput>;
 }

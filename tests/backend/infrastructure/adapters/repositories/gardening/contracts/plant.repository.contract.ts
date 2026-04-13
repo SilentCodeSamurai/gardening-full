@@ -184,7 +184,7 @@ export function registerPlantRepositoryContract(
 			).rejects.toBeInstanceOf(RepositoryNotFoundError);
 		});
 
-		it("deleteOne clears eventв†”plant links", async () => {
+		it("deleteOne clears event-plant links", async () => {
 			const cv = await seedCultivar();
 			const p = await plant.createOne({
 				workspace: wk,

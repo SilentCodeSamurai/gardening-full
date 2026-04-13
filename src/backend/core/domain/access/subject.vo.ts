@@ -28,7 +28,7 @@ export type SubjectType = "user" | "organization" | "serviceAccount";
  * - `version`: Version of the subject key format.
  * - `type`: Type of the subject.
  * - `externalId`: External ID of the subject.
- * 
+ *
  * @example
  * - 'v1:user:123'
  * - 'v1:organization:456'
@@ -41,11 +41,11 @@ export type SubjectKey = `${string}:${SubjectType}:${string}` & { __brand: "Subj
  * - `version`: Version of the subject key format.
  * - `type`: Type of the subject.
  * - `externalId`: External ID of the subject.
- * 
+ *
  * Has static factory methods for each subject type.
  * Has a method to convert to a key.
  * Has a method to convert from a key.
- * 
+ *
  * @example
  * SubjectVO.user("v1", "123")
  * SubjectVO.organization("v1", "456")
@@ -104,16 +104,14 @@ export class SubjectVO {
 				return SubjectVO.serviceAccount(externalId);
 			default:
 				throw new SubjectKeyValidationError(`Invalid subject type: ${type}`);
-			}
+		}
 	}
-	
+
 	public toKey(): SubjectKey {
 		return `${this.version}:${this.type}:${this.externalId}` as SubjectKey;
 	}
 
 	public equals(other: SubjectVO): boolean {
-		return (
-			this.version === other.version && this.type === other.type && this.externalId === other.externalId
-		);
+		return this.version === other.version && this.type === other.type && this.externalId === other.externalId;
 	}
 }

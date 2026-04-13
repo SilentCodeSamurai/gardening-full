@@ -2,6 +2,7 @@ import { z } from "zod";
 import {
 	CultivarCharacteristicsSchema,
 	CultivarEntityIdSchema,
+	CultivarEntityIdsSchema,
 	ItemPresentationSchema,
 	SpeciesEntityIdSchema,
 } from "../../shared/schemas";
@@ -25,4 +26,7 @@ export const UpdateCultivarInputSchema = z.object({
 });
 export const DeleteCultivarInputSchema = z.object({
 	id: CultivarEntityIdSchema,
+});
+export const DeleteManyCultivarInputSchema = z.object({
+	ids: CultivarEntityIdsSchema,
 });

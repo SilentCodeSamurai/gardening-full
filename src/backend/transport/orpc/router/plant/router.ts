@@ -10,7 +10,7 @@ import {
 
 import { createUseCaseContextFromOrpc } from "../../create-use-case-context";
 import { authenticatedProcedure } from "../../orpc-procedure";
-import { resolveAndExecute } from "../../shared/resolve-use-case";
+import { runUseCaseOrpc } from "../../shared/run-use-case-orpc";
 import {
 	CreateManyPlantInputSchema,
 	CreatePlantInputSchema,
@@ -24,37 +24,35 @@ export const plantRouter = {
 	create: authenticatedProcedure
 		.input(CreatePlantInputSchema)
 		.handler(({ input, context }) =>
-			resolveAndExecute(PlantCreateUseCase, { context: createUseCaseContextFromOrpc(context), dto: input }),
+			runUseCaseOrpc(PlantCreateUseCase, { context: createUseCaseContextFromOrpc(context), dto: input }),
 		),
-	createMany: authenticatedProcedure
-		.input(CreateManyPlantInputSchema)
-		.handler(({ input, context }) =>
-			resolveAndExecute(PlantCreateManyUseCase, {
-				context: createUseCaseContextFromOrpc(context),
-				dto: { rows: input.rows },
-			}),
-		),
+	createMany: authenticatedProcedure.input(CreateManyPlantInputSchema).handler(({ input, context }) =>
+		runUseCaseOrpc(PlantCreateManyUseCase, {
+			context: createUseCaseContextFromOrpc(context),
+			dto: { rows: input.rows },
+		}),
+	),
 	getById: authenticatedProcedure
 		.input(GetPlantByIdInputSchema)
 		.handler(({ input, context }) =>
-			resolveAndExecute(PlantGetByIdUseCase, { context: createUseCaseContextFromOrpc(context), dto: input }),
+			runUseCaseOrpc(PlantGetByIdUseCase, { context: createUseCaseContextFromOrpc(context), dto: input }),
 		),
 	getAll: authenticatedProcedure.handler(({ context }) =>
-		resolveAndExecute(PlantGetAllUseCase, { context: createUseCaseContextFromOrpc(context) }),
+		runUseCaseOrpc(PlantGetAllUseCase, { context: createUseCaseContextFromOrpc(context) }),
 	),
 	update: authenticatedProcedure
 		.input(UpdatePlantInputSchema)
 		.handler(({ input, context }) =>
-			resolveAndExecute(PlantUpdateUseCase, { context: createUseCaseContextFromOrpc(context), dto: input }),
+			runUseCaseOrpc(PlantUpdateUseCase, { context: createUseCaseContextFromOrpc(context), dto: input }),
 		),
 	delete: authenticatedProcedure
 		.input(DeletePlantInputSchema)
 		.handler(({ input, context }) =>
-			resolveAndExecute(PlantDeleteUseCase, { context: createUseCaseContextFromOrpc(context), dto: input }),
+			runUseCaseOrpc(PlantDeleteUseCase, { context: createUseCaseContextFromOrpc(context), dto: input }),
 		),
 	deleteMany: authenticatedProcedure
 		.input(DeleteManyPlantInputSchema)
 		.handler(({ input, context }) =>
-			resolveAndExecute(PlantDeleteManyUseCase, { context: createUseCaseContextFromOrpc(context), dto: input }),
+			runUseCaseOrpc(PlantDeleteManyUseCase, { context: createUseCaseContextFromOrpc(context), dto: input }),
 		),
 };

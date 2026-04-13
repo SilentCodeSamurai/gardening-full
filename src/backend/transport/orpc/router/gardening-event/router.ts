@@ -2,6 +2,7 @@ import {
 	GardeningEventCreateForLocationUseCase,
 	GardeningEventCreateForPlantListUseCase,
 	GardeningEventCreateUseCase,
+	GardeningEventDeleteManyUseCase,
 	GardeningEventDeleteUseCase,
 	GardeningEventGetAllUseCase,
 	GardeningEventGetBindingsForEventUseCase,
@@ -13,12 +14,13 @@ import {
 
 import { createUseCaseContextFromOrpc } from "../../create-use-case-context";
 import { authenticatedProcedure } from "../../orpc-procedure";
-import { resolveAndExecute } from "../../shared/resolve-use-case";
+import { runUseCaseOrpc } from "../../shared/run-use-case-orpc";
 import {
 	CreateGardeningEventForLocationInputSchema,
 	CreateGardeningEventForPlantListInputSchema,
 	CreateGardeningEventInputSchema,
 	DeleteGardeningEventInputSchema,
+	DeleteManyGardeningEventInputSchema,
 	GetGardeningEventBindingsInputSchema,
 	GetGardeningEventByIdInputSchema,
 	GetGardeningEventForLocationInputSchema,
@@ -28,38 +30,40 @@ import {
 
 export const gardeningEventRouter = {
 	getAll: authenticatedProcedure.handler(({ context }) =>
-		resolveAndExecute(GardeningEventGetAllUseCase, { context: createUseCaseContextFromOrpc(context) }),
+		runUseCaseOrpc(GardeningEventGetAllUseCase, { context: createUseCaseContextFromOrpc(context) }),
 	),
-	getById: authenticatedProcedure
-		.input(GetGardeningEventByIdInputSchema)
-		.handler(({ input, context }) =>
-			resolveAndExecute(GardeningEventGetByIdUseCase, {
-				context: createUseCaseContextFromOrpc(context),
-				dto: { id: input.id },
-			}),
-		),
+	getById: authenticatedProcedure.input(GetGardeningEventByIdInputSchema).handler(({ input, context }) =>
+		runUseCaseOrpc(GardeningEventGetByIdUseCase, {
+			context: createUseCaseContextFromOrpc(context),
+			dto: { id: input.id },
+		}),
+	),
 	update: authenticatedProcedure
 		.input(UpdateGardeningEventInputSchema)
 		.handler(({ input, context }) =>
-			resolveAndExecute(GardeningEventUpdateUseCase, { context: createUseCaseContextFromOrpc(context), dto: input }),
+			runUseCaseOrpc(GardeningEventUpdateUseCase, { context: createUseCaseContextFromOrpc(context), dto: input }),
 		),
-	delete: authenticatedProcedure
-		.input(DeleteGardeningEventInputSchema)
-		.handler(({ input, context }) =>
-			resolveAndExecute(GardeningEventDeleteUseCase, {
-				context: createUseCaseContextFromOrpc(context),
-				dto: { id: input.id },
-			}),
-		),
+	delete: authenticatedProcedure.input(DeleteGardeningEventInputSchema).handler(({ input, context }) =>
+		runUseCaseOrpc(GardeningEventDeleteUseCase, {
+			context: createUseCaseContextFromOrpc(context),
+			dto: { id: input.id },
+		}),
+	),
+	deleteMany: authenticatedProcedure.input(DeleteManyGardeningEventInputSchema).handler(({ input, context }) =>
+		runUseCaseOrpc(GardeningEventDeleteManyUseCase, {
+			context: createUseCaseContextFromOrpc(context),
+			dto: input,
+		}),
+	),
 	create: authenticatedProcedure
 		.input(CreateGardeningEventInputSchema)
 		.handler(({ input, context }) =>
-			resolveAndExecute(GardeningEventCreateUseCase, { context: createUseCaseContextFromOrpc(context), dto: input }),
+			runUseCaseOrpc(GardeningEventCreateUseCase, { context: createUseCaseContextFromOrpc(context), dto: input }),
 		),
 	createForLocation: authenticatedProcedure
 		.input(CreateGardeningEventForLocationInputSchema)
 		.handler(({ input, context }) =>
-			resolveAndExecute(GardeningEventCreateForLocationUseCase, {
+			runUseCaseOrpc(GardeningEventCreateForLocationUseCase, {
 				context: createUseCaseContextFromOrpc(context),
 				dto: input,
 			}),
@@ -67,23 +71,21 @@ export const gardeningEventRouter = {
 	createForPlantList: authenticatedProcedure
 		.input(CreateGardeningEventForPlantListInputSchema)
 		.handler(({ input, context }) =>
-			resolveAndExecute(GardeningEventCreateForPlantListUseCase, {
+			runUseCaseOrpc(GardeningEventCreateForPlantListUseCase, {
 				context: createUseCaseContextFromOrpc(context),
 				dto: input,
 			}),
 		),
-	getForPlant: authenticatedProcedure
-		.input(GetGardeningEventForPlantInputSchema)
-		.handler(({ input, context }) =>
-			resolveAndExecute(GardeningEventGetForPlantUseCase, {
-				context: createUseCaseContextFromOrpc(context),
-				dto: { plantId: input.plantId },
-			}),
-		),
+	getForPlant: authenticatedProcedure.input(GetGardeningEventForPlantInputSchema).handler(({ input, context }) =>
+		runUseCaseOrpc(GardeningEventGetForPlantUseCase, {
+			context: createUseCaseContextFromOrpc(context),
+			dto: { plantId: input.plantId },
+		}),
+	),
 	getForLocation: authenticatedProcedure
 		.input(GetGardeningEventForLocationInputSchema)
 		.handler(({ input, context }) =>
-			resolveAndExecute(GardeningEventGetForLocationUseCase, {
+			runUseCaseOrpc(GardeningEventGetForLocationUseCase, {
 				context: createUseCaseContextFromOrpc(context),
 				dto: { locationId: input.locationId },
 			}),
@@ -91,7 +93,7 @@ export const gardeningEventRouter = {
 	getBindingsForEvent: authenticatedProcedure
 		.input(GetGardeningEventBindingsInputSchema)
 		.handler(({ input, context }) =>
-			resolveAndExecute(GardeningEventGetBindingsForEventUseCase, {
+			runUseCaseOrpc(GardeningEventGetBindingsForEventUseCase, {
 				context: createUseCaseContextFromOrpc(context),
 				dto: { id: input.id },
 			}),

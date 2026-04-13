@@ -22,3 +22,31 @@ export abstract class BaseUseCaseError extends ApplicationError {
 		this.context = params.context;
 	}
 }
+
+/**
+ * Input or cross-aggregate rule failed before or instead of persistence.
+ * Prefer this for application-level checks so repositories remain persistence-only.
+ */
+export class UseCaseValidationError extends BaseUseCaseError {
+	public readonly validationCode: string;
+	public readonly details: Record<string, unknown> | undefined;
+
+	constructor(params: {
+		useCaseName: string;
+		validationCode: string;
+		message: string;
+		context?: Record<string, unknown>;
+		details?: Record<string, unknown>;
+		cause?: unknown;
+	}) {
+		super({
+			code: "VALIDATION",
+			message: params.message,
+			useCaseName: params.useCaseName,
+			context: params.context,
+			cause: params.cause,
+		});
+		this.validationCode = params.validationCode;
+		this.details = params.details;
+	}
+}

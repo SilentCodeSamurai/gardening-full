@@ -1,5 +1,6 @@
 import type { SpeciesEntity, SpeciesEntityId } from "@backend/core/domain/gardening/entities";
 import type { ItemsContainer } from "@backend/shared/types";
+import type { InjectionToken } from "tsyringe";
 import type {
 	RepositoryCreateManyPort,
 	RepositoryCreateOnePort,
@@ -57,3 +58,5 @@ export interface SpeciesRepositoryPort
 		>,
 		RepositoryDeleteOnePort<SpeciesRepositoryFilterClause, SpeciesRepositoryDeleteOutputDTO>,
 		RepositoryDeleteManyPort<SpeciesRepositoryFilterClause, SpeciesRepositoryDeleteManyOutputDTO> {}
+
+export const SpeciesRepositoryPortToken: InjectionToken<SpeciesRepositoryPort> = Symbol.for("SpeciesRepositoryPort");

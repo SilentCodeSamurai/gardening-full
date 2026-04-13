@@ -2,6 +2,7 @@ import { defineDefaultCatalog } from "@backend/core/application/use-cases/garden
 import {
   PopulateDefaultCatalogUseCase,
   PopulateDefaultCatalogUseCaseDuplicateCategorySlugError,
+  PopulateDefaultCatalogUseCaseUnknownCategorySlugError,
 } from "@backend/core/application/use-cases/gardening/populate-default-catalog.use-case";
 import { bootstrapPopulateServiceAccount } from "#/backend/core/application/service-accounts";
 import { WorkspaceVO } from "@backend/core/domain/access/workspace.vo";
@@ -11,7 +12,7 @@ import {
   SpeciesCategoryGetAllUseCase,
 } from "#/backend/core/application/use-cases/gardening/species-category.use-cases";
 import { SpeciesGetAllUseCase } from "#/backend/core/application/use-cases/gardening/species.use-cases";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 
 import { createUseCaseTestContainer } from "./create-use-case-test-container";
 
@@ -27,8 +28,13 @@ const tinyCatalog = defineDefaultCatalog({
 });
 
 describe("PopulateDefaultCatalogUseCase", () => {
+  let c: ReturnType<typeof createUseCaseTestContainer>;
+
+  beforeEach(() => {
+    c = createUseCaseTestContainer();
+  });
+
   it("creates categories and species from catalog when store is empty", async () => {
-    const c = createUseCaseTestContainer();
     const context = {
       actorSubject: bootstrapPopulateServiceAccount,
       activeWorkspaceScope: WorkspaceVO.globalShared(),
@@ -37,7 +43,7 @@ describe("PopulateDefaultCatalogUseCase", () => {
     const getSpeciesAll = c.resolve(SpeciesGetAllUseCase);
     const getCategoriesAll = c.resolve(SpeciesCategoryGetAllUseCase);
 
-    const result = await populate.execute({
+    const result = await populate.run({
       context,
       dto: { catalog: tinyCatalog },
     });
@@ -48,24 +54,23 @@ describe("PopulateDefaultCatalogUseCase", () => {
       createdSpecies: 1,
     });
 
-    const categories = (await getCategoriesAll.execute({ context: createTestUseCaseContext() })).items;
+    const categories = (await getCategoriesAll.run({ context: createTestUseCaseContext() })).items;
     expect(categories).toHaveLength(1);
     expect(categories[0]?.systemCatalog).toBe(true);
 
-    const species = (await getSpeciesAll.execute({ context: createTestUseCaseContext() })).items;
+    const species = (await getSpeciesAll.run({ context: createTestUseCaseContext() })).items;
     expect(species).toHaveLength(1);
     expect(species[0]?.systemCatalog).toBe(true);
     expect(species[0]?.characteristics.name).toBe("Species one");
   });
 
   it("skips when species categories already exist", async () => {
-    const c = createUseCaseTestContainer();
     const context = createTestUseCaseContext();
     const preCreate = c.resolve(SpeciesCategoryCreateUseCase);
-    await preCreate.execute({ context, dto: { title: "Pre-existing" } });
+    await preCreate.run({ context, dto: { title: "Pre-existing" } });
 
     const populate = c.resolve(PopulateDefaultCatalogUseCase);
-    const result = await populate.execute({
+    const result = await populate.run({
       context: {
         actorSubject: bootstrapPopulateServiceAccount,
         activeWorkspaceScope: WorkspaceVO.globalShared(),
@@ -76,29 +81,27 @@ describe("PopulateDefaultCatalogUseCase", () => {
     expect(result).toEqual({ status: "skipped", reason: "catalog-not-empty" });
 
     const getSpeciesAll = c.resolve(SpeciesGetAllUseCase);
-    expect((await getSpeciesAll.execute({ context })).items).toHaveLength(0);
+    expect((await getSpeciesAll.run({ context })).items).toHaveLength(0);
   });
 
   it("second run on same populated store skips", async () => {
-    const c = createUseCaseTestContainer();
     const context = {
       actorSubject: bootstrapPopulateServiceAccount,
       activeWorkspaceScope: WorkspaceVO.globalShared(),
     };
     const populate = c.resolve(PopulateDefaultCatalogUseCase);
 
-    const first = await populate.execute({
+    const first = await populate.run({
       context,
       dto: { catalog: tinyCatalog },
     });
     expect(first.status).toBe("populated");
 
-    const second = await populate.execute({ context, dto: { catalog: tinyCatalog } });
+    const second = await populate.run({ context, dto: { catalog: tinyCatalog } });
     expect(second).toEqual({ status: "skipped", reason: "catalog-not-empty" });
   });
 
   it("throws on duplicate category slugs in config", async () => {
-    const c = createUseCaseTestContainer();
     const context = {
       actorSubject: bootstrapPopulateServiceAccount,
       activeWorkspaceScope: WorkspaceVO.globalShared(),
@@ -113,12 +116,40 @@ describe("PopulateDefaultCatalogUseCase", () => {
       species: [],
     });
 
-    const duplicateSlug = populate.execute({ context, dto: { catalog: bad } });
+    const duplicateSlug = populate.run({ context, dto: { catalog: bad } });
     await expect(duplicateSlug).rejects.toBeInstanceOf(
       PopulateDefaultCatalogUseCaseDuplicateCategorySlugError,
     );
     await expect(duplicateSlug).rejects.toMatchObject({
       context: { slug: "dup" },
     });
+  });
+
+  it("rolls back created categories when a species references unknown category slug", async () => {
+    const context = {
+      actorSubject: bootstrapPopulateServiceAccount,
+      activeWorkspaceScope: WorkspaceVO.globalShared(),
+    };
+    const populate = c.resolve(PopulateDefaultCatalogUseCase);
+
+    const bad = defineDefaultCatalog({
+      categories: [{ slug: "known", title: "Known" }],
+      species: [
+        {
+          // @ts-expect-error: test error case
+          categorySlug: "unknown",
+          characteristics: { name: "Broken species", description: null },
+        },
+      ],
+    });
+
+    await expect(populate.run({ context, dto: { catalog: bad } })).rejects.toBeInstanceOf(
+      PopulateDefaultCatalogUseCaseUnknownCategorySlugError,
+    );
+
+    const categories = await c.resolve(SpeciesCategoryGetAllUseCase).run({ context: createTestUseCaseContext() });
+    const species = await c.resolve(SpeciesGetAllUseCase).run({ context: createTestUseCaseContext() });
+    expect(categories.items).toHaveLength(0);
+    expect(species.items).toHaveLength(0);
   });
 });

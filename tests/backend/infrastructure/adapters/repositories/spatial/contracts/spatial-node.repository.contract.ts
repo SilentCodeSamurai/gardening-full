@@ -55,7 +55,7 @@ export function registerSpatialNodeRepositoryContract(
 			expect(byId.id).toEqual(child.id);
 
 			const byRef = await spatialNode.getOneByRef({
-				filters: [{ ref: child.ref, workspace: wk }],
+				filters: [{ ref: child.ref }],
 			});
 			expect(byRef.id).toEqual(child.id);
 
@@ -114,7 +114,7 @@ export function registerSpatialNodeRepositoryContract(
 				}),
 			);
 			const { items } = await spatialNode.getMany({
-				filters: [{ ref: a.ref, workspace: wk }, { ref: b.ref, workspace: wk }],
+				filters: [{ ref: a.ref }, { ref: b.ref }],
 			});
 			expect(items).toHaveLength(2);
 		});
@@ -145,13 +145,13 @@ export function registerSpatialNodeRepositoryContract(
 			);
 			await expect(
 				spatialNode.getOneByRef({
-					filters: [{ ref: { entity: "plant", entityId: "nonexistent-ref" }, workspace: wk }],
+					filters: [{ ref: { entity: "plant", entityId: "nonexistent-ref" } }],
 				}),
 			).rejects.toBeInstanceOf(RepositoryNotFoundError);
 			const got = await spatialNode.getOneByRef({
 				filters: [
-					{ ref: { entity: "plant", entityId: "nonexistent-ref" }, workspace: wk },
-					{ ref: node.ref, workspace: wk },
+					{ ref: { entity: "plant", entityId: "nonexistent-ref" } },
+					{ ref: node.ref },
 				],
 			});
 			expect(got.id).toEqual(node.id);
@@ -324,7 +324,7 @@ export function registerSpatialNodeRepositoryContract(
 			});
 			expect(r.id).toEqual(newId);
 			const tree = await spatialNode.getTreeForRootOne({
-				filters: [{ id: parent.id, workspace: wk }],
+				filters: [{ id: parent.id }],
 			});
 			expect(tree.children.some((c) => c.id === newId)).toBe(true);
 		});
@@ -369,7 +369,7 @@ export function registerSpatialNodeRepositoryContract(
 			);
 
 			const tree = await spatialNode.getTreeForRootOne({
-				filters: [{ id: root.id, workspace: wk }],
+				filters: [{ id: root.id }],
 			});
 			expect(tree.children.length).toBe(1);
 			expect(tree.children[0]?.children.length).toBe(1);
@@ -386,8 +386,8 @@ export function registerSpatialNodeRepositoryContract(
 			);
 			const t = await spatialNode.getTreeForRootOne({
 				filters: [
-					{ id: spatialNodeId("00000000-0000-4000-8000-00000000bad"), workspace: wk },
-					{ id: root.id, workspace: wk },
+					{ id: spatialNodeId("00000000-0000-4000-8000-00000000bad")},
+					{ id: root.id },
 				],
 			});
 			expect(t.id).toEqual(root.id);
@@ -417,7 +417,7 @@ export function registerSpatialNodeRepositoryContract(
 				}),
 			);
 			const tree = await spatialNode.getTreeForRootOne({
-				filters: [{ id: rootA.id, workspace: wk }],
+				filters: [{ id: rootA.id }],
 			});
 			expect(tree.children.length).toBe(0);
 		});
@@ -439,7 +439,7 @@ export function registerSpatialNodeRepositoryContract(
 					ref: { entity: "plant", entityId: "kind-leaf-target" },
 				}),
 			);
-			const { items } = await spatialNode.getMany({ filters: [{ kind: "leaf", workspace: wk }] });
+			const { items } = await spatialNode.getMany({ filters: [{ kind: "leaf" }] });
 			expect(items.some((n) => n.id === leaf.id)).toBe(true);
 		});
 
@@ -468,7 +468,7 @@ export function registerSpatialNodeRepositoryContract(
 			const { items } = await spatialNode.getMany({
 				filters: [
 					{ id: spatialNodeId("00000000-0000-4000-8000-00000000bad") },
-					{ ref: n.ref, workspace: wk },
+					{ ref: n.ref },
 				],
 			});
 			expect(items).toHaveLength(1);
@@ -499,7 +499,7 @@ export function registerSpatialNodeRepositoryContract(
 
 		it("updateMany count 0 when nothing matches", async () => {
 			const { count } = await spatialNode.updateMany({
-				filters: [{ ref: { entity: "plant", entityId: "nonexistent-um-spatial" }, workspace: wk }],
+				filters: [{ ref: { entity: "plant", entityId: "nonexistent-um-spatial" } }],
 				dto: { kind: "frame" },
 			});
 			expect(count).toBe(0);
@@ -507,7 +507,7 @@ export function registerSpatialNodeRepositoryContract(
 
 		it("deleteMany count 0 when nothing matches", async () => {
 			const { count } = await spatialNode.deleteMany({
-				filters: [{ ref: { entity: "plant", entityId: "nonexistent-dm-spatial" }, workspace: wk }],
+				filters: [{ ref: { entity: "plant", entityId: "nonexistent-dm-spatial" } }],
 			});
 			expect(count).toBe(0);
 		});

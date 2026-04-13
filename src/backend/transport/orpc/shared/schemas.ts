@@ -22,6 +22,11 @@ export const SpatialNodeEntityIdSchema = asBrandedStringSchema<SpatialNodeEntity
 
 export const PlantEntityIdsSchema = z.array(PlantEntityIdSchema).min(1);
 export const LocationEntityIdsSchema = z.array(LocationEntityIdSchema).min(1);
+export const SpeciesEntityIdsSchema = z.array(SpeciesEntityIdSchema).min(1);
+export const SpeciesCategoryEntityIdsSchema = z.array(SpeciesCategoryEntityIdSchema).min(1);
+export const CultivarEntityIdsSchema = z.array(CultivarEntityIdSchema).min(1);
+export const GardeningEventEntityIdsSchema = z.array(GardeningEventEntityIdSchema).min(1);
+export const SpatialNodeEntityIdsSchema = z.array(SpatialNodeEntityIdSchema).min(1);
 
 const itemPresentationIconKeyLiterals = Object.values(ItemPresentationIconKey).map((value) => z.literal(value));
 

@@ -1,5 +1,6 @@
 import type { HydratedPlantEntity, PlantEntity, PlantEntityId } from "@backend/core/domain/gardening/entities";
 import type { ItemsContainer } from "@backend/shared/types";
+import type { InjectionToken } from "tsyringe";
 import type {
 	RepositoryCreateManyPort,
 	RepositoryCreateOnePort,
@@ -24,10 +25,7 @@ export type PlantRepositoryCreateManyOutputDTO = ItemsContainer<HydratedPlantEnt
 
 export type PlantRepositoryGetOneOutputDTO = HydratedPlantEntity;
 
-export type PlantRepositoryFilterClause = RepositoryEntityFilterClause<
-	PlantEntity,
-	"createdAt" | "updatedAt"
->;
+export type PlantRepositoryFilterClause = RepositoryEntityFilterClause<PlantEntity, "createdAt" | "updatedAt">;
 
 export type PlantRepositoryGetManyOutputDTO = ItemsContainer<HydratedPlantEntity>;
 
@@ -62,3 +60,5 @@ export interface PlantRepositoryPort
 		>,
 		RepositoryDeleteOnePort<PlantRepositoryFilterClause, PlantRepositoryDeleteOutputDTO>,
 		RepositoryDeleteManyPort<PlantRepositoryFilterClause, PlantRepositoryDeleteManyOutputDTO> {}
+
+export const PlantRepositoryPortToken: InjectionToken<PlantRepositoryPort> = Symbol.for("PlantRepositoryPort");

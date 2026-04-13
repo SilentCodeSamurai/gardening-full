@@ -1,5 +1,6 @@
 import type { CultivarEntity, CultivarEntityId, SpeciesEntity } from "@backend/core/domain/gardening/entities";
 import type { ItemsContainer } from "@backend/shared/types";
+import type { InjectionToken } from "tsyringe";
 import type {
 	RepositoryCreateManyPort,
 	RepositoryCreateOnePort,
@@ -25,10 +26,7 @@ export type CultivarRepositoryCreateManyOutputDTO = { count: number };
 
 export type CultivarRepositoryGetOneOutputDTO = CultivarEntity;
 
-export type CultivarRepositoryFilterClause = RepositoryEntityFilterClause<
-	CultivarEntity,
-	"createdAt" | "updatedAt"
->;
+export type CultivarRepositoryFilterClause = RepositoryEntityFilterClause<CultivarEntity, "createdAt" | "updatedAt">;
 
 export type CultivarRepositoryGetManyOutputDTO = ItemsContainer<CultivarEntity>;
 
@@ -75,3 +73,5 @@ export interface CultivarRepositoryPort
 		input: WithRequiredRepositoryFilters<CultivarRepositoryFilterClause>,
 	): Promise<CultivarRepositoryGetFullOutputDTO>;
 }
+
+export const CultivarRepositoryPortToken: InjectionToken<CultivarRepositoryPort> = Symbol.for("CultivarRepositoryPort");

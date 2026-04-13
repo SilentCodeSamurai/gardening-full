@@ -1,5 +1,4 @@
 import type {
-	LocationRepositoryPort,
 	LocationRepositoryCreateInputDTO,
 	LocationRepositoryCreateManyInputDTO,
 	LocationRepositoryCreateManyOutputDTO,
@@ -9,6 +8,7 @@ import type {
 	LocationRepositoryFilterClause,
 	LocationRepositoryGetManyOutputDTO,
 	LocationRepositoryGetOneOutputDTO,
+	LocationRepositoryPort,
 	LocationRepositoryUpdateManyOutputDTO,
 	LocationRepositoryUpdateOutputDTO,
 	LocationRepositoryUpdatePatchDTO,
@@ -19,11 +19,17 @@ import {
 	findFirstRowMatchingAnyClause,
 	findRowsMatchingAnyClause,
 } from "@backend/infrastructure/adapters/repositories/shared/in-memory-entity-filter";
+import { InMemoryTransactionManagerAdapter } from "@backend/infrastructure/adapters/transaction/in-memory-transaction-manager.adapter";
 import type { InMemoryStore } from "@backend/infrastructure/integrations/in-memory-database/client";
 import { idKey, locationId } from "@backend/infrastructure/integrations/shared/database-ids";
+import { inject, injectable } from "tsyringe";
 
+@injectable()
 export class LocationInMemoryRepository extends BaseRepositoryErrors implements LocationRepositoryPort {
-	constructor(private readonly store: InMemoryStore) {
+	constructor(
+		@inject(InMemoryTransactionManagerAdapter)
+		private readonly transactionManager: InMemoryTransactionManagerAdapter,
+	) {
 		super();
 	}
 
@@ -127,5 +133,9 @@ export class LocationInMemoryRepository extends BaseRepositoryErrors implements 
 			if (this.store.locations.delete(idKey(row.id))) count += 1;
 		}
 		return { count };
+	}
+
+	private get store(): InMemoryStore {
+		return this.transactionManager.session;
 	}
 }

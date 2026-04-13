@@ -2,6 +2,7 @@ import { z } from "zod";
 import {
 	GardeningActionSchema,
 	GardeningEventEntityIdSchema,
+	GardeningEventEntityIdsSchema,
 	LocationEntityIdSchema,
 	PlantEntityIdSchema,
 	PlantEntityIdsSchema,
@@ -27,6 +28,9 @@ export const UpdateGardeningEventInputSchema = z.object({
 });
 export const DeleteGardeningEventInputSchema = z.object({
 	id: GardeningEventEntityIdSchema,
+});
+export const DeleteManyGardeningEventInputSchema = z.object({
+	ids: GardeningEventEntityIdsSchema,
 });
 export const GetGardeningEventForPlantInputSchema = z.object({
 	plantId: PlantEntityIdSchema,

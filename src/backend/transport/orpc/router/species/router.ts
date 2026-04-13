@@ -1,5 +1,6 @@
 import {
 	SpeciesCreateUseCase,
+	SpeciesDeleteManyUseCase,
 	SpeciesDeleteUseCase,
 	SpeciesGetAllUseCase,
 	SpeciesGetByIdUseCase,
@@ -8,9 +9,10 @@ import {
 
 import { createUseCaseContextFromOrpc } from "../../create-use-case-context";
 import { authenticatedProcedure } from "../../orpc-procedure";
-import { resolveAndExecute } from "../../shared/resolve-use-case";
+import { runUseCaseOrpc } from "../../shared/run-use-case-orpc";
 import {
 	CreateSpeciesInputSchema,
+	DeleteManySpeciesInputSchema,
 	DeleteSpeciesInputSchema,
 	GetSpeciesByIdInputSchema,
 	UpdateSpeciesInputSchema,
@@ -20,24 +22,29 @@ export const speciesRouter = {
 	create: authenticatedProcedure
 		.input(CreateSpeciesInputSchema)
 		.handler(({ input, context }) =>
-			resolveAndExecute(SpeciesCreateUseCase, { context: createUseCaseContextFromOrpc(context), dto: input }),
+			runUseCaseOrpc(SpeciesCreateUseCase, { context: createUseCaseContextFromOrpc(context), dto: input }),
 		),
 	getById: authenticatedProcedure
 		.input(GetSpeciesByIdInputSchema)
 		.handler(({ input, context }) =>
-			resolveAndExecute(SpeciesGetByIdUseCase, { context: createUseCaseContextFromOrpc(context), dto: input }),
+			runUseCaseOrpc(SpeciesGetByIdUseCase, { context: createUseCaseContextFromOrpc(context), dto: input }),
 		),
 	getAll: authenticatedProcedure.handler(({ context }) =>
-		resolveAndExecute(SpeciesGetAllUseCase, { context: createUseCaseContextFromOrpc(context) }),
+		runUseCaseOrpc(SpeciesGetAllUseCase, { context: createUseCaseContextFromOrpc(context) }),
 	),
 	update: authenticatedProcedure
 		.input(UpdateSpeciesInputSchema)
 		.handler(({ input, context }) =>
-			resolveAndExecute(SpeciesUpdateUseCase, { context: createUseCaseContextFromOrpc(context), dto: input }),
+			runUseCaseOrpc(SpeciesUpdateUseCase, { context: createUseCaseContextFromOrpc(context), dto: input }),
 		),
 	delete: authenticatedProcedure
 		.input(DeleteSpeciesInputSchema)
 		.handler(({ input, context }) =>
-			resolveAndExecute(SpeciesDeleteUseCase, { context: createUseCaseContextFromOrpc(context), dto: input }),
+			runUseCaseOrpc(SpeciesDeleteUseCase, { context: createUseCaseContextFromOrpc(context), dto: input }),
+		),
+	deleteMany: authenticatedProcedure
+		.input(DeleteManySpeciesInputSchema)
+		.handler(({ input, context }) =>
+			runUseCaseOrpc(SpeciesDeleteManyUseCase, { context: createUseCaseContextFromOrpc(context), dto: input }),
 		),
 };

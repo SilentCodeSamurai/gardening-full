@@ -1,5 +1,5 @@
 import { betterAuth } from "better-auth";
-import { organization } from "better-auth/plugins"
+import { organization } from "better-auth/plugins";
 // import { drizzleAdapter } from "better-auth/adapters/drizzle";
 // import { db } from "#/backend/infrastructure/integrations/drizzle";
 // import * as schema from "#/backend/infrastructure/integrations/drizzle/schema";

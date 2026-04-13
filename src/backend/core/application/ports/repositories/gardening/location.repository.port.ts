@@ -1,5 +1,6 @@
 import type { LocationEntity, LocationEntityId } from "@backend/core/domain/gardening/entities";
 import type { ItemsContainer } from "@backend/shared/types";
+import type { InjectionToken } from "tsyringe";
 import type {
 	RepositoryCreateManyPort,
 	RepositoryCreateOnePort,
@@ -24,10 +25,7 @@ export type LocationRepositoryCreateManyOutputDTO = { count: number };
 
 export type LocationRepositoryGetOneOutputDTO = LocationEntity;
 
-export type LocationRepositoryFilterClause = RepositoryEntityFilterClause<
-	LocationEntity,
-	"createdAt" | "updatedAt"
->;
+export type LocationRepositoryFilterClause = RepositoryEntityFilterClause<LocationEntity, "createdAt" | "updatedAt">;
 
 export type LocationRepositoryGetManyOutputDTO = ItemsContainer<LocationEntity>;
 
@@ -60,3 +58,5 @@ export interface LocationRepositoryPort
 		>,
 		RepositoryDeleteOnePort<LocationRepositoryFilterClause, LocationRepositoryDeleteOutputDTO>,
 		RepositoryDeleteManyPort<LocationRepositoryFilterClause, LocationRepositoryDeleteManyOutputDTO> {}
+
+export const LocationRepositoryPortToken: InjectionToken<LocationRepositoryPort> = Symbol.for("LocationRepositoryPort");

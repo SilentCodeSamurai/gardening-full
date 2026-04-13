@@ -7,6 +7,7 @@ import type {
 	PlantEntityId,
 } from "@backend/core/domain/gardening/entities";
 import type { ItemsContainer } from "@backend/shared/types";
+import type { InjectionToken } from "tsyringe";
 import type {
 	RepositoryCreateManyPort,
 	RepositoryCreateOnePort,
@@ -51,13 +52,11 @@ export type GardeningEventRepositoryDeleteManyOutputDTO = { count: number };
 /** OR branch for events linked to a plant (junction semantics; adapter resolves). */
 export type GardeningEventRepositoryForPlantFilterClause = {
 	plantId: PlantEntity["id"];
-	workspace: PlantEntity["workspace"];
 };
 
 /** OR branch for events linked to a location (junction semantics; adapter resolves). */
 export type GardeningEventRepositoryForLocationFilterClause = {
 	locationId: LocationEntity["id"];
-	workspace: LocationEntity["workspace"];
 };
 
 export type GardeningEventRepositoryGetBindingsOutputDTO = {
@@ -70,10 +69,7 @@ export type GardeningEventRepositoryGetBindingsOutputDTO = {
  * because `plantId` / `locationId` are not on {@link GardeningEventEntity}.
  */
 export interface GardeningEventRepositoryPort
-	extends RepositoryCreateOnePort<
-			GardeningEventRepositoryCreateInputDTO,
-			GardeningEventRepositoryCreateOutputDTO
-		>,
+	extends RepositoryCreateOnePort<GardeningEventRepositoryCreateInputDTO, GardeningEventRepositoryCreateOutputDTO>,
 		RepositoryCreateManyPort<
 			GardeningEventRepositoryCreateManyInputDTO,
 			GardeningEventRepositoryCreateManyOutputDTO
@@ -91,10 +87,7 @@ export interface GardeningEventRepositoryPort
 			GardeningEventRepositoryUpdateManyOutputDTO
 		>,
 		RepositoryDeleteOnePort<GardeningEventRepositoryFilterClause, GardeningEventRepositoryDeleteOutputDTO>,
-		RepositoryDeleteManyPort<
-			GardeningEventRepositoryFilterClause,
-			GardeningEventRepositoryDeleteManyOutputDTO
-		> {
+		RepositoryDeleteManyPort<GardeningEventRepositoryFilterClause, GardeningEventRepositoryDeleteManyOutputDTO> {
 	/**
 	 * List events linked to a plant (within adapter scope).
 	 *
@@ -149,3 +142,6 @@ export interface GardeningEventRepositoryPort
 		input: WithRequiredRepositoryFilters<GardeningEventRepositoryFilterClause>,
 	): Promise<GardeningEventRepositoryGetBindingsOutputDTO>;
 }
+
+export const GardeningEventRepositoryPortToken: InjectionToken<GardeningEventRepositoryPort> =
+	Symbol.for("GardeningEventRepositoryPort");

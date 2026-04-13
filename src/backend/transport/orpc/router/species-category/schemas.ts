@@ -1,5 +1,9 @@
 import { z } from "zod";
-import { ItemPresentationSchema, SpeciesCategoryEntityIdSchema } from "../../shared/schemas";
+import {
+	ItemPresentationSchema,
+	SpeciesCategoryEntityIdSchema,
+	SpeciesCategoryEntityIdsSchema,
+} from "../../shared/schemas";
 
 export const CreateSpeciesCategoryInputSchema = z.object({
 	title: z.string().min(1),
@@ -15,4 +19,7 @@ export const UpdateSpeciesCategoryInputSchema = z.object({
 });
 export const DeleteSpeciesCategoryInputSchema = z.object({
 	id: SpeciesCategoryEntityIdSchema,
+});
+export const DeleteManySpeciesCategoryInputSchema = z.object({
+	ids: SpeciesCategoryEntityIdsSchema,
 });

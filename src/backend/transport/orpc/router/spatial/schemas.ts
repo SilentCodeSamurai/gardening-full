@@ -1,5 +1,10 @@
 import { z } from "zod";
-import { SpatialNodeEntityIdSchema, SpatialNodeRefSchema, SpatialRectSchema } from "../../shared/schemas";
+import {
+	SpatialNodeEntityIdSchema,
+	SpatialNodeEntityIdsSchema,
+	SpatialNodeRefSchema,
+	SpatialRectSchema,
+} from "../../shared/schemas";
 
 export const CreateSpatialNodeInputSchema = z.object({
 	parentId: SpatialNodeEntityIdSchema.nullable(),
@@ -9,6 +14,9 @@ export const CreateSpatialNodeInputSchema = z.object({
 });
 export const DeleteSpatialNodeInputSchema = z.object({
 	id: SpatialNodeEntityIdSchema,
+});
+export const DeleteManySpatialNodeInputSchema = z.object({
+	ids: SpatialNodeEntityIdsSchema,
 });
 export const RestoreSpatialNodeInputSchema = z.object({
 	id: SpatialNodeEntityIdSchema,

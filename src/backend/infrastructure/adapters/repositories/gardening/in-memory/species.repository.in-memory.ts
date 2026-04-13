@@ -1,5 +1,4 @@
 import type {
-	SpeciesRepositoryPort,
 	SpeciesRepositoryCreateInputDTO,
 	SpeciesRepositoryCreateManyInputDTO,
 	SpeciesRepositoryCreateManyOutputDTO,
@@ -9,37 +8,33 @@ import type {
 	SpeciesRepositoryFilterClause,
 	SpeciesRepositoryGetManyOutputDTO,
 	SpeciesRepositoryGetOneOutputDTO,
+	SpeciesRepositoryPort,
 	SpeciesRepositoryUpdateManyOutputDTO,
 	SpeciesRepositoryUpdateOutputDTO,
 	SpeciesRepositoryUpdatePatchDTO,
 } from "@backend/core/application/ports/repositories/gardening/species.repository.port";
 import { BaseRepositoryErrors } from "@backend/core/application/ports/repositories/shared/base-repository.errors";
 import type { SpeciesEntity } from "@backend/core/domain/gardening/entities";
-import { workspacesEqual } from "@backend/infrastructure/adapters/repositories/shared/workspace-key";
 import {
 	findFirstRowMatchingAnyClause,
 	findRowsMatchingAnyClause,
 } from "@backend/infrastructure/adapters/repositories/shared/in-memory-entity-filter";
+import { InMemoryTransactionManagerAdapter } from "@backend/infrastructure/adapters/transaction/in-memory-transaction-manager.adapter";
 import type { InMemoryStore } from "@backend/infrastructure/integrations/in-memory-database/client";
 import { idKey, speciesId } from "@backend/infrastructure/integrations/shared/database-ids";
+import { inject, injectable } from "tsyringe";
 
+@injectable()
 export class SpeciesInMemoryRepository extends BaseRepositoryErrors implements SpeciesRepositoryPort {
-	constructor(private readonly store: InMemoryStore) {
+	constructor(
+		@inject(InMemoryTransactionManagerAdapter)
+		private readonly transactionManager: InMemoryTransactionManagerAdapter,
+	) {
 		super();
 	}
 
 	private insertRow(dto: SpeciesRepositoryCreateInputDTO): SpeciesRepositoryCreateOutputDTO {
-		const cat = this.store.speciesCategories.get(idKey(dto.categoryId));
-		if (!cat) {
-			this.throwNotFoundError("SpeciesCategory", dto.categoryId);
-		}
-		if (!workspacesEqual(cat.workspace, dto.workspace)) {
-			this.throwValidationError({
-				operation: "create",
-				validationCode: "category-workspace-mismatch",
-				context: { categoryId: dto.categoryId, workspaceKey: dto.workspace.toKey() },
-			});
-		}
+		this.requireCategoryRow(dto.categoryId);
 		const now = new Date();
 		const id = speciesId();
 		const row: SpeciesEntity = {
@@ -50,6 +45,13 @@ export class SpeciesInMemoryRepository extends BaseRepositoryErrors implements S
 		};
 		this.store.species.set(idKey(id), row);
 		return row;
+	}
+
+	private requireCategoryRow(categoryId: SpeciesEntity["categoryId"]): void {
+		const category = this.store.speciesCategories.get(idKey(categoryId));
+		if (!category) {
+			this.throwNotFoundError("SpeciesCategory", [{ id: categoryId }]);
+		}
 	}
 
 	private patchStored(existing: SpeciesEntity, dto: SpeciesRepositoryUpdatePatchDTO): SpeciesEntity {
@@ -63,18 +65,6 @@ export class SpeciesInMemoryRepository extends BaseRepositoryErrors implements S
 			presentation: dto.presentation !== undefined ? dto.presentation : existing.presentation,
 			updatedAt: new Date(),
 		};
-	}
-
-	private assertCategoryMatchesWorkspace(categoryId: SpeciesEntity["categoryId"], workspace: SpeciesEntity["workspace"]): void {
-		const cat = this.store.speciesCategories.get(idKey(categoryId));
-		if (!cat) this.throwNotFoundError("SpeciesCategory", categoryId);
-		if (!workspacesEqual(cat.workspace, workspace)) {
-			this.throwValidationError({
-				operation: "update",
-				validationCode: "category-workspace-mismatch",
-				context: { categoryId, workspaceKey: workspace.toKey() },
-			});
-		}
 	}
 
 	async createOne(dto: SpeciesRepositoryCreateInputDTO): Promise<SpeciesRepositoryCreateOutputDTO> {
@@ -115,9 +105,8 @@ export class SpeciesInMemoryRepository extends BaseRepositoryErrors implements S
 	}): Promise<SpeciesRepositoryUpdateOutputDTO> {
 		const row = findFirstRowMatchingAnyClause(this.store.species.values(), input.filters);
 		if (!row) this.throwNotFoundError("Species", input.filters);
-		const patchedPreview = this.patchStored(row, input.dto);
-		this.assertCategoryMatchesWorkspace(patchedPreview.categoryId, patchedPreview.workspace);
-		const updated = patchedPreview;
+		const updated = this.patchStored(row, input.dto);
+		this.requireCategoryRow(updated.categoryId);
 		this.store.species.set(idKey(updated.id), updated);
 		return updated;
 	}
@@ -130,7 +119,7 @@ export class SpeciesInMemoryRepository extends BaseRepositoryErrors implements S
 		let count = 0;
 		for (const row of rows) {
 			const updated = this.patchStored(row, input.dto);
-			this.assertCategoryMatchesWorkspace(updated.categoryId, updated.workspace);
+			this.requireCategoryRow(updated.categoryId);
 			this.store.species.set(idKey(updated.id), updated);
 			count += 1;
 		}
@@ -144,7 +133,7 @@ export class SpeciesInMemoryRepository extends BaseRepositoryErrors implements S
 		if (!row) this.throwNotFoundError("Species", input.filters);
 		const key = idKey(row.id);
 		for (const c of this.store.cultivars.values()) {
-			if (idKey(c.speciesId) === key && workspacesEqual(c.workspace, row.workspace)) {
+			if (idKey(c.speciesId) === key) {
 				this.throwConflictError({
 					operation: "delete",
 					reason: "cultivar-reference-species",
@@ -168,12 +157,14 @@ export class SpeciesInMemoryRepository extends BaseRepositoryErrors implements S
 		let count = 0;
 		for (const row of rows) {
 			const key = idKey(row.id);
-			const blocked = [...this.store.cultivars.values()].some(
-				(c) => idKey(c.speciesId) === key && workspacesEqual(c.workspace, row.workspace),
-			);
+			const blocked = [...this.store.cultivars.values()].some((c) => idKey(c.speciesId) === key);
 			if (blocked) continue;
 			if (this.store.species.delete(key)) count += 1;
 		}
 		return { count };
+	}
+
+	private get store(): InMemoryStore {
+		return this.transactionManager.session;
 	}
 }

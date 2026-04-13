@@ -6,6 +6,7 @@ import type { SubjectVO } from "@backend/core/domain/access/subject.vo";
 import type { AccessRole } from "@backend/core/domain/access/types";
 import type { WorkspaceVO } from "@backend/core/domain/access/workspace.vo";
 import type { ItemsContainer } from "@backend/shared/types";
+import type { InjectionToken } from "tsyringe";
 import type {
 	RepositoryCreateManyPort,
 	RepositoryCreateOnePort,
@@ -100,3 +101,6 @@ export interface WorkspaceRoleAssignmentRepositoryPort
 		input: WorkspaceRoleAssignmentRepositoryUpsertInputDTO,
 	): Promise<WorkspaceRoleAssignmentRepositoryUpsertOutputDTO>;
 }
+
+export const WorkspaceRoleAssignmentRepositoryPortToken: InjectionToken<WorkspaceRoleAssignmentRepositoryPort> =
+	Symbol.for("WorkspaceRoleAssignmentRepositoryPort");

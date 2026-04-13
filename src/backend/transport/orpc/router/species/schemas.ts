@@ -4,6 +4,7 @@ import {
 	SpeciesCategoryEntityIdSchema,
 	SpeciesCharacteristicsSchema,
 	SpeciesEntityIdSchema,
+	SpeciesEntityIdsSchema,
 } from "../../shared/schemas";
 
 export const CreateSpeciesInputSchema = z.object({
@@ -22,4 +23,7 @@ export const UpdateSpeciesInputSchema = z.object({
 });
 export const DeleteSpeciesInputSchema = z.object({
 	id: SpeciesEntityIdSchema,
+});
+export const DeleteManySpeciesInputSchema = z.object({
+	ids: SpeciesEntityIdsSchema,
 });

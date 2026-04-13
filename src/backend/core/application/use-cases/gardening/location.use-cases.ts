@@ -1,31 +1,40 @@
 import { WorkspaceVO } from "@backend/core/domain/access/workspace.vo";
 import type { LocationEntity, LocationEntityId } from "@backend/core/domain/gardening/entities";
 import type { ItemsContainer } from "@backend/shared/types";
-import type {
-	LocationRepositoryPort,
-	LocationRepositoryCreateInputDTO,
-	LocationRepositoryDeleteOutputDTO,
-	LocationRepositoryUpdateOutputDTO,
-	LocationRepositoryUpdatePatchDTO,
+import { inject, injectable } from "tsyringe";
+import {
+	type LocationRepositoryCreateInputDTO,
+	type LocationRepositoryDeleteOutputDTO,
+	type LocationRepositoryPort,
+	LocationRepositoryPortToken,
+	type LocationRepositoryUpdatePatchDTO,
 } from "../../ports/repositories/gardening/location.repository.port";
-import { RepositoryValidationError } from "../../ports/repositories/shared/base-repository.errors";
-import type { AccessControlApplicationService } from "../../services/access-control/access-control.application-service";
-import type { SpatialOperationsService } from "../../services/spatial/spatial-operations.service";
-import { BaseUseCaseError } from "../shared/errors";
-import type { IUseCase } from "../shared/use-case.interface";
+import {
+	type TransactionManagerPort,
+	TransactionManagerPortToken,
+} from "../../ports/transaction/transaction-manager.port";
+import { AccessControlApplicationService } from "../../services/access-control/access-control.application-service";
+import { SpatialOperationsService } from "../../services/spatial/spatial-operations.service";
+import { BaseUseCase } from "../shared/base.use-case";
+import { BaseUseCaseError, UseCaseValidationError } from "../shared/errors";
+import type { ExcludeWorkspace } from "../shared/types";
+import { TransactionalUseCase } from "../shared/transactional.use-case";
 import type { UseCaseRequest } from "../use-case-context";
 
-type LocationCreatePayload = Omit<LocationRepositoryCreateInputDTO, "workspace">;
+type LocationCreatePayload = ExcludeWorkspace<LocationRepositoryCreateInputDTO>;
 export type LocationCreateUseCaseInput = UseCaseRequest<LocationCreatePayload>;
 export type LocationCreateUseCaseOutput = LocationEntity;
 
-export class LocationCreateUseCase implements IUseCase<LocationCreateUseCaseInput, LocationCreateUseCaseOutput> {
+@injectable()
+export class LocationCreateUseCase extends BaseUseCase<LocationCreateUseCaseInput, LocationCreateUseCaseOutput> {
 	constructor(
-		private readonly access: AccessControlApplicationService,
-		private readonly locationRepository: LocationRepositoryPort,
-	) {}
+		@inject(AccessControlApplicationService) private readonly access: AccessControlApplicationService,
+		@inject(LocationRepositoryPortToken) private readonly locationRepository: LocationRepositoryPort,
+	) {
+		super();
+	}
 
-	public async execute(input: LocationCreateUseCaseInput): Promise<LocationCreateUseCaseOutput> {
+	protected async execute(input: LocationCreateUseCaseInput): Promise<LocationCreateUseCaseOutput> {
 		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "create" });
 		return this.locationRepository.createOne({
 			...input.dto,
@@ -37,13 +46,16 @@ export class LocationCreateUseCase implements IUseCase<LocationCreateUseCaseInpu
 export type LocationGetByIdUseCaseInput = UseCaseRequest<{ id: LocationEntityId }>;
 export type LocationGetByIdUseCaseOutput = LocationEntity;
 
-export class LocationGetByIdUseCase implements IUseCase<LocationGetByIdUseCaseInput, LocationGetByIdUseCaseOutput> {
+@injectable()
+export class LocationGetByIdUseCase extends BaseUseCase<LocationGetByIdUseCaseInput, LocationGetByIdUseCaseOutput> {
 	constructor(
-		private readonly access: AccessControlApplicationService,
-		private readonly locationRepository: LocationRepositoryPort,
-	) {}
+		@inject(AccessControlApplicationService) private readonly access: AccessControlApplicationService,
+		@inject(LocationRepositoryPortToken) private readonly locationRepository: LocationRepositoryPort,
+	) {
+		super();
+	}
 
-	public async execute(input: LocationGetByIdUseCaseInput): Promise<LocationGetByIdUseCaseOutput> {
+	protected async execute(input: LocationGetByIdUseCaseInput): Promise<LocationGetByIdUseCaseOutput> {
 		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "read" });
 		const scope = input.context.activeWorkspaceScope;
 		return this.locationRepository.getOne({ filters: [{ id: input.dto.id, workspace: scope }] });
@@ -53,13 +65,16 @@ export class LocationGetByIdUseCase implements IUseCase<LocationGetByIdUseCaseIn
 export type LocationGetAllUseCaseInput = UseCaseRequest;
 export type LocationGetAllUseCaseOutput = ItemsContainer<LocationEntity>;
 
-export class LocationGetAllUseCase implements IUseCase<LocationGetAllUseCaseInput, LocationGetAllUseCaseOutput> {
+@injectable()
+export class LocationGetAllUseCase extends BaseUseCase<LocationGetAllUseCaseInput, LocationGetAllUseCaseOutput> {
 	constructor(
-		private readonly access: AccessControlApplicationService,
-		private readonly locationRepository: LocationRepositoryPort,
-	) {}
+		@inject(AccessControlApplicationService) private readonly access: AccessControlApplicationService,
+		@inject(LocationRepositoryPortToken) private readonly locationRepository: LocationRepositoryPort,
+	) {
+		super();
+	}
 
-	public async execute(input: LocationGetAllUseCaseInput): Promise<LocationGetAllUseCaseOutput> {
+	protected async execute(input: LocationGetAllUseCaseInput): Promise<LocationGetAllUseCaseOutput> {
 		await this.access.assertCanPerformActionOnWorkspace({
 			...input.context,
 			action: "read",
@@ -75,16 +90,20 @@ export class LocationGetAllUseCase implements IUseCase<LocationGetAllUseCaseInpu
 	}
 }
 
-export type LocationUpdateUseCaseInput = UseCaseRequest<{ id: LocationEntityId } & LocationRepositoryUpdatePatchDTO>;
+type LocationUpdatePayload = ExcludeWorkspace<LocationRepositoryUpdatePatchDTO>;
+export type LocationUpdateUseCaseInput = UseCaseRequest<{ id: LocationEntityId } & LocationUpdatePayload>;
 export type LocationUpdateUseCaseOutput = LocationEntity;
 
-export class LocationUpdateUseCase implements IUseCase<LocationUpdateUseCaseInput, LocationUpdateUseCaseOutput> {
+@injectable()
+export class LocationUpdateUseCase extends BaseUseCase<LocationUpdateUseCaseInput, LocationUpdateUseCaseOutput> {
 	constructor(
-		private readonly access: AccessControlApplicationService,
-		private readonly locationRepository: LocationRepositoryPort,
-	) {}
+		@inject(AccessControlApplicationService) private readonly access: AccessControlApplicationService,
+		@inject(LocationRepositoryPortToken) private readonly locationRepository: LocationRepositoryPort,
+	) {
+		super();
+	}
 
-	public async execute(input: LocationUpdateUseCaseInput): Promise<LocationUpdateUseCaseOutput> {
+	protected async execute(input: LocationUpdateUseCaseInput): Promise<LocationUpdateUseCaseOutput> {
 		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "update" });
 		const scope = input.context.activeWorkspaceScope;
 		const { id, ...patch } = input.dto;
@@ -118,14 +137,21 @@ export class LocationDeleteManyUseCasePlacedEntityError extends BaseUseCaseError
 	}
 }
 
-export class LocationDeleteUseCase implements IUseCase<LocationDeleteUseCaseInput, LocationDeleteUseCaseOutput> {
+@injectable()
+export class LocationDeleteUseCase extends TransactionalUseCase<
+	LocationDeleteUseCaseInput,
+	LocationDeleteUseCaseOutput
+> {
 	constructor(
-		private readonly access: AccessControlApplicationService,
-		private readonly locationRepository: LocationRepositoryPort,
-		private readonly spatialOperationsService: SpatialOperationsService,
-	) {}
+		@inject(AccessControlApplicationService) private readonly access: AccessControlApplicationService,
+		@inject(SpatialOperationsService) private readonly spatialOperationsService: SpatialOperationsService,
+		@inject(LocationRepositoryPortToken) private readonly locationRepository: LocationRepositoryPort,
+		@inject(TransactionManagerPortToken) transactionManager: TransactionManagerPort,
+	) {
+		super(transactionManager);
+	}
 
-	public async execute(input: LocationDeleteUseCaseInput): Promise<LocationDeleteUseCaseOutput> {
+	protected async execute(input: LocationDeleteUseCaseInput): Promise<LocationDeleteUseCaseOutput> {
 		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "delete" });
 		const scope = input.context.activeWorkspaceScope;
 		const placement = await this.spatialOperationsService.getPlacementStatusByRef({
@@ -149,20 +175,25 @@ export class LocationDeleteUseCase implements IUseCase<LocationDeleteUseCaseInpu
 export type LocationDeleteManyUseCaseInput = UseCaseRequest<{ ids: LocationEntityId[] }>;
 export type LocationDeleteManyUseCaseOutput = { deletedIds: LocationEntityId[] };
 
-export class LocationDeleteManyUseCase
-	implements IUseCase<LocationDeleteManyUseCaseInput, LocationDeleteManyUseCaseOutput>
-{
+@injectable()
+export class LocationDeleteManyUseCase extends TransactionalUseCase<
+	LocationDeleteManyUseCaseInput,
+	LocationDeleteManyUseCaseOutput
+> {
 	constructor(
-		private readonly access: AccessControlApplicationService,
-		private readonly locationRepository: LocationRepositoryPort,
-		private readonly spatialOperationsService: SpatialOperationsService,
-	) {}
+		@inject(AccessControlApplicationService) private readonly access: AccessControlApplicationService,
+		@inject(SpatialOperationsService) private readonly spatialOperationsService: SpatialOperationsService,
+		@inject(LocationRepositoryPortToken) private readonly locationRepository: LocationRepositoryPort,
+		@inject(TransactionManagerPortToken) transactionManager: TransactionManagerPort,
+	) {
+		super(transactionManager);
+	}
 
-	public async execute(input: LocationDeleteManyUseCaseInput): Promise<LocationDeleteManyUseCaseOutput> {
+	protected async execute(input: LocationDeleteManyUseCaseInput): Promise<LocationDeleteManyUseCaseOutput> {
 		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "delete" });
 		if (input.dto.ids.length < 1) {
-			throw new RepositoryValidationError({
-				operation: "deleteMany",
+			throw new UseCaseValidationError({
+				useCaseName: "LocationDeleteManyUseCase",
 				validationCode: "invalid-ids",
 				context: { idCount: input.dto.ids.length },
 				details: { minAllowed: 1 },
@@ -184,8 +215,8 @@ export class LocationDeleteManyUseCase
 		const filters = input.dto.ids.map((id) => ({ id, workspace: scope }));
 		const { count } = await this.locationRepository.deleteMany({ filters });
 		if (count !== input.dto.ids.length) {
-			throw new RepositoryValidationError({
-				operation: "deleteMany",
+			throw new UseCaseValidationError({
+				useCaseName: "LocationDeleteManyUseCase",
 				validationCode: "partial-delete",
 				context: { requested: input.dto.ids.length, deleted: count },
 				message: "deleteMany removed fewer rows than requested.",

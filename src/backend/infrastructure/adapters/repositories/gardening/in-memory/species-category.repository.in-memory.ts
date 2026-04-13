@@ -1,5 +1,4 @@
 import type {
-	SpeciesCategoryRepositoryPort,
 	SpeciesCategoryRepositoryCreateInputDTO,
 	SpeciesCategoryRepositoryCreateManyInputDTO,
 	SpeciesCategoryRepositoryCreateManyOutputDTO,
@@ -9,6 +8,7 @@ import type {
 	SpeciesCategoryRepositoryFilterClause,
 	SpeciesCategoryRepositoryGetManyOutputDTO,
 	SpeciesCategoryRepositoryGetOneOutputDTO,
+	SpeciesCategoryRepositoryPort,
 	SpeciesCategoryRepositoryUpdateManyOutputDTO,
 	SpeciesCategoryRepositoryUpdateOutputDTO,
 	SpeciesCategoryRepositoryUpdatePatchDTO,
@@ -19,14 +19,17 @@ import {
 	findFirstRowMatchingAnyClause,
 	findRowsMatchingAnyClause,
 } from "@backend/infrastructure/adapters/repositories/shared/in-memory-entity-filter";
+import { InMemoryTransactionManagerAdapter } from "@backend/infrastructure/adapters/transaction/in-memory-transaction-manager.adapter";
 import type { InMemoryStore } from "@backend/infrastructure/integrations/in-memory-database/client";
 import { idKey, speciesCategoryId } from "@backend/infrastructure/integrations/shared/database-ids";
+import { inject, injectable } from "tsyringe";
 
-export class SpeciesCategoryInMemoryRepository
-	extends BaseRepositoryErrors
-	implements SpeciesCategoryRepositoryPort
-{
-	constructor(private readonly store: InMemoryStore) {
+@injectable()
+export class SpeciesCategoryInMemoryRepository extends BaseRepositoryErrors implements SpeciesCategoryRepositoryPort {
+	constructor(
+		@inject(InMemoryTransactionManagerAdapter)
+		private readonly transactionManager: InMemoryTransactionManagerAdapter,
+	) {
 		super();
 	}
 
@@ -56,9 +59,7 @@ export class SpeciesCategoryInMemoryRepository
 		};
 	}
 
-	async createOne(
-		dto: SpeciesCategoryRepositoryCreateInputDTO,
-	): Promise<SpeciesCategoryRepositoryCreateOutputDTO> {
+	async createOne(dto: SpeciesCategoryRepositoryCreateInputDTO): Promise<SpeciesCategoryRepositoryCreateOutputDTO> {
 		return this.insertRow(dto);
 	}
 
@@ -124,7 +125,7 @@ export class SpeciesCategoryInMemoryRepository
 		if (!row) this.throwNotFoundError("SpeciesCategory", input.filters);
 		const key = idKey(row.id);
 		for (const s of this.store.species.values()) {
-			if (idKey(s.categoryId) === key && s.workspace.equals(row.workspace)) {
+			if (idKey(s.categoryId) === key) {
 				this.throwConflictError({
 					operation: "delete",
 					reason: "species-reference-category",
@@ -148,12 +149,14 @@ export class SpeciesCategoryInMemoryRepository
 		let count = 0;
 		for (const row of rows) {
 			const key = idKey(row.id);
-			const blocked = [...this.store.species.values()].some(
-				(s) => idKey(s.categoryId) === key && s.workspace.equals(row.workspace),
-			);
+			const blocked = [...this.store.species.values()].some((s) => idKey(s.categoryId) === key);
 			if (blocked) continue;
 			if (this.store.speciesCategories.delete(key)) count += 1;
 		}
 		return { count };
+	}
+
+	private get store(): InMemoryStore {
+		return this.transactionManager.session;
 	}
 }

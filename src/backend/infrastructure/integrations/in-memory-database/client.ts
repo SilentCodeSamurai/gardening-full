@@ -11,6 +11,7 @@ import type {
 	SpeciesEntity,
 } from "@backend/core/domain/gardening/entities";
 import type { SpatialNodeEntity } from "@backend/core/domain/spatial/entities";
+import type { InjectionToken } from "tsyringe";
 import type { WorkspaceRoleAssignmentEntity } from "#/backend/core/domain/access/entities";
 import type { SubjectKey } from "#/backend/core/domain/access/subject.vo";
 import { idKey, locationId, plantId } from "../shared/database-ids";
@@ -132,4 +133,91 @@ export class InMemoryStore {
 		}
 		this.plantToEvents.delete(p);
 	}
+
+	createSnapshot(): InMemoryStoreSnapshot {
+		return {
+			workspaceItemLinks: structuredClone([...this.workspaceItemLinks]),
+			speciesCategories: structuredClone([...this.speciesCategories.entries()]),
+			species: structuredClone([...this.species.entries()]),
+			cultivars: structuredClone([...this.cultivars.entries()]),
+			plants: structuredClone([...this.plants.entries()]),
+			locations: structuredClone([...this.locations.entries()]),
+			spatialNodes: structuredClone([...this.spatialNodes.entries()]),
+			gardeningEvents: structuredClone([...this.gardeningEvents.entries()]),
+			workspaceRoleAssignments: structuredClone([...this.workspaceRoleAssignments.entries()]),
+			eventToPlants: structuredClone([...this.eventToPlants.entries()].map(([k, v]) => [k, [...v]])),
+			plantToEvents: structuredClone([...this.plantToEvents.entries()].map(([k, v]) => [k, [...v]])),
+			eventToLocations: structuredClone([...this.eventToLocations.entries()].map(([k, v]) => [k, [...v]])),
+			locationToEvents: structuredClone([...this.locationToEvents.entries()].map(([k, v]) => [k, [...v]])),
+		};
+	}
+
+	applySnapshot(snapshot: InMemoryStoreSnapshot): void {
+		this.workspaceItemLinks.clear();
+		for (const key of snapshot.workspaceItemLinks) {
+			this.workspaceItemLinks.add(key);
+		}
+		this.replaceMap(this.speciesCategories, snapshot.speciesCategories);
+		this.replaceMap(this.species, snapshot.species);
+		this.replaceMap(this.cultivars, snapshot.cultivars);
+		this.replaceMap(this.plants, snapshot.plants);
+		this.replaceMap(this.locations, snapshot.locations);
+		this.replaceMap(this.spatialNodes, snapshot.spatialNodes);
+		this.replaceMap(this.gardeningEvents, snapshot.gardeningEvents);
+		this.replaceMap(this.workspaceRoleAssignments, snapshot.workspaceRoleAssignments);
+		this.replaceLinkMap(this.eventToPlants, snapshot.eventToPlants);
+		this.replaceLinkMap(this.plantToEvents, snapshot.plantToEvents);
+		this.replaceLinkMap(this.eventToLocations, snapshot.eventToLocations);
+		this.replaceLinkMap(this.locationToEvents, snapshot.locationToEvents);
+	}
+
+	private replaceMap<K, V>(target: Map<K, V>, entries: readonly (readonly [K, V])[]): void {
+		target.clear();
+		for (const [key, value] of entries) {
+			target.set(key, value);
+		}
+	}
+
+	private replaceLinkMap(
+		target: Map<string, Set<string>>,
+		entries: readonly (readonly [string, readonly string[]])[],
+	) {
+		target.clear();
+		for (const [key, values] of entries) {
+			target.set(key, new Set(values));
+		}
+	}
 }
+
+export type InMemoryStoreSnapshot = {
+	workspaceItemLinks: readonly string[];
+	speciesCategories: readonly (readonly [string, SpeciesCategoryEntity])[];
+	species: readonly (readonly [string, SpeciesEntity])[];
+	cultivars: readonly (readonly [string, CultivarEntity])[];
+	plants: readonly (readonly [string, PlantEntity])[];
+	locations: readonly (readonly [string, LocationEntity])[];
+	spatialNodes: readonly (readonly [string, SpatialNodeEntity])[];
+	gardeningEvents: readonly (readonly [string, GardeningEventEntity])[];
+	workspaceRoleAssignments: readonly (readonly [`${SubjectKey}|${WorkspaceKey}`, WorkspaceRoleAssignmentEntity])[];
+	eventToPlants: readonly (readonly [string, readonly string[]])[];
+	plantToEvents: readonly (readonly [string, readonly string[]])[];
+	eventToLocations: readonly (readonly [string, readonly string[]])[];
+	locationToEvents: readonly (readonly [string, readonly string[]])[];
+};
+
+export class InMemoryDatabaseClient {
+	private readonly rootStore = new InMemoryStore();
+
+	getStore(): InMemoryStore {
+		return this.rootStore;
+	}
+
+	createStoreFromSnapshot(snapshot: InMemoryStoreSnapshot): InMemoryStore {
+		const store = new InMemoryStore();
+		store.applySnapshot(snapshot);
+		return store;
+	}
+}
+
+export const InMemoryStoreToken: InjectionToken<InMemoryStore> = Symbol.for("InMemoryStore");
+export const InMemoryDatabaseClientToken: InjectionToken<InMemoryDatabaseClient> = Symbol.for("InMemoryDatabaseClient");

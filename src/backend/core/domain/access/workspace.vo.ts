@@ -28,7 +28,7 @@ export type WorkspaceType = "globalShared" | "user" | "org";
  * - `version`: Version of the workspace key format.
  * - `type`: Type of the workspace.
  * - `externalId`: External ID of the workspace.
- * 
+ *
  * @example
  * - 'v1:globalShared'
  * - 'v1:user:123'
@@ -41,11 +41,11 @@ export type WorkspaceKey = `${string}:${WorkspaceType}:${string}` & { __brand: "
  * - `version`: Version of the workspace key format.
  * - `type`: Type of the workspace.
  * - `externalId`: External ID of the workspace.
- * 
+ *
  * Has static factory methods for each workspace type.
  * Has a method to convert to a key.
  * Has a method to convert from a key.
- * 
+ *
  * @example
  * WorkspaceVO.globalShared("v1")
  * WorkspaceVO.user("v1", "123")
@@ -106,9 +106,7 @@ export class WorkspaceVO {
 	}
 
 	public equals(other: WorkspaceVO): boolean {
-		return (
-			this.version === other.version && this.type === other.type && this.externalId === other.externalId
-		);
+		return this.version === other.version && this.type === other.type && this.externalId === other.externalId;
 	}
 
 	/** True when this workspace is the global shared catalog scope (not keyed by org/user id). */

@@ -1,5 +1,8 @@
 import { RepositoryNotFoundError } from "@backend/core/application/ports/repositories/shared/base-repository.errors";
-import type { SpatialNodeRepositoryPort } from "@backend/core/application/ports/repositories/spatial/spatial-node.repository.port";
+import {
+	type SpatialNodeRepositoryPort,
+	SpatialNodeRepositoryPortToken,
+} from "@backend/core/application/ports/repositories/spatial/spatial-node.repository.port";
 import type {
 	SpatialNodeEntity,
 	SpatialNodeEntityId,
@@ -7,9 +10,11 @@ import type {
 	SpatialNodeTreeNode,
 	SpatialRect,
 } from "@backend/core/domain/spatial/entities";
+import { inject, injectable } from "tsyringe";
 
+@injectable()
 export class SpatialOperationsService {
-	constructor(private readonly spatialRepo: SpatialNodeRepositoryPort) {}
+	constructor(@inject(SpatialNodeRepositoryPortToken) private readonly spatialRepo: SpatialNodeRepositoryPort) {}
 
 	public async getPlacementStatusByRef(params: {
 		ref: SpatialNodeEntityRef;
@@ -22,18 +27,25 @@ export class SpatialOperationsService {
 		let node: SpatialNodeEntity | null = null;
 		try {
 			node = await this.spatialRepo.getOneByRef({
-				filters: workspaces.map((workspace) => ({ ref, workspace })),
+				filters: [{ ref }],
 			});
 		} catch (e) {
 			if (!(e instanceof RepositoryNotFoundError)) throw e;
 		}
+		if (node !== null) {
+			const nodeWorkspace = node.workspace;
+			if (!workspaces.some((workspace) => workspace.equals(nodeWorkspace))) {
+				node = null;
+			}
+		}
 		if (!node) {
 			return { node: null, isPlaced: false };
 		}
+		const nodeId = node.id;
 		const all = await this.spatialRepo.getMany({
 			filters: workspaces.map((workspace) => ({ workspace })),
 		});
-		const hasChildren = all.items.some((item) => String(item.parentId) === String(node.id));
+		const hasChildren = all.items.some((item) => String(item.parentId) === String(nodeId));
 		const isPlaced = node.parentId !== null || hasChildren;
 		return { node, isPlaced };
 	}
@@ -67,7 +79,7 @@ export class SpatialOperationsService {
 				filters: [{ id: input.parentId, workspace: input.workspace }],
 			});
 			const subtree = await this.spatialRepo.getTreeForRootOne({
-				filters: [{ id: input.id, workspace: input.workspace }],
+				filters: [{ id: input.id }],
 			});
 			const contains = (node: SpatialNodeTreeNode, targetId: SpatialNodeEntityId): boolean => {
 				if (String(node.id) === String(targetId)) return true;
@@ -76,7 +88,9 @@ export class SpatialOperationsService {
 				}
 				return false;
 			};
+
 			if (contains(subtree, input.parentId)) {
+				// TODO: create dedicated error class
 				throw new Error("SpatialOperationsService: a node cannot be reparented under its own descendant.");
 			}
 		}

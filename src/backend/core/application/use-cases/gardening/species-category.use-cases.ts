@@ -1,31 +1,39 @@
 import { WorkspaceVO } from "@backend/core/domain/access/workspace.vo";
 import type { SpeciesCategoryEntity, SpeciesCategoryEntityId } from "@backend/core/domain/gardening/entities";
-import type {
-	SpeciesCategoryRepositoryCreateInputDTO,
-	SpeciesCategoryRepositoryDeleteOutputDTO,
-	SpeciesCategoryRepositoryPort,
-	SpeciesCategoryRepositoryUpdateOutputDTO,
-	SpeciesCategoryRepositoryUpdatePatchDTO,
+import { inject, injectable } from "tsyringe";
+import {
+	type SpeciesCategoryRepositoryCreateInputDTO,
+	type SpeciesCategoryRepositoryDeleteManyOutputDTO,
+	type SpeciesCategoryRepositoryDeleteOutputDTO,
+	type SpeciesCategoryRepositoryPort,
+	SpeciesCategoryRepositoryPortToken,
+	type SpeciesCategoryRepositoryUpdatePatchDTO,
 } from "../../ports/repositories/gardening/species-category.repository.port";
-import type { AccessControlApplicationService } from "../../services/access-control/access-control.application-service";
-import type { IUseCase } from "../shared/use-case.interface";
+import { AccessControlApplicationService } from "../../services/access-control/access-control.application-service";
+import { BaseUseCase } from "../shared/base.use-case";
+import type { ExcludeWorkspace } from "../shared/types";
 import type { UseCaseRequest } from "../use-case-context";
 
 export type SpeciesCategoryWithSystemCatalog = SpeciesCategoryEntity & { systemCatalog: boolean };
 
-type SpeciesCategoryCreatePayload = Omit<SpeciesCategoryRepositoryCreateInputDTO, "workspace">;
+type SpeciesCategoryCreatePayload = ExcludeWorkspace<SpeciesCategoryRepositoryCreateInputDTO>;
 export type SpeciesCategoryCreateUseCaseInput = UseCaseRequest<SpeciesCategoryCreatePayload>;
 export type SpeciesCategoryCreateUseCaseOutput = SpeciesCategoryWithSystemCatalog;
 
-export class SpeciesCategoryCreateUseCase
-	implements IUseCase<SpeciesCategoryCreateUseCaseInput, SpeciesCategoryCreateUseCaseOutput>
-{
+@injectable()
+export class SpeciesCategoryCreateUseCase extends BaseUseCase<
+	SpeciesCategoryCreateUseCaseInput,
+	SpeciesCategoryCreateUseCaseOutput
+> {
 	constructor(
-		private readonly access: AccessControlApplicationService,
+		@inject(AccessControlApplicationService) private readonly access: AccessControlApplicationService,
+		@inject(SpeciesCategoryRepositoryPortToken)
 		private readonly speciesCategoryRepository: SpeciesCategoryRepositoryPort,
-	) {}
+	) {
+		super();
+	}
 
-	public async execute(input: SpeciesCategoryCreateUseCaseInput): Promise<SpeciesCategoryCreateUseCaseOutput> {
+	protected async execute(input: SpeciesCategoryCreateUseCaseInput): Promise<SpeciesCategoryCreateUseCaseOutput> {
 		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "create" });
 		const created = await this.speciesCategoryRepository.createOne({
 			...input.dto,
@@ -38,15 +46,20 @@ export class SpeciesCategoryCreateUseCase
 export type SpeciesCategoryGetByIdUseCaseInput = UseCaseRequest<{ id: SpeciesCategoryEntityId }>;
 export type SpeciesCategoryGetByIdUseCaseOutput = SpeciesCategoryWithSystemCatalog;
 
-export class SpeciesCategoryGetByIdUseCase
-	implements IUseCase<SpeciesCategoryGetByIdUseCaseInput, SpeciesCategoryGetByIdUseCaseOutput>
-{
+@injectable()
+export class SpeciesCategoryGetByIdUseCase extends BaseUseCase<
+	SpeciesCategoryGetByIdUseCaseInput,
+	SpeciesCategoryGetByIdUseCaseOutput
+> {
 	constructor(
-		private readonly access: AccessControlApplicationService,
+		@inject(AccessControlApplicationService) private readonly access: AccessControlApplicationService,
+		@inject(SpeciesCategoryRepositoryPortToken)
 		private readonly speciesCategoryRepository: SpeciesCategoryRepositoryPort,
-	) {}
+	) {
+		super();
+	}
 
-	public async execute(input: SpeciesCategoryGetByIdUseCaseInput): Promise<SpeciesCategoryGetByIdUseCaseOutput> {
+	protected async execute(input: SpeciesCategoryGetByIdUseCaseInput): Promise<SpeciesCategoryGetByIdUseCaseOutput> {
 		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "read" });
 		const scope = input.context.activeWorkspaceScope;
 		const row = await this.speciesCategoryRepository.getOne({
@@ -61,14 +74,19 @@ export type SpeciesCategoryGetAllUseCaseOutput = {
 	items: SpeciesCategoryWithSystemCatalog[];
 };
 
-export class SpeciesCategoryGetAllUseCase
-	implements IUseCase<SpeciesCategoryGetAllUseCaseInput, SpeciesCategoryGetAllUseCaseOutput>
-{
+@injectable()
+export class SpeciesCategoryGetAllUseCase extends BaseUseCase<
+	SpeciesCategoryGetAllUseCaseInput,
+	SpeciesCategoryGetAllUseCaseOutput
+> {
 	constructor(
-		private readonly access: AccessControlApplicationService,
+		@inject(AccessControlApplicationService) private readonly access: AccessControlApplicationService,
+		@inject(SpeciesCategoryRepositoryPortToken)
 		private readonly speciesCategoryRepository: SpeciesCategoryRepositoryPort,
-	) {}
-	public async execute(input: SpeciesCategoryGetAllUseCaseInput): Promise<SpeciesCategoryGetAllUseCaseOutput> {
+	) {
+		super();
+	}
+	protected async execute(input: SpeciesCategoryGetAllUseCaseInput): Promise<SpeciesCategoryGetAllUseCaseOutput> {
 		await this.access.assertCanPerformActionOnWorkspace({
 			...input.context,
 			action: "read",
@@ -87,18 +105,23 @@ export class SpeciesCategoryGetAllUseCase
 }
 
 export type SpeciesCategoryUpdateUseCaseInput = UseCaseRequest<
-	{ id: SpeciesCategoryEntityId } & SpeciesCategoryRepositoryUpdatePatchDTO
+	{ id: SpeciesCategoryEntityId } & ExcludeWorkspace<SpeciesCategoryRepositoryUpdatePatchDTO>
 >;
 export type SpeciesCategoryUpdateUseCaseOutput = SpeciesCategoryWithSystemCatalog;
 
-export class SpeciesCategoryUpdateUseCase
-	implements IUseCase<SpeciesCategoryUpdateUseCaseInput, SpeciesCategoryUpdateUseCaseOutput>
-{
+@injectable()
+export class SpeciesCategoryUpdateUseCase extends BaseUseCase<
+	SpeciesCategoryUpdateUseCaseInput,
+	SpeciesCategoryUpdateUseCaseOutput
+> {
 	constructor(
-		private readonly access: AccessControlApplicationService,
+		@inject(AccessControlApplicationService) private readonly access: AccessControlApplicationService,
+		@inject(SpeciesCategoryRepositoryPortToken)
 		private readonly speciesCategoryRepository: SpeciesCategoryRepositoryPort,
-	) {}
-	public async execute(input: SpeciesCategoryUpdateUseCaseInput): Promise<SpeciesCategoryUpdateUseCaseOutput> {
+	) {
+		super();
+	}
+	protected async execute(input: SpeciesCategoryUpdateUseCaseInput): Promise<SpeciesCategoryUpdateUseCaseOutput> {
 		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "update" });
 		const scope = input.context.activeWorkspaceScope;
 		const { id, ...patch } = input.dto;
@@ -113,18 +136,49 @@ export class SpeciesCategoryUpdateUseCase
 export type SpeciesCategoryDeleteUseCaseInput = UseCaseRequest<{ id: SpeciesCategoryEntityId }>;
 export type SpeciesCategoryDeleteUseCaseOutput = SpeciesCategoryRepositoryDeleteOutputDTO;
 
-export class SpeciesCategoryDeleteUseCase
-	implements IUseCase<SpeciesCategoryDeleteUseCaseInput, SpeciesCategoryDeleteUseCaseOutput>
-{
+@injectable()
+export class SpeciesCategoryDeleteUseCase extends BaseUseCase<
+	SpeciesCategoryDeleteUseCaseInput,
+	SpeciesCategoryDeleteUseCaseOutput
+> {
 	constructor(
-		private readonly access: AccessControlApplicationService,
+		@inject(AccessControlApplicationService) private readonly access: AccessControlApplicationService,
+		@inject(SpeciesCategoryRepositoryPortToken)
 		private readonly speciesCategoryRepository: SpeciesCategoryRepositoryPort,
-	) {}
-	public async execute(input: SpeciesCategoryDeleteUseCaseInput): Promise<SpeciesCategoryDeleteUseCaseOutput> {
+	) {
+		super();
+	}
+	protected async execute(input: SpeciesCategoryDeleteUseCaseInput): Promise<SpeciesCategoryDeleteUseCaseOutput> {
 		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "delete" });
 		const scope = input.context.activeWorkspaceScope;
 		return this.speciesCategoryRepository.deleteOne({
 			filters: [{ id: input.dto.id, workspace: scope }],
+		});
+	}
+}
+
+export type SpeciesCategoryDeleteManyUseCaseInput = UseCaseRequest<{ ids: SpeciesCategoryEntityId[] }>;
+export type SpeciesCategoryDeleteManyUseCaseOutput = SpeciesCategoryRepositoryDeleteManyOutputDTO;
+
+@injectable()
+export class SpeciesCategoryDeleteManyUseCase extends BaseUseCase<
+	SpeciesCategoryDeleteManyUseCaseInput,
+	SpeciesCategoryDeleteManyUseCaseOutput
+> {
+	constructor(
+		@inject(AccessControlApplicationService) private readonly access: AccessControlApplicationService,
+		@inject(SpeciesCategoryRepositoryPortToken)
+		private readonly speciesCategoryRepository: SpeciesCategoryRepositoryPort,
+	) {
+		super();
+	}
+	protected async execute(
+		input: SpeciesCategoryDeleteManyUseCaseInput,
+	): Promise<SpeciesCategoryDeleteManyUseCaseOutput> {
+		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "delete" });
+		const scope = input.context.activeWorkspaceScope;
+		return this.speciesCategoryRepository.deleteMany({
+			filters: input.dto.ids.map((id) => ({ id, workspace: scope })),
 		});
 	}
 }

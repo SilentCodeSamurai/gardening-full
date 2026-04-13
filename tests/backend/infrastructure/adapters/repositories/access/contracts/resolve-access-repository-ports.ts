@@ -1,5 +1,7 @@
-import type { WorkspaceRoleAssignmentRepositoryPort } from "@backend/core/application/ports/repositories/access/workspace-role-assignment.repository.port";
-import { TOKENS } from "@backend/di/tokens";
+import {
+	type WorkspaceRoleAssignmentRepositoryPort,
+	WorkspaceRoleAssignmentRepositoryPortToken,
+} from "@backend/core/application/ports/repositories/access/workspace-role-assignment.repository.port";
 import type { DependencyContainer } from "tsyringe";
 
 export type AccessRepositoryPorts = {
@@ -8,8 +10,6 @@ export type AccessRepositoryPorts = {
 
 export function resolveAccessRepositoryPorts(c: DependencyContainer): AccessRepositoryPorts {
 	return {
-		workspaceRoleAssignment: c.resolve<WorkspaceRoleAssignmentRepositoryPort>(
-			TOKENS.WorkspaceRoleAssignmentRepositoryPort,
-		),
+		workspaceRoleAssignment: c.resolve(WorkspaceRoleAssignmentRepositoryPortToken),
 	};
 }

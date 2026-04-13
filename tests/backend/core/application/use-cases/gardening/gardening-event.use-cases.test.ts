@@ -3,6 +3,7 @@ import {
   GardeningEventCreateForLocationUseCase,
   GardeningEventCreateForPlantListUseCase,
   GardeningEventDeleteUseCase,
+  GardeningEventDeleteManyUseCase,
   GardeningEventGetAllUseCase,
   GardeningEventGetBindingsForEventUseCase,
   GardeningEventGetByIdUseCase,
@@ -14,28 +15,28 @@ import { SpatialNodeCreateUseCase } from "@backend/core/application/use-cases/sp
 import { PlantCreateUseCase } from "@backend/core/application/use-cases/gardening/plant.use-cases";
 import { LocationCreateUseCase } from "@backend/core/application/use-cases/gardening/location.use-cases";
 import { RepositoryNotFoundError } from "@backend/core/application/ports/repositories/shared/base-repository.errors";
-import { TOKENS } from "@backend/di/tokens";
-import type { InMemoryStore } from "@backend/infrastructure/integrations/in-memory-database/client";
-import {
-  gardeningEventId,
-  locationId,
-} from "@backend/infrastructure/integrations/shared/database-ids";
 import { createTestUseCaseContext } from "../create-test-use-case-context";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 
 import { createUseCaseTestContainer } from "./create-use-case-test-container";
 import { seedMinimalCatalog } from "../../../../helpers/gardening/seed-minimal-catalog";
 import { fixtureNoteAction } from "../../../../helpers/gardening/test-fixtures";
 
 describe("Gardening event use-cases", () => {
+  let c: ReturnType<typeof createUseCaseTestContainer>;
+  let context: ReturnType<typeof createTestUseCaseContext>;
+
+  beforeEach(() => {
+    c = createUseCaseTestContainer();
+    context = createTestUseCaseContext();
+  });
+
   it("GardeningEventCreateUseCase creates an unbound event", async () => {
-    const c = createUseCaseTestContainer();
-    const context = createTestUseCaseContext();
-    const created = await c.resolve(GardeningEventCreateUseCase).execute({
+    const created = await c.resolve(GardeningEventCreateUseCase).run({
       context,
       dto: { action: fixtureNoteAction({ content: "unbound" }) },
     });
-    const bindings = await c.resolve(GardeningEventGetBindingsForEventUseCase).execute({
+    const bindings = await c.resolve(GardeningEventGetBindingsForEventUseCase).run({
       context,
       dto: { id: created.id },
     });
@@ -44,33 +45,27 @@ describe("Gardening event use-cases", () => {
   });
 
   it("getAll returns empty then items", async () => {
-    const c = createUseCaseTestContainer();
-    const context = createTestUseCaseContext();
     const getAll = c.resolve(GardeningEventGetAllUseCase);
-    expect((await getAll.execute({ context })).items).toHaveLength(0);
-    await c.resolve(GardeningEventCreateForPlantListUseCase).execute({
+    expect((await getAll.run({ context })).items).toHaveLength(0);
+    await c.resolve(GardeningEventCreateForPlantListUseCase).run({
       context,
       dto: { action: fixtureNoteAction({ content: "c" }), plantIds: [] },
     });
-    expect((await getAll.execute({ context })).items).toHaveLength(1);
+    expect((await getAll.run({ context })).items).toHaveLength(1);
   });
 
   it("getById throws when missing", async () => {
-    const c = createUseCaseTestContainer();
-    const context = createTestUseCaseContext();
     await expect(
-      c.resolve(GardeningEventGetByIdUseCase).execute({ context, dto: { id: gardeningEventId() } }),
+      c.resolve(GardeningEventGetByIdUseCase).run({ context, dto: { id: "missing-event-id" as never } }),
     ).rejects.toBeInstanceOf(RepositoryNotFoundError);
   });
 
   it("update changes action and content", async () => {
-    const c = createUseCaseTestContainer();
-    const context = createTestUseCaseContext();
-    const created = await c.resolve(GardeningEventCreateForPlantListUseCase).execute({
+    const created = await c.resolve(GardeningEventCreateForPlantListUseCase).run({
       context,
       dto: { action: fixtureNoteAction({ content: "old" }), plantIds: [] },
     });
-    const updated = await c.resolve(GardeningEventUpdateUseCase).execute({
+    const updated = await c.resolve(GardeningEventUpdateUseCase).run({
       context,
       dto: {
         id: created.id,
@@ -82,28 +77,24 @@ describe("Gardening event use-cases", () => {
   });
 
   it("delete throws when missing", async () => {
-    const c = createUseCaseTestContainer();
-    const context = createTestUseCaseContext();
     await expect(
-      c.resolve(GardeningEventDeleteUseCase).execute({ context, dto: { id: gardeningEventId() } }),
+      c.resolve(GardeningEventDeleteUseCase).run({ context, dto: { id: "missing-event-id" as never } }),
     ).rejects.toBeInstanceOf(RepositoryNotFoundError);
   });
 
   it("GardeningEventCreateForLocationUseCase links location and plants from spatial mapping", async () => {
-    const c = createUseCaseTestContainer();
-    const context = createTestUseCaseContext();
     const { cultivar } = await seedMinimalCatalog(c);
     const spatialCreate = c.resolve(SpatialNodeCreateUseCase);
-    const loc = await c.resolve(LocationCreateUseCase).execute({ context, dto: { name: "Bed" } });
-    const p1 = await c.resolve(PlantCreateUseCase).execute({
+    const loc = await c.resolve(LocationCreateUseCase).run({ context, dto: { name: "Bed" } });
+    const p1 = await c.resolve(PlantCreateUseCase).run({
       context,
       dto: { cultivarId: cultivar.id, title: null, description: null },
     });
-    const p2 = await c.resolve(PlantCreateUseCase).execute({
+    const p2 = await c.resolve(PlantCreateUseCase).run({
       context,
       dto: { cultivarId: cultivar.id, title: null, description: null },
     });
-    const locNode = await spatialCreate.execute({
+    const locNode = await spatialCreate.run({
       context,
       dto: {
         parentId: null,
@@ -112,7 +103,7 @@ describe("Gardening event use-cases", () => {
         ref: { entity: "location", entityId: String(loc.id) },
       },
     });
-    await spatialCreate.execute({
+    await spatialCreate.run({
       context,
       dto: {
         parentId: locNode.id,
@@ -121,7 +112,7 @@ describe("Gardening event use-cases", () => {
         ref: { entity: "plant", entityId: String(p1.id) },
       },
     });
-    await spatialCreate.execute({
+    await spatialCreate.run({
       context,
       dto: {
         parentId: locNode.id,
@@ -130,31 +121,29 @@ describe("Gardening event use-cases", () => {
         ref: { entity: "plant", entityId: String(p2.id) },
       },
     });
-    const ev = await c.resolve(GardeningEventCreateForLocationUseCase).execute({
+    const ev = await c.resolve(GardeningEventCreateForLocationUseCase).run({
       context,
       dto: { locationId: loc.id, action: fixtureNoteAction({ content: "loc event" }) },
     });
-    const forLoc = await c.resolve(GardeningEventGetForLocationUseCase).execute({
+    const forLoc = await c.resolve(GardeningEventGetForLocationUseCase).run({
       context,
       dto: { locationId: loc.id },
     });
     expect(forLoc.items.map((e) => e.id)).toContainEqual(ev.id);
 
-    const forP1 = await c.resolve(GardeningEventGetForPlantUseCase).execute({ context, dto: { plantId: p1.id } });
-    const forP2 = await c.resolve(GardeningEventGetForPlantUseCase).execute({ context, dto: { plantId: p2.id } });
+    const forP1 = await c.resolve(GardeningEventGetForPlantUseCase).run({ context, dto: { plantId: p1.id } });
+    const forP2 = await c.resolve(GardeningEventGetForPlantUseCase).run({ context, dto: { plantId: p2.id } });
     expect(forP1.items.map((e) => e.id)).toContainEqual(ev.id);
     expect(forP2.items.map((e) => e.id)).toContainEqual(ev.id);
   });
 
   it("GardeningEventCreateForLocationUseCase with no plants still links location", async () => {
-    const c = createUseCaseTestContainer();
-    const context = createTestUseCaseContext();
-    const loc = await c.resolve(LocationCreateUseCase).execute({ context, dto: { name: "Empty" } });
-    const ev = await c.resolve(GardeningEventCreateForLocationUseCase).execute({
+    const loc = await c.resolve(LocationCreateUseCase).run({ context, dto: { name: "Empty" } });
+    const ev = await c.resolve(GardeningEventCreateForLocationUseCase).run({
       context,
       dto: { locationId: loc.id, action: fixtureNoteAction({ content: "x" }) },
     });
-    const forLoc = await c.resolve(GardeningEventGetForLocationUseCase).execute({
+    const forLoc = await c.resolve(GardeningEventGetForLocationUseCase).run({
       context,
       dto: { locationId: loc.id },
     });
@@ -164,33 +153,30 @@ describe("Gardening event use-cases", () => {
     expect(linked.id).toEqual(ev.id);
   });
 
-  it("GardeningEventCreateForLocationUseCase rejects invalid location and leaves orphan event row", async () => {
-    const c = createUseCaseTestContainer();
-    const context = createTestUseCaseContext();
-    const store = c.resolve<InMemoryStore>(TOKENS.InMemoryStore);
-    const before = store.gardeningEvents.size;
+  it("GardeningEventCreateForLocationUseCase rejects invalid location without persisting an event", async () => {
+    const getAll = c.resolve(GardeningEventGetAllUseCase);
+    const before = (await getAll.run({ context })).items.length;
     await expect(
-      c.resolve(GardeningEventCreateForLocationUseCase).execute({
+      c.resolve(GardeningEventCreateForLocationUseCase).run({
         context,
-        dto: { locationId: locationId(), action: fixtureNoteAction({ content: "x" }) },
+        dto: { locationId: "missing-location-id" as never, action: fixtureNoteAction({ content: "x" }) },
       }),
     ).rejects.toBeInstanceOf(RepositoryNotFoundError);
-    expect(store.gardeningEvents.size).toBe(before);
+    const after = (await getAll.run({ context })).items.length;
+    expect(after).toBe(before);
   });
 
   it("GardeningEventCreateForPlantListUseCase binds listed readable plants", async () => {
-    const c = createUseCaseTestContainer();
-    const context = createTestUseCaseContext();
     const { cultivar } = await seedMinimalCatalog(c);
-    const plant = await c.resolve(PlantCreateUseCase).execute({
+    const plant = await c.resolve(PlantCreateUseCase).run({
       context,
       dto: { cultivarId: cultivar.id, title: null, description: null },
     });
-    const ev = await c.resolve(GardeningEventCreateForPlantListUseCase).execute({
+    const ev = await c.resolve(GardeningEventCreateForPlantListUseCase).run({
       context,
       dto: { action: fixtureNoteAction({ content: "multi" }), plantIds: [plant.id] },
     });
-    const forPlant = await c.resolve(GardeningEventGetForPlantUseCase).execute({
+    const forPlant = await c.resolve(GardeningEventGetForPlantUseCase).run({
       context,
       dto: { plantId: plant.id },
     });
@@ -198,18 +184,16 @@ describe("Gardening event use-cases", () => {
   });
 
   it("GardeningEventCreateForPlantListUseCase with empty plantIds creates event without plant links", async () => {
-    const c = createUseCaseTestContainer();
-    const context = createTestUseCaseContext();
     const { cultivar } = await seedMinimalCatalog(c);
-    const plant = await c.resolve(PlantCreateUseCase).execute({
+    const plant = await c.resolve(PlantCreateUseCase).run({
       context,
       dto: { cultivarId: cultivar.id, title: null, description: null },
     });
-    const ev = await c.resolve(GardeningEventCreateForPlantListUseCase).execute({
+    const ev = await c.resolve(GardeningEventCreateForPlantListUseCase).run({
       context,
       dto: { action: fixtureNoteAction({ content: "none" }), plantIds: [] },
     });
-    const forPlant = await c.resolve(GardeningEventGetForPlantUseCase).execute({
+    const forPlant = await c.resolve(GardeningEventGetForPlantUseCase).run({
       context,
       dto: { plantId: plant.id },
     });
@@ -217,36 +201,48 @@ describe("Gardening event use-cases", () => {
   });
 
   it("getForPlant and getForLocation return empty when no links", async () => {
-    const c = createUseCaseTestContainer();
-    const context = createTestUseCaseContext();
     const { cultivar } = await seedMinimalCatalog(c);
-    const loc = await c.resolve(LocationCreateUseCase).execute({ context, dto: { name: "L" } });
-    const plant = await c.resolve(PlantCreateUseCase).execute({
+    const loc = await c.resolve(LocationCreateUseCase).run({ context, dto: { name: "L" } });
+    const plant = await c.resolve(PlantCreateUseCase).run({
       context,
       dto: { cultivarId: cultivar.id, title: null, description: null },
     });
     expect(
-      (await c.resolve(GardeningEventGetForPlantUseCase).execute({ context, dto: { plantId: plant.id } })).items,
+      (await c.resolve(GardeningEventGetForPlantUseCase).run({ context, dto: { plantId: plant.id } })).items,
     ).toHaveLength(0);
     expect(
-      (await c.resolve(GardeningEventGetForLocationUseCase).execute({ context, dto: { locationId: loc.id } })).items,
+      (await c.resolve(GardeningEventGetForLocationUseCase).run({ context, dto: { locationId: loc.id } })).items,
     ).toHaveLength(0);
   });
 
   it("GardeningEventGetBindingsForEventUseCase returns plant ids after create-for-plants", async () => {
-    const c = createUseCaseTestContainer();
-    const context = createTestUseCaseContext();
     const { cultivar } = await seedMinimalCatalog(c);
-    const plant = await c.resolve(PlantCreateUseCase).execute({
+    const plant = await c.resolve(PlantCreateUseCase).run({
       context,
       dto: { cultivarId: cultivar.id, title: null, description: null },
     });
-    const ev = await c.resolve(GardeningEventCreateForPlantListUseCase).execute({
+    const ev = await c.resolve(GardeningEventCreateForPlantListUseCase).run({
       context,
       dto: { action: fixtureNoteAction({ content: "bindings" }), plantIds: [plant.id] },
     });
-    const b = await c.resolve(GardeningEventGetBindingsForEventUseCase).execute({ context, dto: { id: ev.id } });
+    const b = await c.resolve(GardeningEventGetBindingsForEventUseCase).run({ context, dto: { id: ev.id } });
     expect(b.plantIds.map(String)).toContain(String(plant.id));
     expect(b.locationIds).toHaveLength(0);
+  });
+
+  it("deleteMany removes requested events", async () => {
+    const create = c.resolve(GardeningEventCreateUseCase);
+    const deleteMany = c.resolve(GardeningEventDeleteManyUseCase);
+    const getAll = c.resolve(GardeningEventGetAllUseCase);
+
+    const e1 = await create.run({ context, dto: { action: fixtureNoteAction({ content: "dm-1" }) } });
+    const e2 = await create.run({ context, dto: { action: fixtureNoteAction({ content: "dm-2" }) } });
+
+    const out = await deleteMany.run({ context, dto: { ids: [e1.id, e2.id] } });
+    expect(out.count).toBe(2);
+
+    const remaining = await getAll.run({ context });
+    expect(remaining.items.some((e) => e.id === e1.id)).toBe(false);
+    expect(remaining.items.some((e) => e.id === e2.id)).toBe(false);
   });
 });

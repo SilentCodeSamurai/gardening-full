@@ -1,9 +1,7 @@
-import type { WorkspaceRoleAssignmentRepositoryPort } from "@backend/core/application/ports/repositories/access/workspace-role-assignment.repository.port";
+import { WorkspaceRoleAssignmentRepositoryPortToken } from "@backend/core/application/ports/repositories/access/workspace-role-assignment.repository.port";
 import { SubjectVO } from "@backend/core/domain/access/subject.vo";
 import { appContainer } from "@backend/di/app-container";
 import { WorkspaceVO } from "#/backend/core/domain/access/workspace.vo";
-import { TOKENS } from "#/backend/di/tokens";
-
 /**
  * Grants the creator admin on the organization workspace scope.
  * @param data - Organization, member, and user from Better Auth `afterCreateOrganization`.
@@ -18,9 +16,7 @@ export async function grantDefaultPermissionsOnOrganizationCreated(data: {
 	const creatorSubject = SubjectVO.user(userId);
 	/** Must match {@link createUseCaseContextFromOrpc}: org workspace id is Better Auth organization id. */
 	const orgWorkspace = WorkspaceVO.org(organizationId);
-	const repository = appContainer.resolve<WorkspaceRoleAssignmentRepositoryPort>(
-		TOKENS.WorkspaceRoleAssignmentRepositoryPort,
-	);
+	const repository = appContainer.resolve(WorkspaceRoleAssignmentRepositoryPortToken);
 	await repository.upsertOne({
 		subject: creatorSubject,
 		workspace: orgWorkspace,

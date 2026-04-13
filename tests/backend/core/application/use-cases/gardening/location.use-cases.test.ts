@@ -12,62 +12,61 @@ import {
   SpatialNodeCreateUseCase,
   SpatialNodeGetAllUseCase,
 } from "@backend/core/application/use-cases/spatial/spatial.use-cases";
-import {
-  RepositoryNotFoundError,
-  RepositoryValidationError,
-} from "@backend/core/application/ports/repositories/shared/base-repository.errors";
+import { RepositoryNotFoundError } from "@backend/core/application/ports/repositories/shared/base-repository.errors";
+import { UseCaseValidationError } from "@backend/core/application/use-cases/shared/errors";
 import { createTestUseCaseContext } from "../create-test-use-case-context";
-import { locationId } from "@backend/infrastructure/integrations/shared/database-ids";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 
 import { createUseCaseTestContainer } from "./create-use-case-test-container";
 
 describe("Location use-cases", () => {
+  let c: ReturnType<typeof createUseCaseTestContainer>;
+  let context: ReturnType<typeof createTestUseCaseContext>;
+
+  beforeEach(() => {
+    c = createUseCaseTestContainer();
+    context = createTestUseCaseContext();
+  });
+
   it("create, getById, getAll, update, delete happy path", async () => {
-    const c = createUseCaseTestContainer();
-    const context = createTestUseCaseContext();
     const create = c.resolve(LocationCreateUseCase);
     const getById = c.resolve(LocationGetByIdUseCase);
     const getAll = c.resolve(LocationGetAllUseCase);
     const update = c.resolve(LocationUpdateUseCase);
     const del = c.resolve(LocationDeleteUseCase);
 
-    const a = await create.execute({ context, dto: { name: "Garden" } });
-    const b = await create.execute({ context, dto: { name: "Bed" } });
+    const a = await create.run({ context, dto: { name: "Garden" } });
+    const b = await create.run({ context, dto: { name: "Bed" } });
 
-    expect((await getById.execute({ context, dto: { id: b.id } })).name).toBe("Bed");
-    expect((await getAll.execute({ context })).items.length).toBeGreaterThanOrEqual(2);
+    expect((await getById.run({ context, dto: { id: b.id } })).name).toBe("Bed");
+    expect((await getAll.run({ context })).items.length).toBeGreaterThanOrEqual(2);
 
-    const renamed = await update.execute({ context, dto: { id: b.id, name: "Raised bed" } });
+    const renamed = await update.run({ context, dto: { id: b.id, name: "Raised bed" } });
     expect(renamed.name).toBe("Raised bed");
 
-    await del.execute({ context, dto: { id: b.id } });
-    await expect(getById.execute({ context, dto: { id: b.id } })).rejects.toBeInstanceOf(RepositoryNotFoundError);
+    await del.run({ context, dto: { id: b.id } });
+    await expect(getById.run({ context, dto: { id: b.id } })).rejects.toBeInstanceOf(RepositoryNotFoundError);
 
-    await del.execute({ context, dto: { id: a.id } });
-    await expect(getById.execute({ context, dto: { id: a.id } })).rejects.toBeInstanceOf(RepositoryNotFoundError);
+    await del.run({ context, dto: { id: a.id } });
+    await expect(getById.run({ context, dto: { id: a.id } })).rejects.toBeInstanceOf(RepositoryNotFoundError);
   });
 
   it("getById throws when missing", async () => {
-    const c = createUseCaseTestContainer();
-    const context = createTestUseCaseContext();
-    const missingId = locationId();
+    const missingId = "missing-location-id" as never;
     await expect(
-      c.resolve(LocationGetByIdUseCase).execute({ context, dto: { id: missingId } }),
+      c.resolve(LocationGetByIdUseCase).run({ context, dto: { id: missingId } }),
     ).rejects.toBeInstanceOf(Error);
   });
 
   it("delete throws when location is placed in spatial layout", async () => {
-    const c = createUseCaseTestContainer();
-    const context = createTestUseCaseContext();
     const createLocation = c.resolve(LocationCreateUseCase);
     const createSpatial = c.resolve(SpatialNodeCreateUseCase);
     const del = c.resolve(LocationDeleteUseCase);
 
-    const rootLocation = await createLocation.execute({ context, dto: { name: "Root" } });
-    const placedLocation = await createLocation.execute({ context, dto: { name: "Placed" } });
+    const rootLocation = await createLocation.run({ context, dto: { name: "Root" } });
+    const placedLocation = await createLocation.run({ context, dto: { name: "Placed" } });
 
-    const rootNode = await createSpatial.execute({
+    const rootNode = await createSpatial.run({
       context,
       dto: {
         parentId: null,
@@ -76,7 +75,7 @@ describe("Location use-cases", () => {
         ref: { entity: "location", entityId: String(rootLocation.id) },
       },
     });
-    await createSpatial.execute({
+    await createSpatial.run({
       context,
       dto: {
         parentId: rootNode.id,
@@ -86,7 +85,7 @@ describe("Location use-cases", () => {
       },
     });
 
-    const deletePlaced = del.execute({ context, dto: { id: placedLocation.id } });
+    const deletePlaced = del.run({ context, dto: { id: placedLocation.id } });
     await expect(deletePlaced).rejects.toBeInstanceOf(LocationDeleteUseCasePlacedEntityError);
     await expect(deletePlaced).rejects.toMatchObject({
       useCaseName: "LocationDeleteUseCase",
@@ -95,15 +94,13 @@ describe("Location use-cases", () => {
   });
 
   it("delete allows unplaced location and removes isolated bound node", async () => {
-    const c = createUseCaseTestContainer();
-    const context = createTestUseCaseContext();
     const createLocation = c.resolve(LocationCreateUseCase);
     const createSpatial = c.resolve(SpatialNodeCreateUseCase);
     const getAllSpatial = c.resolve(SpatialNodeGetAllUseCase);
     const del = c.resolve(LocationDeleteUseCase);
 
-    const location = await createLocation.execute({ context, dto: { name: "Unplaced" } });
-    const isolatedNode = await createSpatial.execute({
+    const location = await createLocation.run({ context, dto: { name: "Unplaced" } });
+    const isolatedNode = await createSpatial.run({
       context,
       dto: {
         parentId: null,
@@ -113,23 +110,21 @@ describe("Location use-cases", () => {
       },
     });
 
-    await del.execute({ context, dto: { id: location.id } });
-    const allNodes = await getAllSpatial.execute({ context });
+    await del.run({ context, dto: { id: location.id } });
+    const allNodes = await getAllSpatial.run({ context });
     expect(allNodes.items.find((n) => String(n.id) === String(isolatedNode.id))).toBeUndefined();
   });
 
   it("deleteMany removes multiple unplaced locations and spatial stubs", async () => {
-    const c = createUseCaseTestContainer();
-    const context = createTestUseCaseContext();
     const createLocation = c.resolve(LocationCreateUseCase);
     const deleteMany = c.resolve(LocationDeleteManyUseCase);
     const createSpatial = c.resolve(SpatialNodeCreateUseCase);
     const getAllSpatial = c.resolve(SpatialNodeGetAllUseCase);
     const getById = c.resolve(LocationGetByIdUseCase);
 
-    const l1 = await createLocation.execute({ context, dto: { name: "L1" } });
-    const l2 = await createLocation.execute({ context, dto: { name: "L2" } });
-    const n1 = await createSpatial.execute({
+    const l1 = await createLocation.run({ context, dto: { name: "L1" } });
+    const l2 = await createLocation.run({ context, dto: { name: "L2" } });
+    const n1 = await createSpatial.run({
       context,
       dto: {
         parentId: null,
@@ -138,7 +133,7 @@ describe("Location use-cases", () => {
         ref: { entity: "location", entityId: String(l1.id) },
       },
     });
-    const n2 = await createSpatial.execute({
+    const n2 = await createSpatial.run({
       context,
       dto: {
         parentId: null,
@@ -148,26 +143,24 @@ describe("Location use-cases", () => {
       },
     });
 
-    const { deletedIds } = await deleteMany.execute({ context, dto: { ids: [l1.id, l2.id] } });
+    const { deletedIds } = await deleteMany.run({ context, dto: { ids: [l1.id, l2.id] } });
     expect(deletedIds).toEqual([l1.id, l2.id]);
-    await expect(getById.execute({ context, dto: { id: l1.id } })).rejects.toBeInstanceOf(RepositoryNotFoundError);
-    await expect(getById.execute({ context, dto: { id: l2.id } })).rejects.toBeInstanceOf(RepositoryNotFoundError);
-    const allNodes = await getAllSpatial.execute({ context });
+    await expect(getById.run({ context, dto: { id: l1.id } })).rejects.toBeInstanceOf(RepositoryNotFoundError);
+    await expect(getById.run({ context, dto: { id: l2.id } })).rejects.toBeInstanceOf(RepositoryNotFoundError);
+    const allNodes = await getAllSpatial.run({ context });
     expect(allNodes.items.find((n) => String(n.id) === String(n1.id))).toBeUndefined();
     expect(allNodes.items.find((n) => String(n.id) === String(n2.id))).toBeUndefined();
   });
 
   it("deleteMany throws when any location is placed", async () => {
-    const c = createUseCaseTestContainer();
-    const context = createTestUseCaseContext();
     const createLocation = c.resolve(LocationCreateUseCase);
     const deleteMany = c.resolve(LocationDeleteManyUseCase);
     const createSpatial = c.resolve(SpatialNodeCreateUseCase);
 
-    const rootLocation = await createLocation.execute({ context, dto: { name: "Root" } });
-    const ok = await createLocation.execute({ context, dto: { name: "Ok" } });
-    const placed = await createLocation.execute({ context, dto: { name: "Placed" } });
-    const rootNode = await createSpatial.execute({
+    const rootLocation = await createLocation.run({ context, dto: { name: "Root" } });
+    const ok = await createLocation.run({ context, dto: { name: "Ok" } });
+    const placed = await createLocation.run({ context, dto: { name: "Placed" } });
+    const rootNode = await createSpatial.run({
       context,
       dto: {
         parentId: null,
@@ -176,7 +169,7 @@ describe("Location use-cases", () => {
         ref: { entity: "location", entityId: String(rootLocation.id) },
       },
     });
-    await createSpatial.execute({
+    await createSpatial.run({
       context,
       dto: {
         parentId: rootNode.id,
@@ -186,7 +179,7 @@ describe("Location use-cases", () => {
       },
     });
 
-    const run = deleteMany.execute({ context, dto: { ids: [ok.id, placed.id] } });
+    const run = deleteMany.run({ context, dto: { ids: [ok.id, placed.id] } });
     await expect(run).rejects.toBeInstanceOf(LocationDeleteManyUseCasePlacedEntityError);
     await expect(run).rejects.toMatchObject({
       useCaseName: "LocationDeleteManyUseCase",
@@ -195,9 +188,24 @@ describe("Location use-cases", () => {
   });
 
   it("deleteMany rejects empty ids", async () => {
-    const c = createUseCaseTestContainer();
-    const context = createTestUseCaseContext();
     const deleteMany = c.resolve(LocationDeleteManyUseCase);
-    await expect(deleteMany.execute({ context, dto: { ids: [] } })).rejects.toBeInstanceOf(RepositoryValidationError);
+    await expect(deleteMany.run({ context, dto: { ids: [] } })).rejects.toBeInstanceOf(UseCaseValidationError);
+  });
+
+  it("deleteMany rolls back all deletes when request includes missing ids", async () => {
+    const createLocation = c.resolve(LocationCreateUseCase);
+    const deleteMany = c.resolve(LocationDeleteManyUseCase);
+    const getById = c.resolve(LocationGetByIdUseCase);
+
+    const existing = await createLocation.run({ context, dto: { name: "Rollback target" } });
+    const missing = "missing-location-id" as never;
+
+    await expect(deleteMany.run({ context, dto: { ids: [existing.id, missing] } })).rejects.toMatchObject({
+      useCaseName: "LocationDeleteManyUseCase",
+      validationCode: "partial-delete",
+    });
+
+    const stillThere = await getById.run({ context, dto: { id: existing.id } });
+    expect(stillThere.id).toEqual(existing.id);
   });
 });

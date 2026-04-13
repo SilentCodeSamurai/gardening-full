@@ -1,5 +1,4 @@
 import type {
-	PlantRepositoryPort,
 	PlantRepositoryCreateInputDTO,
 	PlantRepositoryCreateManyInputDTO,
 	PlantRepositoryCreateManyOutputDTO,
@@ -9,6 +8,7 @@ import type {
 	PlantRepositoryFilterClause,
 	PlantRepositoryGetManyOutputDTO,
 	PlantRepositoryGetOneOutputDTO,
+	PlantRepositoryPort,
 	PlantRepositoryUpdateManyOutputDTO,
 	PlantRepositoryUpdateOutputDTO,
 	PlantRepositoryUpdatePatchDTO,
@@ -19,12 +19,17 @@ import {
 	findFirstRowMatchingAnyClause,
 	findRowsMatchingAnyClause,
 } from "@backend/infrastructure/adapters/repositories/shared/in-memory-entity-filter";
-import { workspacesEqual } from "@backend/infrastructure/adapters/repositories/shared/workspace-key";
+import { InMemoryTransactionManagerAdapter } from "@backend/infrastructure/adapters/transaction/in-memory-transaction-manager.adapter";
 import type { InMemoryStore } from "@backend/infrastructure/integrations/in-memory-database/client";
 import { idKey, plantId } from "@backend/infrastructure/integrations/shared/database-ids";
+import { inject, injectable } from "tsyringe";
 
+@injectable()
 export class PlantInMemoryRepository extends BaseRepositoryErrors implements PlantRepositoryPort {
-	constructor(private readonly store: InMemoryStore) {
+	constructor(
+		@inject(InMemoryTransactionManagerAdapter)
+		private readonly transactionManager: InMemoryTransactionManagerAdapter,
+	) {
 		super();
 	}
 
@@ -43,17 +48,7 @@ export class PlantInMemoryRepository extends BaseRepositoryErrors implements Pla
 	}
 
 	private insertRow(dto: PlantRepositoryCreateInputDTO): PlantRepositoryCreateOutputDTO {
-		const cultivarRow = this.store.cultivars.get(idKey(dto.cultivarId));
-		if (!cultivarRow) {
-			this.throwNotFoundError("Cultivar", dto.cultivarId);
-		}
-		if (!workspacesEqual(cultivarRow.workspace, dto.workspace)) {
-			this.throwValidationError({
-				operation: "create",
-				validationCode: "cultivar-workspace-mismatch",
-				context: { cultivarId: dto.cultivarId, workspaceKey: dto.workspace.toKey() },
-			});
-		}
+		this.requireCultivarRow(dto.cultivarId);
 		const now = new Date();
 		const id = plantId();
 		const row: PlantEntity = {
@@ -64,6 +59,13 @@ export class PlantInMemoryRepository extends BaseRepositoryErrors implements Pla
 		};
 		this.store.plants.set(idKey(id), row);
 		return this.hydrate(row);
+	}
+
+	private requireCultivarRow(cultivarId: PlantEntity["cultivarId"]): void {
+		const cultivar = this.store.cultivars.get(idKey(cultivarId));
+		if (!cultivar) {
+			this.throwNotFoundError("Cultivar", [{ id: cultivarId }]);
+		}
 	}
 
 	private patchStored(existing: PlantEntity, dto: PlantRepositoryUpdatePatchDTO): PlantEntity {
@@ -79,21 +81,6 @@ export class PlantInMemoryRepository extends BaseRepositoryErrors implements Pla
 		};
 	}
 
-	private assertCultivarMatchesWorkspace(
-		cultivarId: PlantEntity["cultivarId"],
-		workspace: PlantEntity["workspace"],
-	): void {
-		const cultivarRow = this.store.cultivars.get(idKey(cultivarId));
-		if (!cultivarRow) this.throwNotFoundError("Cultivar", cultivarId);
-		if (!workspacesEqual(cultivarRow.workspace, workspace)) {
-			this.throwValidationError({
-				operation: "update",
-				validationCode: "cultivar-workspace-mismatch",
-				context: { cultivarId, workspaceKey: workspace.toKey() },
-			});
-		}
-	}
-
 	async createOne(dto: PlantRepositoryCreateInputDTO): Promise<PlantRepositoryCreateOutputDTO> {
 		return this.insertRow(dto);
 	}
@@ -106,9 +93,7 @@ export class PlantInMemoryRepository extends BaseRepositoryErrors implements Pla
 		return { items };
 	}
 
-	async getOne(input: {
-		filters: readonly PlantRepositoryFilterClause[];
-	}): Promise<PlantRepositoryGetOneOutputDTO> {
+	async getOne(input: { filters: readonly PlantRepositoryFilterClause[] }): Promise<PlantRepositoryGetOneOutputDTO> {
 		const row = findFirstRowMatchingAnyClause(this.store.plants.values(), input.filters);
 		if (!row) this.throwNotFoundError("Plant", input.filters);
 		return this.hydrate(row);
@@ -132,7 +117,7 @@ export class PlantInMemoryRepository extends BaseRepositoryErrors implements Pla
 		const row = findFirstRowMatchingAnyClause(this.store.plants.values(), input.filters);
 		if (!row) this.throwNotFoundError("Plant", input.filters);
 		const updated = this.patchStored(row, input.dto);
-		this.assertCultivarMatchesWorkspace(updated.cultivarId, updated.workspace);
+		this.requireCultivarRow(updated.cultivarId);
 		this.store.plants.set(idKey(updated.id), updated);
 		return this.hydrate(updated);
 	}
@@ -145,7 +130,7 @@ export class PlantInMemoryRepository extends BaseRepositoryErrors implements Pla
 		let count = 0;
 		for (const row of rows) {
 			const updated = this.patchStored(row, input.dto);
-			this.assertCultivarMatchesWorkspace(updated.cultivarId, updated.workspace);
+			this.requireCultivarRow(updated.cultivarId);
 			this.store.plants.set(idKey(updated.id), updated);
 			count += 1;
 		}
@@ -172,5 +157,9 @@ export class PlantInMemoryRepository extends BaseRepositoryErrors implements Pla
 			if (this.store.plants.delete(idKey(row.id))) count += 1;
 		}
 		return { count };
+	}
+
+	private get store(): InMemoryStore {
+		return this.transactionManager.session;
 	}
 }

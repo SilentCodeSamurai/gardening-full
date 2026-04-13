@@ -9,7 +9,7 @@ import {
 
 import { createUseCaseContextFromOrpc } from "../../create-use-case-context";
 import { authenticatedProcedure } from "../../orpc-procedure";
-import { resolveAndExecute } from "../../shared/resolve-use-case";
+import { runUseCaseOrpc } from "../../shared/run-use-case-orpc";
 import {
 	CreateLocationInputSchema,
 	DeleteLocationInputSchema,
@@ -22,35 +22,31 @@ export const locationRouter = {
 	create: authenticatedProcedure
 		.input(CreateLocationInputSchema)
 		.handler(({ input, context }) =>
-			resolveAndExecute(LocationCreateUseCase, { context: createUseCaseContextFromOrpc(context), dto: input }),
+			runUseCaseOrpc(LocationCreateUseCase, { context: createUseCaseContextFromOrpc(context), dto: input }),
 		),
-	getById: authenticatedProcedure
-		.input(GetLocationByIdInputSchema)
-		.handler(({ input, context }) =>
-			resolveAndExecute(LocationGetByIdUseCase, {
-				context: createUseCaseContextFromOrpc(context),
-				dto: { id: input.id },
-			}),
-		),
+	getById: authenticatedProcedure.input(GetLocationByIdInputSchema).handler(({ input, context }) =>
+		runUseCaseOrpc(LocationGetByIdUseCase, {
+			context: createUseCaseContextFromOrpc(context),
+			dto: { id: input.id },
+		}),
+	),
 	getAll: authenticatedProcedure.handler(({ context }) =>
-		resolveAndExecute(LocationGetAllUseCase, { context: createUseCaseContextFromOrpc(context) }),
+		runUseCaseOrpc(LocationGetAllUseCase, { context: createUseCaseContextFromOrpc(context) }),
 	),
 	update: authenticatedProcedure
 		.input(UpdateLocationInputSchema)
 		.handler(({ input, context }) =>
-			resolveAndExecute(LocationUpdateUseCase, { context: createUseCaseContextFromOrpc(context), dto: input }),
+			runUseCaseOrpc(LocationUpdateUseCase, { context: createUseCaseContextFromOrpc(context), dto: input }),
 		),
-	delete: authenticatedProcedure
-		.input(DeleteLocationInputSchema)
-		.handler(({ input, context }) =>
-			resolveAndExecute(LocationDeleteUseCase, {
-				context: createUseCaseContextFromOrpc(context),
-				dto: { id: input.id },
-			}),
-		),
+	delete: authenticatedProcedure.input(DeleteLocationInputSchema).handler(({ input, context }) =>
+		runUseCaseOrpc(LocationDeleteUseCase, {
+			context: createUseCaseContextFromOrpc(context),
+			dto: { id: input.id },
+		}),
+	),
 	deleteMany: authenticatedProcedure
 		.input(DeleteManyLocationInputSchema)
 		.handler(({ input, context }) =>
-			resolveAndExecute(LocationDeleteManyUseCase, { context: createUseCaseContextFromOrpc(context), dto: input }),
+			runUseCaseOrpc(LocationDeleteManyUseCase, { context: createUseCaseContextFromOrpc(context), dto: input }),
 		),
 };

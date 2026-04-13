@@ -17,4 +17,3 @@ export type WorkspaceRoleAssignmentEntity = BaseEntity<WorkspaceRoleAssignmentEn
 	readonly role: AccessRole;
 	readonly grantSource?: string;
 };
-

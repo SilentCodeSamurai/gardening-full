@@ -1,10 +1,21 @@
 import { WorkspaceVO } from "@backend/core/domain/access/workspace.vo";
 import type { SpeciesCategoryEntityId } from "@backend/core/domain/gardening/entities";
-import type { SpeciesRepositoryPort } from "../../ports/repositories/gardening/species.repository.port";
-import type { SpeciesCategoryRepositoryPort } from "../../ports/repositories/gardening/species-category.repository.port";
-import type { AccessControlApplicationService } from "../../services/access-control/access-control.application-service";
+import { inject, injectable } from "tsyringe";
+import {
+	type SpeciesRepositoryPort,
+	SpeciesRepositoryPortToken,
+} from "../../ports/repositories/gardening/species.repository.port";
+import {
+	type SpeciesCategoryRepositoryPort,
+	SpeciesCategoryRepositoryPortToken,
+} from "../../ports/repositories/gardening/species-category.repository.port";
+import {
+	type TransactionManagerPort,
+	TransactionManagerPortToken,
+} from "../../ports/transaction/transaction-manager.port";
+import { AccessControlApplicationService } from "../../services/access-control/access-control.application-service";
 import { BaseUseCaseError } from "../shared/errors";
-import type { IUseCase } from "../shared/use-case.interface";
+import { TransactionalUseCase } from "../shared/transactional.use-case";
 import type { UseCaseRequest } from "../use-case-context";
 
 import type { DefaultCatalogCategory, DefaultCatalogDefinition } from "./default-catalog.config";
@@ -47,16 +58,22 @@ function assertUniqueCategorySlugs(categories: readonly DefaultCatalogCategory[]
 	}
 }
 
-export class PopulateDefaultCatalogUseCase
-	implements IUseCase<PopulateDefaultCatalogInput, PopulateDefaultCatalogOutput>
-{
+@injectable()
+export class PopulateDefaultCatalogUseCase extends TransactionalUseCase<
+	PopulateDefaultCatalogInput,
+	PopulateDefaultCatalogOutput
+> {
 	constructor(
-		private readonly access: AccessControlApplicationService,
+		@inject(AccessControlApplicationService) private readonly access: AccessControlApplicationService,
+		@inject(SpeciesCategoryRepositoryPortToken)
 		private readonly speciesCategoryRepository: SpeciesCategoryRepositoryPort,
-		private readonly speciesRepository: SpeciesRepositoryPort,
-	) {}
+		@inject(SpeciesRepositoryPortToken) private readonly speciesRepository: SpeciesRepositoryPort,
+		@inject(TransactionManagerPortToken) transactionManager: TransactionManagerPort,
+	) {
+		super(transactionManager);
+	}
 
-	public async execute(input: PopulateDefaultCatalogInput): Promise<PopulateDefaultCatalogOutput> {
+	protected async execute(input: PopulateDefaultCatalogInput): Promise<PopulateDefaultCatalogOutput> {
 		assertUniqueCategorySlugs(input.dto.catalog.categories);
 
 		const globalShared = WorkspaceVO.globalShared();

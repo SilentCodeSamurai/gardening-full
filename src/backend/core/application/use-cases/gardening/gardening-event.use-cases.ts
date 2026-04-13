@@ -1,9 +1,26 @@
-import type { GardeningEventRepositoryPort } from "@backend/core/application/ports/repositories/gardening/gardening-event.repository.port";
-import type { LocationRepositoryPort } from "@backend/core/application/ports/repositories/gardening/location.repository.port";
-import type { PlantRepositoryPort } from "@backend/core/application/ports/repositories/gardening/plant.repository.port";
-import type { SpatialNodeRepositoryPort } from "@backend/core/application/ports/repositories/spatial/spatial-node.repository.port";
-import type { AccessControlApplicationService } from "@backend/core/application/services/access-control/access-control.application-service";
-import type { IUseCase } from "@backend/core/application/use-cases/shared/use-case.interface";
+import {
+	type GardeningEventRepositoryPort,
+	GardeningEventRepositoryPortToken,
+} from "@backend/core/application/ports/repositories/gardening/gardening-event.repository.port";
+import {
+	type LocationRepositoryPort,
+	LocationRepositoryPortToken,
+} from "@backend/core/application/ports/repositories/gardening/location.repository.port";
+import {
+	type PlantRepositoryPort,
+	PlantRepositoryPortToken,
+} from "@backend/core/application/ports/repositories/gardening/plant.repository.port";
+import {
+	type SpatialNodeRepositoryPort,
+	SpatialNodeRepositoryPortToken,
+} from "@backend/core/application/ports/repositories/spatial/spatial-node.repository.port";
+import {
+	type TransactionManagerPort,
+	TransactionManagerPortToken,
+} from "@backend/core/application/ports/transaction/transaction-manager.port";
+import { AccessControlApplicationService } from "@backend/core/application/services/access-control/access-control.application-service";
+import { BaseUseCase } from "@backend/core/application/use-cases/shared/base.use-case";
+import { TransactionalUseCase } from "@backend/core/application/use-cases/shared/transactional.use-case";
 import type { UseCaseRequest } from "@backend/core/application/use-cases/use-case-context";
 import type {
 	GardeningEventEntity,
@@ -13,19 +30,25 @@ import type {
 } from "@backend/core/domain/gardening/entities";
 import type { GardeningAction } from "@backend/core/domain/gardening/value-objects";
 import type { ItemsContainer } from "@backend/shared/types";
+import { inject, injectable } from "tsyringe";
 
 export type GardeningEventGetAllUseCaseInput = UseCaseRequest;
 export type GardeningEventGetAllUseCaseOutput = ItemsContainer<GardeningEventEntity>;
 
-export class GardeningEventGetAllUseCase
-	implements IUseCase<GardeningEventGetAllUseCaseInput, GardeningEventGetAllUseCaseOutput>
-{
+@injectable()
+export class GardeningEventGetAllUseCase extends BaseUseCase<
+	GardeningEventGetAllUseCaseInput,
+	GardeningEventGetAllUseCaseOutput
+> {
 	constructor(
-		private readonly access: AccessControlApplicationService,
+		@inject(AccessControlApplicationService) private readonly access: AccessControlApplicationService,
+		@inject(GardeningEventRepositoryPortToken)
 		private readonly gardeningEventRepository: GardeningEventRepositoryPort,
-	) {}
+	) {
+		super();
+	}
 
-	public async execute(input: GardeningEventGetAllUseCaseInput): Promise<GardeningEventGetAllUseCaseOutput> {
+	protected async execute(input: GardeningEventGetAllUseCaseInput): Promise<GardeningEventGetAllUseCaseOutput> {
 		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "read" });
 		const scope = input.context.activeWorkspaceScope;
 		return this.gardeningEventRepository.getMany({ filters: [{ workspace: scope }] });
@@ -35,15 +58,20 @@ export class GardeningEventGetAllUseCase
 export type GardeningEventGetByIdUseCaseInput = UseCaseRequest<{ id: GardeningEventEntityId }>;
 export type GardeningEventGetByIdUseCaseOutput = GardeningEventEntity;
 
-export class GardeningEventGetByIdUseCase
-	implements IUseCase<GardeningEventGetByIdUseCaseInput, GardeningEventGetByIdUseCaseOutput>
-{
+@injectable()
+export class GardeningEventGetByIdUseCase extends BaseUseCase<
+	GardeningEventGetByIdUseCaseInput,
+	GardeningEventGetByIdUseCaseOutput
+> {
 	constructor(
-		private readonly access: AccessControlApplicationService,
+		@inject(AccessControlApplicationService) private readonly access: AccessControlApplicationService,
+		@inject(GardeningEventRepositoryPortToken)
 		private readonly gardeningEventRepository: GardeningEventRepositoryPort,
-	) {}
+	) {
+		super();
+	}
 
-	public async execute(input: GardeningEventGetByIdUseCaseInput): Promise<GardeningEventGetByIdUseCaseOutput> {
+	protected async execute(input: GardeningEventGetByIdUseCaseInput): Promise<GardeningEventGetByIdUseCaseOutput> {
 		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "read" });
 		const scope = input.context.activeWorkspaceScope;
 		return this.gardeningEventRepository.getOne({ filters: [{ id: input.dto.id, workspace: scope }] });
@@ -56,15 +84,20 @@ export type GardeningEventUpdateUseCaseInput = UseCaseRequest<{
 }>;
 export type GardeningEventUpdateUseCaseOutput = GardeningEventEntity;
 
-export class GardeningEventUpdateUseCase
-	implements IUseCase<GardeningEventUpdateUseCaseInput, GardeningEventUpdateUseCaseOutput>
-{
+@injectable()
+export class GardeningEventUpdateUseCase extends BaseUseCase<
+	GardeningEventUpdateUseCaseInput,
+	GardeningEventUpdateUseCaseOutput
+> {
 	constructor(
-		private readonly access: AccessControlApplicationService,
+		@inject(AccessControlApplicationService) private readonly access: AccessControlApplicationService,
+		@inject(GardeningEventRepositoryPortToken)
 		private readonly gardeningEventRepository: GardeningEventRepositoryPort,
-	) {}
+	) {
+		super();
+	}
 
-	public async execute(input: GardeningEventUpdateUseCaseInput): Promise<GardeningEventUpdateUseCaseOutput> {
+	protected async execute(input: GardeningEventUpdateUseCaseInput): Promise<GardeningEventUpdateUseCaseOutput> {
 		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "update" });
 		const scope = input.context.activeWorkspaceScope;
 		const { id, ...patch } = input.dto;
@@ -78,19 +111,49 @@ export class GardeningEventUpdateUseCase
 export type GardeningEventDeleteUseCaseInput = UseCaseRequest<{ id: GardeningEventEntityId }>;
 export type GardeningEventDeleteUseCaseOutput = GardeningEventEntityId;
 
-export class GardeningEventDeleteUseCase
-	implements IUseCase<GardeningEventDeleteUseCaseInput, GardeningEventDeleteUseCaseOutput>
-{
+@injectable()
+export class GardeningEventDeleteUseCase extends BaseUseCase<
+	GardeningEventDeleteUseCaseInput,
+	GardeningEventDeleteUseCaseOutput
+> {
 	constructor(
-		private readonly access: AccessControlApplicationService,
+		@inject(AccessControlApplicationService) private readonly access: AccessControlApplicationService,
+		@inject(GardeningEventRepositoryPortToken)
 		private readonly gardeningEventRepository: GardeningEventRepositoryPort,
-	) {}
+	) {
+		super();
+	}
 
-	public async execute(input: GardeningEventDeleteUseCaseInput): Promise<GardeningEventDeleteUseCaseOutput> {
+	protected async execute(input: GardeningEventDeleteUseCaseInput): Promise<GardeningEventDeleteUseCaseOutput> {
 		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "delete" });
 		const scope = input.context.activeWorkspaceScope;
 		return this.gardeningEventRepository.deleteOne({
 			filters: [{ id: input.dto.id, workspace: scope }],
+		});
+	}
+}
+
+export type GardeningEventDeleteManyUseCaseInput = UseCaseRequest<{ ids: GardeningEventEntityId[] }>;
+export type GardeningEventDeleteManyUseCaseOutput = { count: number };
+
+@injectable()
+export class GardeningEventDeleteManyUseCase extends BaseUseCase<
+	GardeningEventDeleteManyUseCaseInput,
+	GardeningEventDeleteManyUseCaseOutput
+> {
+	constructor(
+		@inject(AccessControlApplicationService) private readonly access: AccessControlApplicationService,
+		@inject(GardeningEventRepositoryPortToken)
+		private readonly gardeningEventRepository: GardeningEventRepositoryPort,
+	) {
+		super();
+	}
+
+	protected async execute(input: GardeningEventDeleteManyUseCaseInput): Promise<GardeningEventDeleteManyUseCaseOutput> {
+		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "delete" });
+		const scope = input.context.activeWorkspaceScope;
+		return this.gardeningEventRepository.deleteMany({
+			filters: input.dto.ids.map((id) => ({ id, workspace: scope })),
 		});
 	}
 }
@@ -100,15 +163,20 @@ export type GardeningEventCreateUseCaseInput = UseCaseRequest<{
 }>;
 export type GardeningEventCreateUseCaseOutput = GardeningEventEntity;
 
-export class GardeningEventCreateUseCase
-	implements IUseCase<GardeningEventCreateUseCaseInput, GardeningEventCreateUseCaseOutput>
-{
+@injectable()
+export class GardeningEventCreateUseCase extends BaseUseCase<
+	GardeningEventCreateUseCaseInput,
+	GardeningEventCreateUseCaseOutput
+> {
 	constructor(
-		private readonly access: AccessControlApplicationService,
+		@inject(AccessControlApplicationService) private readonly access: AccessControlApplicationService,
+		@inject(GardeningEventRepositoryPortToken)
 		private readonly gardeningEventRepository: GardeningEventRepositoryPort,
-	) {}
+	) {
+		super();
+	}
 
-	public async execute(input: GardeningEventCreateUseCaseInput): Promise<GardeningEventCreateUseCaseOutput> {
+	protected async execute(input: GardeningEventCreateUseCaseInput): Promise<GardeningEventCreateUseCaseOutput> {
 		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "create" });
 		return this.gardeningEventRepository.createOne({
 			action: input.dto.action,
@@ -123,24 +191,33 @@ export type GardeningEventCreateForLocationUseCaseInput = UseCaseRequest<{
 }>;
 export type GardeningEventCreateForLocationUseCaseOutput = GardeningEventEntity;
 
-export class GardeningEventCreateForLocationUseCase
-	implements IUseCase<GardeningEventCreateForLocationUseCaseInput, GardeningEventCreateForLocationUseCaseOutput>
-{
+@injectable()
+export class GardeningEventCreateForLocationUseCase extends TransactionalUseCase<
+	GardeningEventCreateForLocationUseCaseInput,
+	GardeningEventCreateForLocationUseCaseOutput
+> {
 	constructor(
-		private readonly access: AccessControlApplicationService,
+		@inject(AccessControlApplicationService) private readonly access: AccessControlApplicationService,
+		@inject(GardeningEventRepositoryPortToken)
 		private readonly gardeningEventRepository: GardeningEventRepositoryPort,
-		private readonly plantRepository: PlantRepositoryPort,
+		@inject(PlantRepositoryPortToken) private readonly plantRepository: PlantRepositoryPort,
+		@inject(SpatialNodeRepositoryPortToken)
 		private readonly spatialNodeRepository: SpatialNodeRepositoryPort,
-		private readonly locationRepository: LocationRepositoryPort,
-	) {}
+		@inject(LocationRepositoryPortToken) private readonly locationRepository: LocationRepositoryPort,
+		@inject(TransactionManagerPortToken) transactionManager: TransactionManagerPort,
+	) {
+		super(transactionManager);
+	}
 
-	public async execute(
+	protected async execute(
 		input: GardeningEventCreateForLocationUseCaseInput,
 	): Promise<GardeningEventCreateForLocationUseCaseOutput> {
 		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "create" });
 		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "read" });
 		const scope = input.context.activeWorkspaceScope;
-		await this.locationRepository.getOne({ filters: [{ id: input.dto.locationId, workspace: scope }] });
+		await this.locationRepository.getOne({
+			filters: [{ id: input.dto.locationId, workspace: scope }],
+		});
 		const gardeningEvent = await this.gardeningEventRepository.createOne({
 			action: input.dto.action,
 			workspace: input.context.activeWorkspaceScope,
@@ -151,7 +228,6 @@ export class GardeningEventCreateForLocationUseCase
 				filters: [
 					{
 						ref: { entity: "location", entityId: String(input.dto.locationId) },
-						workspace: activeScope,
 					},
 				],
 			});
@@ -171,12 +247,12 @@ export class GardeningEventCreateForLocationUseCase
 						})
 					: { items: [] };
 			await Promise.all(
-				plants.items.map((plant) =>
-					this.gardeningEventRepository.bindToPlantOne({
+				plants.items.map((plant) => {
+					return this.gardeningEventRepository.bindToPlantOne({
 						filters: [{ id: gardeningEvent.id, workspace: gardeningEvent.workspace }],
 						plantId: plant.id,
-					}),
-				),
+					});
+				}),
 			);
 		} catch {
 			// Spatial mapping is optional during bootstrap/reset states.
@@ -195,16 +271,22 @@ export type GardeningEventCreateForPlantListUseCaseInput = UseCaseRequest<{
 }>;
 export type GardeningEventCreateForPlantListUseCaseOutput = GardeningEventEntity;
 
-export class GardeningEventCreateForPlantListUseCase
-	implements IUseCase<GardeningEventCreateForPlantListUseCaseInput, GardeningEventCreateForPlantListUseCaseOutput>
-{
+@injectable()
+export class GardeningEventCreateForPlantListUseCase extends TransactionalUseCase<
+	GardeningEventCreateForPlantListUseCaseInput,
+	GardeningEventCreateForPlantListUseCaseOutput
+> {
 	constructor(
-		private readonly access: AccessControlApplicationService,
+		@inject(AccessControlApplicationService) private readonly access: AccessControlApplicationService,
+		@inject(GardeningEventRepositoryPortToken)
 		private readonly gardeningEventRepository: GardeningEventRepositoryPort,
-		private readonly plantRepository: PlantRepositoryPort,
-	) {}
+		@inject(PlantRepositoryPortToken) private readonly plantRepository: PlantRepositoryPort,
+		@inject(TransactionManagerPortToken) transactionManager: TransactionManagerPort,
+	) {
+		super(transactionManager);
+	}
 
-	public async execute(
+	protected async execute(
 		input: GardeningEventCreateForPlantListUseCaseInput,
 	): Promise<GardeningEventCreateForPlantListUseCaseOutput> {
 		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "create" });
@@ -234,23 +316,28 @@ export class GardeningEventCreateForPlantListUseCase
 export type GardeningEventGetForPlantUseCaseInput = UseCaseRequest<{ plantId: PlantEntityId }>;
 export type GardeningEventGetForPlantUseCaseOutput = ItemsContainer<GardeningEventEntity>;
 
-export class GardeningEventGetForPlantUseCase
-	implements IUseCase<GardeningEventGetForPlantUseCaseInput, GardeningEventGetForPlantUseCaseOutput>
-{
+@injectable()
+export class GardeningEventGetForPlantUseCase extends BaseUseCase<
+	GardeningEventGetForPlantUseCaseInput,
+	GardeningEventGetForPlantUseCaseOutput
+> {
 	constructor(
-		private readonly access: AccessControlApplicationService,
+		@inject(AccessControlApplicationService) private readonly access: AccessControlApplicationService,
+		@inject(GardeningEventRepositoryPortToken)
 		private readonly gardeningEventRepository: GardeningEventRepositoryPort,
-		private readonly plantRepository: PlantRepositoryPort,
-	) {}
+		@inject(PlantRepositoryPortToken) private readonly plantRepository: PlantRepositoryPort,
+	) {
+		super();
+	}
 
-	public async execute(
+	protected async execute(
 		input: GardeningEventGetForPlantUseCaseInput,
 	): Promise<GardeningEventGetForPlantUseCaseOutput> {
 		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "read" });
 		const activeScope = input.context.activeWorkspaceScope;
 		await this.plantRepository.getOne({ filters: [{ id: input.dto.plantId, workspace: activeScope }] });
 		return this.gardeningEventRepository.getManyForPlant({
-			filters: [{ plantId: input.dto.plantId, workspace: activeScope }],
+			filters: [{ plantId: input.dto.plantId }],
 		});
 	}
 }
@@ -258,23 +345,28 @@ export class GardeningEventGetForPlantUseCase
 export type GardeningEventGetForLocationUseCaseInput = UseCaseRequest<{ locationId: LocationEntityId }>;
 export type GardeningEventGetForLocationUseCaseOutput = ItemsContainer<GardeningEventEntity>;
 
-export class GardeningEventGetForLocationUseCase
-	implements IUseCase<GardeningEventGetForLocationUseCaseInput, GardeningEventGetForLocationUseCaseOutput>
-{
+@injectable()
+export class GardeningEventGetForLocationUseCase extends BaseUseCase<
+	GardeningEventGetForLocationUseCaseInput,
+	GardeningEventGetForLocationUseCaseOutput
+> {
 	constructor(
-		private readonly access: AccessControlApplicationService,
+		@inject(AccessControlApplicationService) private readonly access: AccessControlApplicationService,
+		@inject(GardeningEventRepositoryPortToken)
 		private readonly gardeningEventRepository: GardeningEventRepositoryPort,
-		private readonly locationRepository: LocationRepositoryPort,
-	) {}
+		@inject(LocationRepositoryPortToken) private readonly locationRepository: LocationRepositoryPort,
+	) {
+		super();
+	}
 
-	public async execute(
+	protected async execute(
 		input: GardeningEventGetForLocationUseCaseInput,
 	): Promise<GardeningEventGetForLocationUseCaseOutput> {
 		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "read" });
 		const activeScope = input.context.activeWorkspaceScope;
 		await this.locationRepository.getOne({ filters: [{ id: input.dto.locationId, workspace: activeScope }] });
 		return this.gardeningEventRepository.getManyForLocation({
-			filters: [{ locationId: input.dto.locationId, workspace: activeScope }],
+			filters: [{ locationId: input.dto.locationId }],
 		});
 	}
 }
@@ -285,15 +377,20 @@ export type GardeningEventGetBindingsForEventUseCaseOutput = {
 	locationIds: LocationEntityId[];
 };
 
-export class GardeningEventGetBindingsForEventUseCase
-	implements IUseCase<GardeningEventGetBindingsForEventUseCaseInput, GardeningEventGetBindingsForEventUseCaseOutput>
-{
+@injectable()
+export class GardeningEventGetBindingsForEventUseCase extends BaseUseCase<
+	GardeningEventGetBindingsForEventUseCaseInput,
+	GardeningEventGetBindingsForEventUseCaseOutput
+> {
 	constructor(
-		private readonly access: AccessControlApplicationService,
+		@inject(AccessControlApplicationService) private readonly access: AccessControlApplicationService,
+		@inject(GardeningEventRepositoryPortToken)
 		private readonly gardeningEventRepository: GardeningEventRepositoryPort,
-	) {}
+	) {
+		super();
+	}
 
-	public async execute(
+	protected async execute(
 		input: GardeningEventGetBindingsForEventUseCaseInput,
 	): Promise<GardeningEventGetBindingsForEventUseCaseOutput> {
 		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "read" });

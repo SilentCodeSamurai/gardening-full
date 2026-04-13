@@ -81,7 +81,7 @@ export function registerLocationRepositoryContract(
 			).rejects.toBeInstanceOf(RepositoryNotFoundError);
 		});
 
-		it("deleteOne clears gardening eventв†”location links", async () => {
+		it("deleteOne clears gardening event-location links", async () => {
 			const loc = await location.createOne({ workspace: wk, name: "Bench" });
 			const ev = await gardeningEvent.createOne({ workspace: wk, action: fixtureNoteAction() });
 			await gardeningEvent.bindToLocationOne({ filters: [{ id: ev.id }], locationId: loc.id });

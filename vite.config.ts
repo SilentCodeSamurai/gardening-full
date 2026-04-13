@@ -43,6 +43,7 @@ const config = defineConfig({
 			},
 		}),
 		viteReact({
+			include: [/src\/app\/.*\.[tj]sx?$/],
 			babel: {
 				plugins: ["babel-plugin-transform-typescript-metadata", "babel-plugin-react-compiler"],
 			},

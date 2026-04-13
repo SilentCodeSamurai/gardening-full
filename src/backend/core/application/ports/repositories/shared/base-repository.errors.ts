@@ -49,35 +49,6 @@ export class RepositoryConflictError extends BaseRepositoryError {
 	}
 }
 
-export class RepositoryValidationError extends BaseRepositoryError {
-	public readonly operation: string;
-	public readonly validationCode: string;
-	public readonly details: Record<string, unknown> | undefined;
-
-	constructor(params: {
-		operation: string;
-		validationCode: string;
-		context?: Record<string, unknown>;
-		details?: Record<string, unknown>;
-		message?: string;
-		cause?: unknown;
-	}) {
-		super({
-			code: "VALIDATION",
-			message:
-				params.message ??
-				`Validation failed: ${params.operation} ${params.validationCode} ${JSON.stringify(
-					params.context ?? {},
-				)}`,
-			context: params.context,
-			cause: params.cause,
-		});
-		this.operation = params.operation;
-		this.validationCode = params.validationCode;
-		this.details = params.details;
-	}
-}
-
 export abstract class BaseRepositoryErrors {
 	protected throwNotFoundError(resource: string, id: unknown): never {
 		throw new RepositoryNotFoundError({
@@ -95,16 +66,5 @@ export abstract class BaseRepositoryErrors {
 		cause?: unknown;
 	}): never {
 		throw new RepositoryConflictError(params);
-	}
-
-	protected throwValidationError(params: {
-		operation: string;
-		validationCode: string;
-		context?: Record<string, unknown>;
-		details?: Record<string, unknown>;
-		message?: string;
-		cause?: unknown;
-	}): never {
-		throw new RepositoryValidationError(params);
 	}
 }
