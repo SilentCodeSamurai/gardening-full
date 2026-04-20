@@ -2,7 +2,6 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { ExternalLinkIcon, PencilIcon, PencilOffIcon, Trash2Icon } from "lucide-react";
 import { useState } from "react";
-import type { SpeciesItem } from "#/app/store/cache/collections/species";
 import { DeleteConfirmDialog } from "@/components/gardening/shared/delete-confirm-dialog";
 import { SpeciesUpdateDialog } from "@/components/gardening/species/species-update-dialog";
 import { ItemPresentationIcon } from "@/components/icon/item-presentation-icon";
@@ -22,10 +21,11 @@ import { cn } from "@/lib/utils";
 import * as m from "@/paraglide/messages.js";
 import { queryKeys } from "@/store/keys";
 import { useSpeciesDeleteMutation } from "@/store/mutations";
+import type { CachedSpeciesWithSystemCatalog } from "@/store/query-cache-types";
 import { isQueryObjectPending } from "@/store/query-object-status";
 
 type Props = {
-	species: SpeciesItem;
+	species: CachedSpeciesWithSystemCatalog;
 	categoryId: string;
 	categoryLabel: string;
 };
