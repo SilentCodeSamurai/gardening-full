@@ -1,5 +1,7 @@
+import type { SpeciesCategoryEntityId, SpeciesEntityId } from "@backend/core/domain/gardening/entities";
 import { ItemPresentationIconKey } from "@backend/core/domain/gardening/enums";
 import type { ItemPresentationValueObject } from "@backend/core/domain/gardening/value-objects";
+import { speciesId } from "@backend/infrastructure/integrations/shared/database-ids";
 import type { SpeciesRepositoryCreateInputDTO } from "../../ports/repositories/gardening/species.repository.port";
 import type { SpeciesCategoryRepositoryCreateInputDTO } from "../../ports/repositories/gardening/species-category.repository.port";
 
@@ -111,13 +113,15 @@ const DEFAULT_CATEGORY_PRESENTATION = {
 
 const DEFAULT_SPECIES_BY_CATEGORY: Record<
 	CategorySlugEnum,
-	{
+	{	
+		id: SpeciesEntityId;
 		characteristics: { name: string; description: string | null };
 		presentation: ItemPresentationValueObject;
 	}[]
 > = {
 	vegetables: [
 		{
+			id: speciesId("system-species:vegetables:tomato"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.vegetables.tomato.name,
 				description: CATALOG_I18N_KEYS.species.vegetables.tomato.description,
@@ -128,6 +132,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:vegetables:cucumber"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.vegetables.cucumber.name,
 				description: CATALOG_I18N_KEYS.species.vegetables.cucumber.description,
@@ -138,6 +143,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:vegetables:zucchini"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.vegetables.zucchini.name,
 				description: CATALOG_I18N_KEYS.species.vegetables.zucchini.description,
@@ -148,6 +154,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:vegetables:eggplant"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.vegetables.eggplant.name,
 				description: CATALOG_I18N_KEYS.species.vegetables.eggplant.description,
@@ -158,6 +165,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:vegetables:bellPepper"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.vegetables.bellPepper.name,
 				description: CATALOG_I18N_KEYS.species.vegetables.bellPepper.description,
@@ -168,6 +176,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:vegetables:chiliPepper"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.vegetables.chiliPepper.name,
 				description: CATALOG_I18N_KEYS.species.vegetables.chiliPepper.description,
@@ -178,6 +187,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:vegetables:pumpkin"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.vegetables.pumpkin.name,
 				description: CATALOG_I18N_KEYS.species.vegetables.pumpkin.description,
@@ -188,6 +198,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:vegetables:squash"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.vegetables.squash.name,
 				description: CATALOG_I18N_KEYS.species.vegetables.squash.description,
@@ -198,6 +209,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:vegetables:corn"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.vegetables.corn.name,
 				description: CATALOG_I18N_KEYS.species.vegetables.corn.description,
@@ -208,6 +220,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:vegetables:okra"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.vegetables.okra.name,
 				description: CATALOG_I18N_KEYS.species.vegetables.okra.description,
@@ -218,6 +231,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:vegetables:artichoke"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.vegetables.artichoke.name,
 				description: CATALOG_I18N_KEYS.species.vegetables.artichoke.description,
@@ -228,6 +242,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:vegetables:celery"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.vegetables.celery.name,
 				description: CATALOG_I18N_KEYS.species.vegetables.celery.description,
@@ -238,6 +253,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:vegetables:asparagus"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.vegetables.asparagus.name,
 				description: CATALOG_I18N_KEYS.species.vegetables.asparagus.description,
@@ -248,6 +264,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:vegetables:rhubarb"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.vegetables.rhubarb.name,
 				description: CATALOG_I18N_KEYS.species.vegetables.rhubarb.description,
@@ -258,6 +275,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:vegetables:sweetPotato"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.vegetables.sweetPotato.name,
 				description: CATALOG_I18N_KEYS.species.vegetables.sweetPotato.description,
@@ -268,6 +286,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:vegetables:tomatillo"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.vegetables.tomatillo.name,
 				description: CATALOG_I18N_KEYS.species.vegetables.tomatillo.description,
@@ -278,6 +297,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:vegetables:pattypanSquash"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.vegetables.pattypanSquash.name,
 				description: CATALOG_I18N_KEYS.species.vegetables.pattypanSquash.description,
@@ -288,6 +308,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:vegetables:chayote"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.vegetables.chayote.name,
 				description: CATALOG_I18N_KEYS.species.vegetables.chayote.description,
@@ -298,6 +319,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:vegetables:kohlrabi"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.vegetables.kohlrabi.name,
 				description: CATALOG_I18N_KEYS.species.vegetables.kohlrabi.description,
@@ -308,6 +330,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:vegetables:fennel"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.vegetables.fennel.name,
 				description: CATALOG_I18N_KEYS.species.vegetables.fennel.description,
@@ -320,6 +343,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 	],
 	herbs: [
 		{
+			id: speciesId("system-species:herbs:basil"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.herbs.basil.name,
 				description: CATALOG_I18N_KEYS.species.herbs.basil.description,
@@ -330,6 +354,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:herbs:parsley"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.herbs.parsley.name,
 				description: CATALOG_I18N_KEYS.species.herbs.parsley.description,
@@ -340,6 +365,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:herbs:cilantro"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.herbs.cilantro.name,
 				description: CATALOG_I18N_KEYS.species.herbs.cilantro.description,
@@ -350,6 +376,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:herbs:dill"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.herbs.dill.name,
 				description: CATALOG_I18N_KEYS.species.herbs.dill.description,
@@ -360,6 +387,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:herbs:mint"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.herbs.mint.name,
 				description: CATALOG_I18N_KEYS.species.herbs.mint.description,
@@ -370,6 +398,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:herbs:oregano"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.herbs.oregano.name,
 				description: CATALOG_I18N_KEYS.species.herbs.oregano.description,
@@ -380,6 +409,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:herbs:thyme"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.herbs.thyme.name,
 				description: CATALOG_I18N_KEYS.species.herbs.thyme.description,
@@ -390,6 +420,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:herbs:rosemary"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.herbs.rosemary.name,
 				description: CATALOG_I18N_KEYS.species.herbs.rosemary.description,
@@ -400,6 +431,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:herbs:sage"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.herbs.sage.name,
 				description: CATALOG_I18N_KEYS.species.herbs.sage.description,
@@ -410,6 +442,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:herbs:chives"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.herbs.chives.name,
 				description: CATALOG_I18N_KEYS.species.herbs.chives.description,
@@ -420,6 +453,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:herbs:tarragon"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.herbs.tarragon.name,
 				description: CATALOG_I18N_KEYS.species.herbs.tarragon.description,
@@ -430,6 +464,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:herbs:marjoram"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.herbs.marjoram.name,
 				description: CATALOG_I18N_KEYS.species.herbs.marjoram.description,
@@ -440,6 +475,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:herbs:lavender"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.herbs.lavender.name,
 				description: CATALOG_I18N_KEYS.species.herbs.lavender.description,
@@ -450,6 +486,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:herbs:lemonBalm"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.herbs.lemonBalm.name,
 				description: CATALOG_I18N_KEYS.species.herbs.lemonBalm.description,
@@ -460,6 +497,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:herbs:bayLaurel"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.herbs.bayLaurel.name,
 				description: CATALOG_I18N_KEYS.species.herbs.bayLaurel.description,
@@ -470,6 +508,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:herbs:lemongrass"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.herbs.lemongrass.name,
 				description: CATALOG_I18N_KEYS.species.herbs.lemongrass.description,
@@ -480,6 +519,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:herbs:stevia"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.herbs.stevia.name,
 				description: CATALOG_I18N_KEYS.species.herbs.stevia.description,
@@ -490,6 +530,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:herbs:chervil"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.herbs.chervil.name,
 				description: CATALOG_I18N_KEYS.species.herbs.chervil.description,
@@ -500,6 +541,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:herbs:summerSavory"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.herbs.summerSavory.name,
 				description: CATALOG_I18N_KEYS.species.herbs.summerSavory.description,
@@ -510,6 +552,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:herbs:winterSavory"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.herbs.winterSavory.name,
 				description: CATALOG_I18N_KEYS.species.herbs.winterSavory.description,
@@ -522,6 +565,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 	],
 	fruits: [
 		{
+			id: speciesId("system-species:fruits:apple"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.fruits.apple.name,
 				description: CATALOG_I18N_KEYS.species.fruits.apple.description,
@@ -532,6 +576,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:fruits:pear"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.fruits.pear.name,
 				description: CATALOG_I18N_KEYS.species.fruits.pear.description,
@@ -542,6 +587,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:fruits:peach"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.fruits.peach.name,
 				description: CATALOG_I18N_KEYS.species.fruits.peach.description,
@@ -552,6 +598,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:fruits:plum"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.fruits.plum.name,
 				description: CATALOG_I18N_KEYS.species.fruits.plum.description,
@@ -562,6 +609,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:fruits:apricot"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.fruits.apricot.name,
 				description: CATALOG_I18N_KEYS.species.fruits.apricot.description,
@@ -572,6 +620,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:fruits:cherry"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.fruits.cherry.name,
 				description: CATALOG_I18N_KEYS.species.fruits.cherry.description,
@@ -582,6 +631,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:fruits:fig"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.fruits.fig.name,
 				description: CATALOG_I18N_KEYS.species.fruits.fig.description,
@@ -592,6 +642,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:fruits:persimmon"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.fruits.persimmon.name,
 				description: CATALOG_I18N_KEYS.species.fruits.persimmon.description,
@@ -602,6 +653,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:fruits:quince"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.fruits.quince.name,
 				description: CATALOG_I18N_KEYS.species.fruits.quince.description,
@@ -612,6 +664,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:fruits:grape"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.fruits.grape.name,
 				description: CATALOG_I18N_KEYS.species.fruits.grape.description,
@@ -622,6 +675,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:fruits:kiwi"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.fruits.kiwi.name,
 				description: CATALOG_I18N_KEYS.species.fruits.kiwi.description,
@@ -632,6 +686,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:fruits:melon"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.fruits.melon.name,
 				description: CATALOG_I18N_KEYS.species.fruits.melon.description,
@@ -642,6 +697,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:fruits:watermelon"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.fruits.watermelon.name,
 				description: CATALOG_I18N_KEYS.species.fruits.watermelon.description,
@@ -652,6 +708,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:fruits:pineapple"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.fruits.pineapple.name,
 				description: CATALOG_I18N_KEYS.species.fruits.pineapple.description,
@@ -662,6 +719,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:fruits:pomegranate"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.fruits.pomegranate.name,
 				description: CATALOG_I18N_KEYS.species.fruits.pomegranate.description,
@@ -672,6 +730,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:fruits:orange"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.fruits.orange.name,
 				description: CATALOG_I18N_KEYS.species.fruits.orange.description,
@@ -682,6 +741,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:fruits:lemon"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.fruits.lemon.name,
 				description: CATALOG_I18N_KEYS.species.fruits.lemon.description,
@@ -692,6 +752,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:fruits:lime"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.fruits.lime.name,
 				description: CATALOG_I18N_KEYS.species.fruits.lime.description,
@@ -702,6 +763,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:fruits:mango"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.fruits.mango.name,
 				description: CATALOG_I18N_KEYS.species.fruits.mango.description,
@@ -712,6 +774,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:fruits:papaya"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.fruits.papaya.name,
 				description: CATALOG_I18N_KEYS.species.fruits.papaya.description,
@@ -724,6 +787,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 	],
 	berries: [
 		{
+			id: speciesId("system-species:berries:strawberry"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.berries.strawberry.name,
 				description: CATALOG_I18N_KEYS.species.berries.strawberry.description,
@@ -734,6 +798,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:berries:blueberry"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.berries.blueberry.name,
 				description: CATALOG_I18N_KEYS.species.berries.blueberry.description,
@@ -744,6 +809,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:berries:raspberry"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.berries.raspberry.name,
 				description: CATALOG_I18N_KEYS.species.berries.raspberry.description,
@@ -754,6 +820,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:berries:blackberry"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.berries.blackberry.name,
 				description: CATALOG_I18N_KEYS.species.berries.blackberry.description,
@@ -764,6 +831,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:berries:gooseberry"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.berries.gooseberry.name,
 				description: CATALOG_I18N_KEYS.species.berries.gooseberry.description,
@@ -774,6 +842,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:berries:redCurrant"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.berries.redCurrant.name,
 				description: CATALOG_I18N_KEYS.species.berries.redCurrant.description,
@@ -784,6 +853,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:berries:blackCurrant"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.berries.blackCurrant.name,
 				description: CATALOG_I18N_KEYS.species.berries.blackCurrant.description,
@@ -794,6 +864,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:berries:whiteCurrant"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.berries.whiteCurrant.name,
 				description: CATALOG_I18N_KEYS.species.berries.whiteCurrant.description,
@@ -804,6 +875,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:berries:cranberry"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.berries.cranberry.name,
 				description: CATALOG_I18N_KEYS.species.berries.cranberry.description,
@@ -814,6 +886,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:berries:lingonberry"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.berries.lingonberry.name,
 				description: CATALOG_I18N_KEYS.species.berries.lingonberry.description,
@@ -824,6 +897,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:berries:elderberry"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.berries.elderberry.name,
 				description: CATALOG_I18N_KEYS.species.berries.elderberry.description,
@@ -834,6 +908,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:berries:mulberry"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.berries.mulberry.name,
 				description: CATALOG_I18N_KEYS.species.berries.mulberry.description,
@@ -844,6 +919,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:berries:boysenberry"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.berries.boysenberry.name,
 				description: CATALOG_I18N_KEYS.species.berries.boysenberry.description,
@@ -854,6 +930,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:berries:loganberry"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.berries.loganberry.name,
 				description: CATALOG_I18N_KEYS.species.berries.loganberry.description,
@@ -864,6 +941,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:berries:huckleberry"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.berries.huckleberry.name,
 				description: CATALOG_I18N_KEYS.species.berries.huckleberry.description,
@@ -874,6 +952,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:berries:serviceberry"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.berries.serviceberry.name,
 				description: CATALOG_I18N_KEYS.species.berries.serviceberry.description,
@@ -884,6 +963,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:berries:seaBuckthorn"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.berries.seaBuckthorn.name,
 				description: CATALOG_I18N_KEYS.species.berries.seaBuckthorn.description,
@@ -894,6 +974,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:berries:aronia"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.berries.aronia.name,
 				description: CATALOG_I18N_KEYS.species.berries.aronia.description,
@@ -904,6 +985,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:berries:cloudberry"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.berries.cloudberry.name,
 				description: CATALOG_I18N_KEYS.species.berries.cloudberry.description,
@@ -914,6 +996,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:berries:jostaberry"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.berries.jostaberry.name,
 				description: CATALOG_I18N_KEYS.species.berries.jostaberry.description,
@@ -926,6 +1009,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 	],
 	leafyGreens: [
 		{
+			id: speciesId("system-species:leafyGreens:lettuce"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.leafyGreens.lettuce.name,
 				description: CATALOG_I18N_KEYS.species.leafyGreens.lettuce.description,
@@ -936,6 +1020,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:leafyGreens:spinach"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.leafyGreens.spinach.name,
 				description: CATALOG_I18N_KEYS.species.leafyGreens.spinach.description,
@@ -946,6 +1031,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:leafyGreens:kale"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.leafyGreens.kale.name,
 				description: CATALOG_I18N_KEYS.species.leafyGreens.kale.description,
@@ -956,6 +1042,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:leafyGreens:arugula"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.leafyGreens.arugula.name,
 				description: CATALOG_I18N_KEYS.species.leafyGreens.arugula.description,
@@ -966,6 +1053,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:leafyGreens:swissChard"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.leafyGreens.swissChard.name,
 				description: CATALOG_I18N_KEYS.species.leafyGreens.swissChard.description,
@@ -976,6 +1064,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:leafyGreens:collardGreens"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.leafyGreens.collardGreens.name,
 				description: CATALOG_I18N_KEYS.species.leafyGreens.collardGreens.description,
@@ -986,6 +1075,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:leafyGreens:endive"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.leafyGreens.endive.name,
 				description: CATALOG_I18N_KEYS.species.leafyGreens.endive.description,
@@ -996,6 +1086,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:leafyGreens:escarole"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.leafyGreens.escarole.name,
 				description: CATALOG_I18N_KEYS.species.leafyGreens.escarole.description,
@@ -1006,6 +1097,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:leafyGreens:mustardGreens"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.leafyGreens.mustardGreens.name,
 				description: CATALOG_I18N_KEYS.species.leafyGreens.mustardGreens.description,
@@ -1016,6 +1108,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:leafyGreens:bokChoy"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.leafyGreens.bokChoy.name,
 				description: CATALOG_I18N_KEYS.species.leafyGreens.bokChoy.description,
@@ -1026,6 +1119,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:leafyGreens:romaine"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.leafyGreens.romaine.name,
 				description: CATALOG_I18N_KEYS.species.leafyGreens.romaine.description,
@@ -1036,6 +1130,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:leafyGreens:radicchio"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.leafyGreens.radicchio.name,
 				description: CATALOG_I18N_KEYS.species.leafyGreens.radicchio.description,
@@ -1046,6 +1141,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:leafyGreens:watercress"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.leafyGreens.watercress.name,
 				description: CATALOG_I18N_KEYS.species.leafyGreens.watercress.description,
@@ -1056,6 +1152,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:leafyGreens:mizuna"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.leafyGreens.mizuna.name,
 				description: CATALOG_I18N_KEYS.species.leafyGreens.mizuna.description,
@@ -1066,6 +1163,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:leafyGreens:tatsoi"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.leafyGreens.tatsoi.name,
 				description: CATALOG_I18N_KEYS.species.leafyGreens.tatsoi.description,
@@ -1076,6 +1174,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:leafyGreens:newZealandSpinach"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.leafyGreens.newZealandSpinach.name,
 				description: CATALOG_I18N_KEYS.species.leafyGreens.newZealandSpinach.description,
@@ -1086,6 +1185,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:leafyGreens:purslane"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.leafyGreens.purslane.name,
 				description: CATALOG_I18N_KEYS.species.leafyGreens.purslane.description,
@@ -1096,6 +1196,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:leafyGreens:sorrel"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.leafyGreens.sorrel.name,
 				description: CATALOG_I18N_KEYS.species.leafyGreens.sorrel.description,
@@ -1106,6 +1207,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:leafyGreens:malabarSpinach"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.leafyGreens.malabarSpinach.name,
 				description: CATALOG_I18N_KEYS.species.leafyGreens.malabarSpinach.description,
@@ -1116,6 +1218,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:leafyGreens:chicory"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.leafyGreens.chicory.name,
 				description: CATALOG_I18N_KEYS.species.leafyGreens.chicory.description,
@@ -1128,6 +1231,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 	],
 	alliums: [
 		{
+			id: speciesId("system-species:alliums:onion"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.alliums.onion.name,
 				description: CATALOG_I18N_KEYS.species.alliums.onion.description,
@@ -1138,6 +1242,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:alliums:garlic"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.alliums.garlic.name,
 				description: CATALOG_I18N_KEYS.species.alliums.garlic.description,
@@ -1148,6 +1253,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:alliums:leek"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.alliums.leek.name,
 				description: CATALOG_I18N_KEYS.species.alliums.leek.description,
@@ -1158,6 +1264,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:alliums:shallot"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.alliums.shallot.name,
 				description: CATALOG_I18N_KEYS.species.alliums.shallot.description,
@@ -1168,6 +1275,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:alliums:scallion"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.alliums.scallion.name,
 				description: CATALOG_I18N_KEYS.species.alliums.scallion.description,
@@ -1178,6 +1286,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:alliums:garlicChive"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.alliums.garlicChive.name,
 				description: CATALOG_I18N_KEYS.species.alliums.garlicChive.description,
@@ -1188,6 +1297,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:alliums:onionChive"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.alliums.onionChive.name,
 				description: CATALOG_I18N_KEYS.species.alliums.onionChive.description,
@@ -1198,6 +1308,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:alliums:welshOnion"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.alliums.welshOnion.name,
 				description: CATALOG_I18N_KEYS.species.alliums.welshOnion.description,
@@ -1208,6 +1319,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:alliums:walkingOnion"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.alliums.walkingOnion.name,
 				description: CATALOG_I18N_KEYS.species.alliums.walkingOnion.description,
@@ -1218,6 +1330,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:alliums:rakkyo"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.alliums.rakkyo.name,
 				description: CATALOG_I18N_KEYS.species.alliums.rakkyo.description,
@@ -1228,6 +1341,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:alliums:elephantGarlic"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.alliums.elephantGarlic.name,
 				description: CATALOG_I18N_KEYS.species.alliums.elephantGarlic.description,
@@ -1238,6 +1352,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:alliums:ramps"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.alliums.ramps.name,
 				description: CATALOG_I18N_KEYS.species.alliums.ramps.description,
@@ -1248,6 +1363,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:alliums:garlicChives"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.alliums.garlicChives.name,
 				description: CATALOG_I18N_KEYS.species.alliums.garlicChives.description,
@@ -1258,6 +1374,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:alliums:springOnion"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.alliums.springOnion.name,
 				description: CATALOG_I18N_KEYS.species.alliums.springOnion.description,
@@ -1268,6 +1385,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:alliums:redOnion"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.alliums.redOnion.name,
 				description: CATALOG_I18N_KEYS.species.alliums.redOnion.description,
@@ -1278,6 +1396,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:alliums:yellowOnion"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.alliums.yellowOnion.name,
 				description: CATALOG_I18N_KEYS.species.alliums.yellowOnion.description,
@@ -1288,6 +1407,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:alliums:whiteOnion"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.alliums.whiteOnion.name,
 				description: CATALOG_I18N_KEYS.species.alliums.whiteOnion.description,
@@ -1298,6 +1418,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:alliums:pearlOnion"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.alliums.pearlOnion.name,
 				description: CATALOG_I18N_KEYS.species.alliums.pearlOnion.description,
@@ -1308,6 +1429,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:alliums:cipolliniOnion"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.alliums.cipolliniOnion.name,
 				description: CATALOG_I18N_KEYS.species.alliums.cipolliniOnion.description,
@@ -1318,6 +1440,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:alliums:societyGarlic"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.alliums.societyGarlic.name,
 				description: CATALOG_I18N_KEYS.species.alliums.societyGarlic.description,
@@ -1330,6 +1453,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 	],
 	brassicas: [
 		{
+			id: speciesId("system-species:brassicas:cabbage"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.brassicas.cabbage.name,
 				description: CATALOG_I18N_KEYS.species.brassicas.cabbage.description,
@@ -1340,6 +1464,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:brassicas:broccoli"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.brassicas.broccoli.name,
 				description: CATALOG_I18N_KEYS.species.brassicas.broccoli.description,
@@ -1350,6 +1475,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:brassicas:cauliflower"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.brassicas.cauliflower.name,
 				description: CATALOG_I18N_KEYS.species.brassicas.cauliflower.description,
@@ -1360,6 +1486,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:brassicas:brusselsSprouts"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.brassicas.brusselsSprouts.name,
 				description: CATALOG_I18N_KEYS.species.brassicas.brusselsSprouts.description,
@@ -1370,6 +1497,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:brassicas:broccolini"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.brassicas.broccolini.name,
 				description: CATALOG_I18N_KEYS.species.brassicas.broccolini.description,
@@ -1380,6 +1508,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:brassicas:napaCabbage"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.brassicas.napaCabbage.name,
 				description: CATALOG_I18N_KEYS.species.brassicas.napaCabbage.description,
@@ -1390,6 +1519,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:brassicas:savoyCabbage"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.brassicas.savoyCabbage.name,
 				description: CATALOG_I18N_KEYS.species.brassicas.savoyCabbage.description,
@@ -1400,6 +1530,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:brassicas:redCabbage"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.brassicas.redCabbage.name,
 				description: CATALOG_I18N_KEYS.species.brassicas.redCabbage.description,
@@ -1410,6 +1541,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:brassicas:romanesco"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.brassicas.romanesco.name,
 				description: CATALOG_I18N_KEYS.species.brassicas.romanesco.description,
@@ -1420,6 +1552,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:brassicas:turnip"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.brassicas.turnip.name,
 				description: CATALOG_I18N_KEYS.species.brassicas.turnip.description,
@@ -1430,6 +1563,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:brassicas:rutabaga"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.brassicas.rutabaga.name,
 				description: CATALOG_I18N_KEYS.species.brassicas.rutabaga.description,
@@ -1440,6 +1574,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:brassicas:daikon"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.brassicas.daikon.name,
 				description: CATALOG_I18N_KEYS.species.brassicas.daikon.description,
@@ -1450,6 +1585,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:brassicas:wasabi"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.brassicas.wasabi.name,
 				description: CATALOG_I18N_KEYS.species.brassicas.wasabi.description,
@@ -1460,6 +1596,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:brassicas:horseradish"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.brassicas.horseradish.name,
 				description: CATALOG_I18N_KEYS.species.brassicas.horseradish.description,
@@ -1470,6 +1607,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:brassicas:komatsuna"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.brassicas.komatsuna.name,
 				description: CATALOG_I18N_KEYS.species.brassicas.komatsuna.description,
@@ -1480,6 +1618,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:brassicas:broccoliRaab"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.brassicas.broccoliRaab.name,
 				description: CATALOG_I18N_KEYS.species.brassicas.broccoliRaab.description,
@@ -1490,6 +1629,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:brassicas:mustardCabbage"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.brassicas.mustardCabbage.name,
 				description: CATALOG_I18N_KEYS.species.brassicas.mustardCabbage.description,
@@ -1500,6 +1640,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:brassicas:chineseBroccoli"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.brassicas.chineseBroccoli.name,
 				description: CATALOG_I18N_KEYS.species.brassicas.chineseBroccoli.description,
@@ -1510,6 +1651,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:brassicas:pakChoi"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.brassicas.pakChoi.name,
 				description: CATALOG_I18N_KEYS.species.brassicas.pakChoi.description,
@@ -1520,6 +1662,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:brassicas:canola"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.brassicas.canola.name,
 				description: CATALOG_I18N_KEYS.species.brassicas.canola.description,
@@ -1532,6 +1675,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 	],
 	legumes: [
 		{
+			id: speciesId("system-species:legumes:pea"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.legumes.pea.name,
 				description: CATALOG_I18N_KEYS.species.legumes.pea.description,
@@ -1542,6 +1686,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:legumes:snapPea"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.legumes.snapPea.name,
 				description: CATALOG_I18N_KEYS.species.legumes.snapPea.description,
@@ -1552,6 +1697,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:legumes:snowPea"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.legumes.snowPea.name,
 				description: CATALOG_I18N_KEYS.species.legumes.snowPea.description,
@@ -1562,6 +1708,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:legumes:greenBean"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.legumes.greenBean.name,
 				description: CATALOG_I18N_KEYS.species.legumes.greenBean.description,
@@ -1572,6 +1719,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:legumes:runnerBean"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.legumes.runnerBean.name,
 				description: CATALOG_I18N_KEYS.species.legumes.runnerBean.description,
@@ -1582,6 +1730,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:legumes:limaBean"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.legumes.limaBean.name,
 				description: CATALOG_I18N_KEYS.species.legumes.limaBean.description,
@@ -1592,6 +1741,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:legumes:favaBean"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.legumes.favaBean.name,
 				description: CATALOG_I18N_KEYS.species.legumes.favaBean.description,
@@ -1602,6 +1752,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:legumes:chickpea"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.legumes.chickpea.name,
 				description: CATALOG_I18N_KEYS.species.legumes.chickpea.description,
@@ -1612,6 +1763,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:legumes:lentil"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.legumes.lentil.name,
 				description: CATALOG_I18N_KEYS.species.legumes.lentil.description,
@@ -1622,6 +1774,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:legumes:soybean"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.legumes.soybean.name,
 				description: CATALOG_I18N_KEYS.species.legumes.soybean.description,
@@ -1632,6 +1785,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:legumes:peanut"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.legumes.peanut.name,
 				description: CATALOG_I18N_KEYS.species.legumes.peanut.description,
@@ -1642,6 +1796,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:legumes:cowpea"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.legumes.cowpea.name,
 				description: CATALOG_I18N_KEYS.species.legumes.cowpea.description,
@@ -1652,6 +1807,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:legumes:pigeonPea"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.legumes.pigeonPea.name,
 				description: CATALOG_I18N_KEYS.species.legumes.pigeonPea.description,
@@ -1662,6 +1818,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:legumes:blackEyedPea"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.legumes.blackEyedPea.name,
 				description: CATALOG_I18N_KEYS.species.legumes.blackEyedPea.description,
@@ -1672,6 +1829,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:legumes:adzukiBean"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.legumes.adzukiBean.name,
 				description: CATALOG_I18N_KEYS.species.legumes.adzukiBean.description,
@@ -1682,6 +1840,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:legumes:mungBean"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.legumes.mungBean.name,
 				description: CATALOG_I18N_KEYS.species.legumes.mungBean.description,
@@ -1692,6 +1851,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:legumes:kidneyBean"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.legumes.kidneyBean.name,
 				description: CATALOG_I18N_KEYS.species.legumes.kidneyBean.description,
@@ -1702,6 +1862,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:legumes:navyBean"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.legumes.navyBean.name,
 				description: CATALOG_I18N_KEYS.species.legumes.navyBean.description,
@@ -1712,6 +1873,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:legumes:pintoBean"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.legumes.pintoBean.name,
 				description: CATALOG_I18N_KEYS.species.legumes.pintoBean.description,
@@ -1722,6 +1884,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:legumes:borlottiBean"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.legumes.borlottiBean.name,
 				description: CATALOG_I18N_KEYS.species.legumes.borlottiBean.description,
@@ -1734,6 +1897,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 	],
 	rootCrops: [
 		{
+			id: speciesId("system-species:rootCrops:carrot"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.rootCrops.carrot.name,
 				description: CATALOG_I18N_KEYS.species.rootCrops.carrot.description,
@@ -1744,6 +1908,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:rootCrops:beet"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.rootCrops.beet.name,
 				description: CATALOG_I18N_KEYS.species.rootCrops.beet.description,
@@ -1754,6 +1919,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:rootCrops:radish"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.rootCrops.radish.name,
 				description: CATALOG_I18N_KEYS.species.rootCrops.radish.description,
@@ -1764,6 +1930,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:rootCrops:parsnip"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.rootCrops.parsnip.name,
 				description: CATALOG_I18N_KEYS.species.rootCrops.parsnip.description,
@@ -1774,6 +1941,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:rootCrops:turnipRoot"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.rootCrops.turnipRoot.name,
 				description: CATALOG_I18N_KEYS.species.rootCrops.turnipRoot.description,
@@ -1784,6 +1952,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:rootCrops:celeriac"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.rootCrops.celeriac.name,
 				description: CATALOG_I18N_KEYS.species.rootCrops.celeriac.description,
@@ -1794,6 +1963,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:rootCrops:salsify"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.rootCrops.salsify.name,
 				description: CATALOG_I18N_KEYS.species.rootCrops.salsify.description,
@@ -1804,6 +1974,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:rootCrops:scorzonera"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.rootCrops.scorzonera.name,
 				description: CATALOG_I18N_KEYS.species.rootCrops.scorzonera.description,
@@ -1814,6 +1985,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:rootCrops:yacon"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.rootCrops.yacon.name,
 				description: CATALOG_I18N_KEYS.species.rootCrops.yacon.description,
@@ -1824,6 +1996,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:rootCrops:jicama"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.rootCrops.jicama.name,
 				description: CATALOG_I18N_KEYS.species.rootCrops.jicama.description,
@@ -1834,6 +2007,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:rootCrops:burdock"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.rootCrops.burdock.name,
 				description: CATALOG_I18N_KEYS.species.rootCrops.burdock.description,
@@ -1844,6 +2018,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:rootCrops:skirret"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.rootCrops.skirret.name,
 				description: CATALOG_I18N_KEYS.species.rootCrops.skirret.description,
@@ -1854,6 +2029,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:rootCrops:cassava"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.rootCrops.cassava.name,
 				description: CATALOG_I18N_KEYS.species.rootCrops.cassava.description,
@@ -1864,6 +2040,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:rootCrops:taro"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.rootCrops.taro.name,
 				description: CATALOG_I18N_KEYS.species.rootCrops.taro.description,
@@ -1874,6 +2051,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:rootCrops:yam"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.rootCrops.yam.name,
 				description: CATALOG_I18N_KEYS.species.rootCrops.yam.description,
@@ -1884,6 +2062,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:rootCrops:ginger"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.rootCrops.ginger.name,
 				description: CATALOG_I18N_KEYS.species.rootCrops.ginger.description,
@@ -1894,6 +2073,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:rootCrops:turmeric"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.rootCrops.turmeric.name,
 				description: CATALOG_I18N_KEYS.species.rootCrops.turmeric.description,
@@ -1904,6 +2084,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:rootCrops:horseradishRoot"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.rootCrops.horseradishRoot.name,
 				description: CATALOG_I18N_KEYS.species.rootCrops.horseradishRoot.description,
@@ -1914,6 +2095,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:rootCrops:daikonRoot"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.rootCrops.daikonRoot.name,
 				description: CATALOG_I18N_KEYS.species.rootCrops.daikonRoot.description,
@@ -1924,6 +2106,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:rootCrops:rutabagaRoot"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.rootCrops.rutabagaRoot.name,
 				description: CATALOG_I18N_KEYS.species.rootCrops.rutabagaRoot.description,
@@ -1936,6 +2119,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 	],
 	flowers: [
 		{
+			id: speciesId("system-species:flowers:marigold"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.flowers.marigold.name,
 				description: CATALOG_I18N_KEYS.species.flowers.marigold.description,
@@ -1946,6 +2130,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:flowers:nasturtium"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.flowers.nasturtium.name,
 				description: CATALOG_I18N_KEYS.species.flowers.nasturtium.description,
@@ -1956,6 +2141,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:flowers:calendula"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.flowers.calendula.name,
 				description: CATALOG_I18N_KEYS.species.flowers.calendula.description,
@@ -1966,6 +2152,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:flowers:borage"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.flowers.borage.name,
 				description: CATALOG_I18N_KEYS.species.flowers.borage.description,
@@ -1976,6 +2163,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:flowers:chamomile"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.flowers.chamomile.name,
 				description: CATALOG_I18N_KEYS.species.flowers.chamomile.description,
@@ -1986,6 +2174,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:flowers:sunflower"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.flowers.sunflower.name,
 				description: CATALOG_I18N_KEYS.species.flowers.sunflower.description,
@@ -1996,6 +2185,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:flowers:zinnia"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.flowers.zinnia.name,
 				description: CATALOG_I18N_KEYS.species.flowers.zinnia.description,
@@ -2006,6 +2196,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:flowers:cosmos"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.flowers.cosmos.name,
 				description: CATALOG_I18N_KEYS.species.flowers.cosmos.description,
@@ -2016,6 +2207,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:flowers:lavenderFlower"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.flowers.lavenderFlower.name,
 				description: CATALOG_I18N_KEYS.species.flowers.lavenderFlower.description,
@@ -2026,6 +2218,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:flowers:echinacea"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.flowers.echinacea.name,
 				description: CATALOG_I18N_KEYS.species.flowers.echinacea.description,
@@ -2036,6 +2229,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:flowers:yarrow"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.flowers.yarrow.name,
 				description: CATALOG_I18N_KEYS.species.flowers.yarrow.description,
@@ -2046,6 +2240,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:flowers:alyssum"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.flowers.alyssum.name,
 				description: CATALOG_I18N_KEYS.species.flowers.alyssum.description,
@@ -2056,6 +2251,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:flowers:phacelia"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.flowers.phacelia.name,
 				description: CATALOG_I18N_KEYS.species.flowers.phacelia.description,
@@ -2066,6 +2262,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:flowers:cornflower"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.flowers.cornflower.name,
 				description: CATALOG_I18N_KEYS.species.flowers.cornflower.description,
@@ -2076,6 +2273,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:flowers:dahlia"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.flowers.dahlia.name,
 				description: CATALOG_I18N_KEYS.species.flowers.dahlia.description,
@@ -2086,6 +2284,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:flowers:pansy"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.flowers.pansy.name,
 				description: CATALOG_I18N_KEYS.species.flowers.pansy.description,
@@ -2096,6 +2295,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:flowers:viola"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.flowers.viola.name,
 				description: CATALOG_I18N_KEYS.species.flowers.viola.description,
@@ -2106,6 +2306,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:flowers:snapdragon"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.flowers.snapdragon.name,
 				description: CATALOG_I18N_KEYS.species.flowers.snapdragon.description,
@@ -2116,6 +2317,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:flowers:sweetPeaFlower"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.flowers.sweetPeaFlower.name,
 				description: CATALOG_I18N_KEYS.species.flowers.sweetPeaFlower.description,
@@ -2126,6 +2328,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:flowers:beeBalm"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.flowers.beeBalm.name,
 				description: CATALOG_I18N_KEYS.species.flowers.beeBalm.description,
@@ -2138,6 +2341,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 	],
 	microgreens: [
 		{
+			id: speciesId("system-species:microgreens:broccoliMicrogreen"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.microgreens.broccoliMicrogreen.name,
 				description: CATALOG_I18N_KEYS.species.microgreens.broccoliMicrogreen.description,
@@ -2148,6 +2352,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:microgreens:radishMicrogreen"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.microgreens.radishMicrogreen.name,
 				description: CATALOG_I18N_KEYS.species.microgreens.radishMicrogreen.description,
@@ -2158,6 +2363,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:microgreens:sunflowerMicrogreen"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.microgreens.sunflowerMicrogreen.name,
 				description: CATALOG_I18N_KEYS.species.microgreens.sunflowerMicrogreen.description,
@@ -2168,6 +2374,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:microgreens:peaMicrogreen"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.microgreens.peaMicrogreen.name,
 				description: CATALOG_I18N_KEYS.species.microgreens.peaMicrogreen.description,
@@ -2178,6 +2385,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:microgreens:mustardMicrogreen"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.microgreens.mustardMicrogreen.name,
 				description: CATALOG_I18N_KEYS.species.microgreens.mustardMicrogreen.description,
@@ -2188,6 +2396,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:microgreens:arugulaMicrogreen"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.microgreens.arugulaMicrogreen.name,
 				description: CATALOG_I18N_KEYS.species.microgreens.arugulaMicrogreen.description,
@@ -2198,6 +2407,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:microgreens:kaleMicrogreen"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.microgreens.kaleMicrogreen.name,
 				description: CATALOG_I18N_KEYS.species.microgreens.kaleMicrogreen.description,
@@ -2208,6 +2418,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:microgreens:cabbageMicrogreen"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.microgreens.cabbageMicrogreen.name,
 				description: CATALOG_I18N_KEYS.species.microgreens.cabbageMicrogreen.description,
@@ -2218,6 +2429,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:microgreens:beetMicrogreen"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.microgreens.beetMicrogreen.name,
 				description: CATALOG_I18N_KEYS.species.microgreens.beetMicrogreen.description,
@@ -2228,6 +2440,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:microgreens:basilMicrogreen"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.microgreens.basilMicrogreen.name,
 				description: CATALOG_I18N_KEYS.species.microgreens.basilMicrogreen.description,
@@ -2238,6 +2451,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:microgreens:cilantroMicrogreen"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.microgreens.cilantroMicrogreen.name,
 				description: CATALOG_I18N_KEYS.species.microgreens.cilantroMicrogreen.description,
@@ -2248,6 +2462,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:microgreens:amaranthMicrogreen"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.microgreens.amaranthMicrogreen.name,
 				description: CATALOG_I18N_KEYS.species.microgreens.amaranthMicrogreen.description,
@@ -2258,6 +2473,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:microgreens:pakChoiMicrogreen"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.microgreens.pakChoiMicrogreen.name,
 				description: CATALOG_I18N_KEYS.species.microgreens.pakChoiMicrogreen.description,
@@ -2268,6 +2484,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:microgreens:turnipMicrogreen"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.microgreens.turnipMicrogreen.name,
 				description: CATALOG_I18N_KEYS.species.microgreens.turnipMicrogreen.description,
@@ -2278,6 +2495,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:microgreens:chiaMicrogreen"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.microgreens.chiaMicrogreen.name,
 				description: CATALOG_I18N_KEYS.species.microgreens.chiaMicrogreen.description,
@@ -2288,6 +2506,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:microgreens:flaxMicrogreen"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.microgreens.flaxMicrogreen.name,
 				description: CATALOG_I18N_KEYS.species.microgreens.flaxMicrogreen.description,
@@ -2298,6 +2517,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:microgreens:fennelMicrogreen"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.microgreens.fennelMicrogreen.name,
 				description: CATALOG_I18N_KEYS.species.microgreens.fennelMicrogreen.description,
@@ -2308,6 +2528,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:microgreens:dillMicrogreen"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.microgreens.dillMicrogreen.name,
 				description: CATALOG_I18N_KEYS.species.microgreens.dillMicrogreen.description,
@@ -2318,6 +2539,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:microgreens:shisoMicrogreen"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.microgreens.shisoMicrogreen.name,
 				description: CATALOG_I18N_KEYS.species.microgreens.shisoMicrogreen.description,
@@ -2328,6 +2550,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:microgreens:watercressMicrogreen"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.microgreens.watercressMicrogreen.name,
 				description: CATALOG_I18N_KEYS.species.microgreens.watercressMicrogreen.description,
@@ -2340,6 +2563,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 	],
 	coverCrops: [
 		{
+			id: speciesId("system-species:coverCrops:whiteClover"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.coverCrops.whiteClover.name,
 				description: CATALOG_I18N_KEYS.species.coverCrops.whiteClover.description,
@@ -2350,6 +2574,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:coverCrops:redClover"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.coverCrops.redClover.name,
 				description: CATALOG_I18N_KEYS.species.coverCrops.redClover.description,
@@ -2360,6 +2585,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:coverCrops:alfalfa"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.coverCrops.alfalfa.name,
 				description: CATALOG_I18N_KEYS.species.coverCrops.alfalfa.description,
@@ -2370,6 +2596,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:coverCrops:rye"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.coverCrops.rye.name,
 				description: CATALOG_I18N_KEYS.species.coverCrops.rye.description,
@@ -2380,6 +2607,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:coverCrops:winterWheat"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.coverCrops.winterWheat.name,
 				description: CATALOG_I18N_KEYS.species.coverCrops.winterWheat.description,
@@ -2390,6 +2618,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:coverCrops:buckwheat"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.coverCrops.buckwheat.name,
 				description: CATALOG_I18N_KEYS.species.coverCrops.buckwheat.description,
@@ -2400,6 +2629,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:coverCrops:hairyVetch"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.coverCrops.hairyVetch.name,
 				description: CATALOG_I18N_KEYS.species.coverCrops.hairyVetch.description,
@@ -2410,6 +2640,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:coverCrops:fieldPea"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.coverCrops.fieldPea.name,
 				description: CATALOG_I18N_KEYS.species.coverCrops.fieldPea.description,
@@ -2420,6 +2651,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:coverCrops:oat"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.coverCrops.oat.name,
 				description: CATALOG_I18N_KEYS.species.coverCrops.oat.description,
@@ -2430,6 +2662,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:coverCrops:barley"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.coverCrops.barley.name,
 				description: CATALOG_I18N_KEYS.species.coverCrops.barley.description,
@@ -2440,6 +2673,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:coverCrops:mustardCover"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.coverCrops.mustardCover.name,
 				description: CATALOG_I18N_KEYS.species.coverCrops.mustardCover.description,
@@ -2450,6 +2684,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:coverCrops:daikonCover"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.coverCrops.daikonCover.name,
 				description: CATALOG_I18N_KEYS.species.coverCrops.daikonCover.description,
@@ -2460,6 +2695,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:coverCrops:sorghumSudangrass"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.coverCrops.sorghumSudangrass.name,
 				description: CATALOG_I18N_KEYS.species.coverCrops.sorghumSudangrass.description,
@@ -2470,6 +2706,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:coverCrops:sunnHemp"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.coverCrops.sunnHemp.name,
 				description: CATALOG_I18N_KEYS.species.coverCrops.sunnHemp.description,
@@ -2480,6 +2717,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:coverCrops:phaceliaCover"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.coverCrops.phaceliaCover.name,
 				description: CATALOG_I18N_KEYS.species.coverCrops.phaceliaCover.description,
@@ -2490,6 +2728,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:coverCrops:annualRyegrass"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.coverCrops.annualRyegrass.name,
 				description: CATALOG_I18N_KEYS.species.coverCrops.annualRyegrass.description,
@@ -2500,6 +2739,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:coverCrops:cowpeaCover"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.coverCrops.cowpeaCover.name,
 				description: CATALOG_I18N_KEYS.species.coverCrops.cowpeaCover.description,
@@ -2510,6 +2750,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:coverCrops:crimsonClover"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.coverCrops.crimsonClover.name,
 				description: CATALOG_I18N_KEYS.species.coverCrops.crimsonClover.description,
@@ -2520,6 +2761,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:coverCrops:lablab"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.coverCrops.lablab.name,
 				description: CATALOG_I18N_KEYS.species.coverCrops.lablab.description,
@@ -2530,6 +2772,7 @@ const DEFAULT_SPECIES_BY_CATEGORY: Record<
 			},
 		},
 		{
+			id: speciesId("system-species:coverCrops:fabaBeanCover"),
 			characteristics: {
 				name: CATALOG_I18N_KEYS.species.coverCrops.fabaBeanCover.name,
 				description: CATALOG_I18N_KEYS.species.coverCrops.fabaBeanCover.description,
@@ -2551,6 +2794,7 @@ function buildDefaultSpecies() {
 		][]
 	).flatMap(([categorySlug, species]) =>
 		species.map((speciesRow) => ({
+			id: speciesRow.id,
 			categorySlug,
 			characteristics: speciesRow.characteristics,
 			presentation: speciesRow.presentation,
@@ -2558,104 +2802,113 @@ function buildDefaultSpecies() {
 	);
 }
 
+const DEFAULT_CATEGORY_ROWS = [
+	{
+		slug: "vegetables",
+		title: CATALOG_I18N_KEYS.categories.vegetables.title,
+		presentation: {
+			...DEFAULT_CATEGORY_PRESENTATION.vegetables,
+			iconKey: ItemPresentationIconKey.category_vegetables,
+		},
+	},
+	{
+		slug: "herbs",
+		title: CATALOG_I18N_KEYS.categories.herbs.title,
+		presentation: {
+			...DEFAULT_CATEGORY_PRESENTATION.herbs,
+			iconKey: ItemPresentationIconKey.category_herbs,
+		},
+	},
+	{
+		slug: "fruits",
+		title: CATALOG_I18N_KEYS.categories.fruits.title,
+		presentation: {
+			...DEFAULT_CATEGORY_PRESENTATION.fruits,
+			iconKey: ItemPresentationIconKey.category_fruits,
+		},
+	},
+	{
+		slug: "berries",
+		title: CATALOG_I18N_KEYS.categories.berries.title,
+		presentation: {
+			...DEFAULT_CATEGORY_PRESENTATION.berries,
+			iconKey: ItemPresentationIconKey.category_berries,
+		},
+	},
+	{
+		slug: "leafyGreens",
+		title: CATALOG_I18N_KEYS.categories.leafyGreens.title,
+		presentation: {
+			...DEFAULT_CATEGORY_PRESENTATION.leafyGreens,
+			iconKey: ItemPresentationIconKey.category_leafyGreens,
+		},
+	},
+	{
+		slug: "alliums",
+		title: CATALOG_I18N_KEYS.categories.alliums.title,
+		presentation: {
+			...DEFAULT_CATEGORY_PRESENTATION.alliums,
+			iconKey: ItemPresentationIconKey.category_alliums,
+		},
+	},
+	{
+		slug: "brassicas",
+		title: CATALOG_I18N_KEYS.categories.brassicas.title,
+		presentation: {
+			...DEFAULT_CATEGORY_PRESENTATION.brassicas,
+			iconKey: ItemPresentationIconKey.category_brassicas,
+		},
+	},
+	{
+		slug: "legumes",
+		title: CATALOG_I18N_KEYS.categories.legumes.title,
+		presentation: {
+			...DEFAULT_CATEGORY_PRESENTATION.legumes,
+			iconKey: ItemPresentationIconKey.category_legumes,
+		},
+	},
+	{
+		slug: "rootCrops",
+		title: CATALOG_I18N_KEYS.categories.rootCrops.title,
+		presentation: {
+			...DEFAULT_CATEGORY_PRESENTATION.rootCrops,
+			iconKey: ItemPresentationIconKey.category_rootCrops,
+		},
+	},
+	{
+		slug: "flowers",
+		title: CATALOG_I18N_KEYS.categories.flowers.title,
+		presentation: {
+			...DEFAULT_CATEGORY_PRESENTATION.flowers,
+			iconKey: ItemPresentationIconKey.category_flowers,
+		},
+	},
+	{
+		slug: "microgreens",
+		title: CATALOG_I18N_KEYS.categories.microgreens.title,
+		presentation: {
+			...DEFAULT_CATEGORY_PRESENTATION.microgreens,
+			iconKey: ItemPresentationIconKey.category_microgreens,
+		},
+	},
+	{
+		slug: "coverCrops",
+		title: CATALOG_I18N_KEYS.categories.coverCrops.title,
+		presentation: {
+			...DEFAULT_CATEGORY_PRESENTATION.coverCrops,
+			iconKey: ItemPresentationIconKey.category_coverCrops,
+		},
+	},
+] as const;
+
+function makeSystemCategoryId(slug: string): SpeciesCategoryEntityId {
+	return `system-category:${encodeURIComponent(slug)}` as SpeciesCategoryEntityId;
+}
+
 export const DEFAULT_CATALOG = defineDefaultCatalog({
-	categories: [
-		{
-			slug: "vegetables",
-			title: CATALOG_I18N_KEYS.categories.vegetables.title,
-			presentation: {
-				...DEFAULT_CATEGORY_PRESENTATION.vegetables,
-				iconKey: ItemPresentationIconKey.category_vegetables,
-			},
-		},
-		{
-			slug: "herbs",
-			title: CATALOG_I18N_KEYS.categories.herbs.title,
-			presentation: {
-				...DEFAULT_CATEGORY_PRESENTATION.herbs,
-				iconKey: ItemPresentationIconKey.category_herbs,
-			},
-		},
-		{
-			slug: "fruits",
-			title: CATALOG_I18N_KEYS.categories.fruits.title,
-			presentation: {
-				...DEFAULT_CATEGORY_PRESENTATION.fruits,
-				iconKey: ItemPresentationIconKey.category_fruits,
-			},
-		},
-		{
-			slug: "berries",
-			title: CATALOG_I18N_KEYS.categories.berries.title,
-			presentation: {
-				...DEFAULT_CATEGORY_PRESENTATION.berries,
-				iconKey: ItemPresentationIconKey.category_berries,
-			},
-		},
-		{
-			slug: "leafyGreens",
-			title: CATALOG_I18N_KEYS.categories.leafyGreens.title,
-			presentation: {
-				...DEFAULT_CATEGORY_PRESENTATION.leafyGreens,
-				iconKey: ItemPresentationIconKey.category_leafyGreens,
-			},
-		},
-		{
-			slug: "alliums",
-			title: CATALOG_I18N_KEYS.categories.alliums.title,
-			presentation: {
-				...DEFAULT_CATEGORY_PRESENTATION.alliums,
-				iconKey: ItemPresentationIconKey.category_alliums,
-			},
-		},
-		{
-			slug: "brassicas",
-			title: CATALOG_I18N_KEYS.categories.brassicas.title,
-			presentation: {
-				...DEFAULT_CATEGORY_PRESENTATION.brassicas,
-				iconKey: ItemPresentationIconKey.category_brassicas,
-			},
-		},
-		{
-			slug: "legumes",
-			title: CATALOG_I18N_KEYS.categories.legumes.title,
-			presentation: {
-				...DEFAULT_CATEGORY_PRESENTATION.legumes,
-				iconKey: ItemPresentationIconKey.category_legumes,
-			},
-		},
-		{
-			slug: "rootCrops",
-			title: CATALOG_I18N_KEYS.categories.rootCrops.title,
-			presentation: {
-				...DEFAULT_CATEGORY_PRESENTATION.rootCrops,
-				iconKey: ItemPresentationIconKey.category_rootCrops,
-			},
-		},
-		{
-			slug: "flowers",
-			title: CATALOG_I18N_KEYS.categories.flowers.title,
-			presentation: {
-				...DEFAULT_CATEGORY_PRESENTATION.flowers,
-				iconKey: ItemPresentationIconKey.category_flowers,
-			},
-		},
-		{
-			slug: "microgreens",
-			title: CATALOG_I18N_KEYS.categories.microgreens.title,
-			presentation: {
-				...DEFAULT_CATEGORY_PRESENTATION.microgreens,
-				iconKey: ItemPresentationIconKey.category_microgreens,
-			},
-		},
-		{
-			slug: "coverCrops",
-			title: CATALOG_I18N_KEYS.categories.coverCrops.title,
-			presentation: {
-				...DEFAULT_CATEGORY_PRESENTATION.coverCrops,
-				iconKey: ItemPresentationIconKey.category_coverCrops,
-			},
-		},
-	],
+	categories: DEFAULT_CATEGORY_ROWS.map((category) => ({
+		...category,
+		id: makeSystemCategoryId(category.slug),
+	})),
 	species: buildDefaultSpecies(),
 });

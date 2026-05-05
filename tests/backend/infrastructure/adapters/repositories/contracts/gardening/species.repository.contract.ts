@@ -70,6 +70,46 @@ export function registerSpeciesRepositoryContract(
 			expect(items.length).toBeGreaterThanOrEqual(2);
 		});
 
+		it("createOne preserves caller-provided id", async () => {
+			const c = await cat();
+			const providedId = speciesId("system-species:contract-test:provided");
+			const row = await species.createOne({
+				id: providedId,
+				workspace: wk,
+				categoryId: c.id,
+				characteristics: fixtureSpeciesCharacteristics({ name: "provided-id-species" }),
+			});
+			expect(row.id).toEqual(providedId);
+
+			const got = await species.getOne({ filters: [{ id: providedId }] });
+			expect(got.id).toEqual(providedId);
+		});
+
+		it("createMany preserves caller-provided ids", async () => {
+			const c = await cat();
+			const firstId = speciesId("system-species:contract-many:first");
+			const secondId = speciesId("system-species:contract-many:second");
+			const { count } = await species.createMany({
+				items: [
+					{
+						id: firstId,
+						workspace: wk,
+						categoryId: c.id,
+						characteristics: fixtureSpeciesCharacteristics({ name: "provided-many-1" }),
+					},
+					{
+						id: secondId,
+						workspace: wk,
+						categoryId: c.id,
+						characteristics: fixtureSpeciesCharacteristics({ name: "provided-many-2" }),
+					},
+				],
+			});
+			expect(count).toBe(2);
+			await expect(species.getOne({ filters: [{ id: firstId }] })).resolves.toMatchObject({ id: firstId });
+			await expect(species.getOne({ filters: [{ id: secondId }] })).resolves.toMatchObject({ id: secondId });
+		});
+
 		it("full CRUD via segregated ports", async () => {
 			const c = await cat();
 			const row = await species.createOne({

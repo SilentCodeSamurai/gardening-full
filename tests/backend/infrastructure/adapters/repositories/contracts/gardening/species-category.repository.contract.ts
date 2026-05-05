@@ -59,6 +59,35 @@ export function registerSpeciesCategoryRepositoryContract(
 			expect(items.filter((x) => ["A", "B", "C"].includes(x.title)).length).toBe(3);
 		});
 
+		it("createOne preserves caller-provided id", async () => {
+			const providedId = speciesCategoryId("system-category:contract-test");
+			const row = await speciesCategory.createOne({
+				id: providedId,
+				workspace: wk,
+				title: "Provided id category",
+			});
+			expect(row.id).toEqual(providedId);
+
+			const got = await speciesCategory.getOne({ filters: [{ id: providedId }] });
+			expect(got.id).toEqual(providedId);
+		});
+
+		it("createMany preserves caller-provided ids", async () => {
+			const firstId = speciesCategoryId("system-category:contract-many-1");
+			const secondId = speciesCategoryId("system-category:contract-many-2");
+			const { count } = await speciesCategory.createMany({
+				items: [
+					{ id: firstId, workspace: wk, title: "Provided many A" },
+					{ id: secondId, workspace: wk, title: "Provided many B" },
+				],
+			});
+			expect(count).toBe(2);
+			await expect(speciesCategory.getOne({ filters: [{ id: firstId }] })).resolves.toMatchObject({ id: firstId });
+			await expect(speciesCategory.getOne({ filters: [{ id: secondId }] })).resolves.toMatchObject({
+				id: secondId,
+			});
+		});
+
 		it("getOne uses OR filters вЂ” first miss, second hit", async () => {
 			const a = await speciesCategory.createOne({ workspace: wk, title: "Alpha" });
 			const { items } = await speciesCategory.getMany({ filters: [{ title: "Alpha", workspace: wk }] });

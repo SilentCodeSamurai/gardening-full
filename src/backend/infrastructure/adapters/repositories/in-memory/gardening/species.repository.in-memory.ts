@@ -36,7 +36,7 @@ export class SpeciesInMemoryRepository extends BaseRepositoryErrors implements S
 	private insertRow(dto: SpeciesRepositoryCreateInputDTO): SpeciesRepositoryCreateOutputDTO {
 		if (dto.categoryId !== null) this.requireCategoryRow(dto.categoryId);
 		const now = new Date();
-		const id = speciesId();
+		const id = dto.id ?? speciesId();
 		const row: SpeciesEntity = {
 			...dto,
 			id,

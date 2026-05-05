@@ -23,12 +23,12 @@ export function ensureBackendBootstrap(): Promise<void> {
 				actorSubject: bootstrapServiceAccount,
 			});
 
-			if (result.status === "populated") {
+			if (result.status === "reconciled") {
 				console.info(
-					`[bootstrap] Default catalog populated (${result.createdCategories} categories, ${result.createdSpecies} species).`,
+					`[bootstrap] Default catalog reconciled (${result.createdCategories} created categories, ${result.updatedCategories} updated categories, ${result.createdSpecies} created species, ${result.updatedSpecies} updated species).`,
 				);
 			} else {
-				console.info("[bootstrap] Default catalog skipped (catalog already has data).");
+				console.info("[bootstrap] Default catalog already up to date.");
 			}
 
 			backendBootstrapped = true;

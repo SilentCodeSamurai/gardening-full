@@ -15,7 +15,9 @@ import type {
 } from "../shared/repository-operation-ports";
 import type { BaseRepositoryCreateInputDTO } from "../shared/types";
 
-export type SpeciesCategoryRepositoryCreateInputDTO = BaseRepositoryCreateInputDTO<SpeciesCategoryEntity>;
+export type SpeciesCategoryRepositoryCreateInputDTO = BaseRepositoryCreateInputDTO<SpeciesCategoryEntity> & {
+	id?: SpeciesCategoryEntityId;
+};
 export type SpeciesCategoryRepositoryCreateOutputDTO = SpeciesCategoryEntity;
 
 export type SpeciesCategoryRepositoryCreateManyInputDTO = {

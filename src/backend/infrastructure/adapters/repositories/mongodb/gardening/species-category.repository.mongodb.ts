@@ -36,7 +36,7 @@ export class SpeciesCategoryMongoDBRepository extends BaseMongoDBRepository impl
 		const now = new Date();
 		const doc: SpeciesCategoryDoc = {
 			...dto,
-			id: speciesCategoryId(),
+			id: dto.id ?? speciesCategoryId(),
 			createdAt: now,
 			updatedAt: now,
 			workspaceKey: dto.workspace.toKey(),
@@ -54,7 +54,7 @@ export class SpeciesCategoryMongoDBRepository extends BaseMongoDBRepository impl
 		const now = new Date();
 		const docs: SpeciesCategoryDoc[] = input.items.map((item) => ({
 			...item,
-			id: speciesCategoryId(),
+			id: item.id ?? speciesCategoryId(),
 			createdAt: now,
 			updatedAt: now,
 			workspaceKey: item.workspace.toKey(),

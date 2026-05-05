@@ -35,7 +35,7 @@ export class SpeciesCategoryInMemoryRepository extends BaseRepositoryErrors impl
 
 	private insertRow(dto: SpeciesCategoryRepositoryCreateInputDTO): SpeciesCategoryRepositoryCreateOutputDTO {
 		const now = new Date();
-		const id = speciesCategoryId();
+		const id = dto.id ?? speciesCategoryId();
 		const row: SpeciesCategoryEntity = {
 			...dto,
 			id,

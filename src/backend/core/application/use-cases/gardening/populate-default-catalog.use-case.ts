@@ -1,5 +1,5 @@
 import { WorkspaceVO } from "@backend/core/domain/access/workspace.vo";
-import type { SpeciesCategoryEntityId } from "@backend/core/domain/gardening/entities";
+import type { SpeciesCategoryEntityId, SpeciesEntityId } from "@backend/core/domain/gardening/entities";
 import { inject, injectable } from "tsyringe";
 import {
 	type SpeciesRepositoryPort,
@@ -47,8 +47,14 @@ export type PopulateDefaultCatalogInput = UseCaseRequest<{
 }>;
 
 export type PopulateDefaultCatalogOutput =
-	| { status: "skipped"; reason: "catalog-not-empty" }
-	| { status: "populated"; createdCategories: number; createdSpecies: number };
+	| { status: "skipped"; reason: "up-to-date" }
+	| {
+			status: "reconciled";
+			createdCategories: number;
+			updatedCategories: number;
+			createdSpecies: number;
+			updatedSpecies: number;
+	  };
 
 function assertUniqueCategorySlugs(categories: readonly DefaultCatalogCategory[]): void {
 	const seen = new Set<string>();
@@ -58,6 +64,18 @@ function assertUniqueCategorySlugs(categories: readonly DefaultCatalogCategory[]
 		}
 		seen.add(c.slug);
 	}
+}
+
+function toStablePart(input: string): string {
+	return encodeURIComponent(input);
+}
+
+function makeSystemCategoryId(slug: string): SpeciesCategoryEntityId {
+	return `system-category:${toStablePart(slug)}` as SpeciesCategoryEntityId;
+}
+
+function makeSystemSpeciesId(categorySlug: string, speciesName: string): SpeciesEntityId {
+	return `system-species:${toStablePart(categorySlug)}:${toStablePart(speciesName)}` as SpeciesEntityId;
 }
 
 @injectable()
@@ -85,25 +103,49 @@ export class PopulateDefaultCatalogUseCase extends TransactionalUseCase<
 			action: "create",
 		});
 
-		const existing = await this.speciesCategoryRepository.getMany({
+		const existingCategories = await this.speciesCategoryRepository.getMany({
 			filters: [{ workspace: globalShared }],
 		});
-		if (existing.items.length > 0) {
-			return { status: "skipped", reason: "catalog-not-empty" };
-		}
+		const existingSpecies = await this.speciesRepository.getMany({
+			filters: [{ workspace: globalShared }],
+		});
 
 		const slugToCategoryId = new Map<string, SpeciesCategoryEntityId>();
-
-		const createdCategories = [];
-		const createdSpecies = [];
+		const existingCategoriesById = new Map(existingCategories.items.map((item) => [String(item.id), item]));
+		const existingSpeciesById = new Map(existingSpecies.items.map((item) => [String(item.id), item]));
+		let createdCategories = 0;
+		let updatedCategories = 0;
+		let createdSpecies = 0;
+		let updatedSpecies = 0;
 
 		for (const row of input.dto.catalog.categories) {
 			const { slug, ...categoryCreate } = row;
+			const expectedId = row.id ?? makeSystemCategoryId(slug);
+			const existingById = existingCategoriesById.get(String(expectedId));
+			if (existingById) {
+				const categoryNeedsUpdate =
+					existingById.title !== categoryCreate.title ||
+					JSON.stringify(existingById.presentation ?? null) !==
+						JSON.stringify(categoryCreate.presentation ?? null);
+				if (categoryNeedsUpdate) {
+					await this.speciesCategoryRepository.updateOne({
+						filters: [{ id: expectedId, workspace: globalShared }],
+						dto: {
+							title: categoryCreate.title,
+							presentation: categoryCreate.presentation,
+						},
+					});
+					updatedCategories += 1;
+				}
+				slugToCategoryId.set(slug, existingById.id);
+				continue;
+			}
 			const created = await this.speciesCategoryRepository.createOne({
+				id: expectedId,
 				...categoryCreate,
 				workspace: globalShared,
 			});
-			createdCategories.push(created);
+			createdCategories += 1;
 			slugToCategoryId.set(slug, created.id);
 		}
 
@@ -116,18 +158,50 @@ export class PopulateDefaultCatalogUseCase extends TransactionalUseCase<
 			}
 			const { categorySlug, ...speciesCreate } = row;
 			void categorySlug;
-			const created = await this.speciesRepository.createOne({
+			const expectedId = row.id ?? makeSystemSpeciesId(categorySlug, row.characteristics.name);
+			const existingById = existingSpeciesById.get(String(expectedId));
+			if (existingById) {
+				const speciesNeedsUpdate =
+					String(existingById.categoryId) !== String(categoryId) ||
+					JSON.stringify(existingById.characteristics) !== JSON.stringify(speciesCreate.characteristics) ||
+					JSON.stringify(existingById.presentation ?? null) !== JSON.stringify(speciesCreate.presentation ?? null);
+				if (speciesNeedsUpdate) {
+					await this.speciesRepository.updateOne({
+						filters: [{ id: expectedId, workspace: globalShared }],
+						dto: {
+							categoryId,
+							characteristics: speciesCreate.characteristics,
+							presentation: speciesCreate.presentation,
+						},
+					});
+					updatedSpecies += 1;
+				}
+				continue;
+			}
+			await this.speciesRepository.createOne({
+				id: expectedId,
 				categoryId,
 				...speciesCreate,
 				workspace: globalShared,
 			});
-			createdSpecies.push(created);
+			createdSpecies += 1;
+		}
+
+		if (
+			createdCategories === 0 &&
+			updatedCategories === 0 &&
+			createdSpecies === 0 &&
+			updatedSpecies === 0
+		) {
+			return { status: "skipped", reason: "up-to-date" };
 		}
 
 		return {
-			status: "populated",
-			createdCategories: createdCategories.length,
-			createdSpecies: createdSpecies.length,
+			status: "reconciled",
+			createdCategories,
+			updatedCategories,
+			createdSpecies,
+			updatedSpecies,
 		};
 	}
 }

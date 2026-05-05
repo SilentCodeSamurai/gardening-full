@@ -42,7 +42,7 @@ export class SpeciesMongoDBRepository extends BaseMongoDBRepository implements S
 		const now = new Date();
 		const doc: SpeciesDoc = {
 			...dto,
-			id: speciesId(),
+			id: dto.id ?? speciesId(),
 			createdAt: now,
 			updatedAt: now,
 			workspaceKey: dto.workspace.toKey(),
@@ -65,7 +65,7 @@ export class SpeciesMongoDBRepository extends BaseMongoDBRepository implements S
 		const now = new Date();
 		const docs: SpeciesDoc[] = input.items.map((item) => ({
 			...item,
-			id: speciesId(),
+			id: item.id ?? speciesId(),
 			createdAt: now,
 			updatedAt: now,
 			workspaceKey: item.workspace.toKey(),
