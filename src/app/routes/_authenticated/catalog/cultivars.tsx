@@ -5,13 +5,11 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
 	type Column,
 	type ColumnFiltersState,
-	type VisibilityState,
 	createColumnHelper,
 	createTable,
 	getCoreRowModel,
 	getFilteredRowModel,
 	getSortedRowModel,
-	type RowSelectionState,
 	type SortingState,
 	type Updater,
 } from "@tanstack/react-table";
@@ -20,11 +18,12 @@ import { useCallback, useMemo, useState } from "react";
 import { DashboardPageContent } from "#/app/components/layout/dashboard-page-content";
 import { DashboardPageHeading } from "#/app/components/layout/dashboard-page-heading";
 import { CultivarCreateDialog } from "@/components/gardening/cultivar/cultivar-create-dialog";
-import { CultivarUpdateManyDialog } from "@/components/gardening/cultivar/cultivar-update-many-dialog";
+import { CultivarListCard } from "@/components/gardening/cultivar/cultivar-list-card";
 import { CultivarUpdateDialog } from "@/components/gardening/cultivar/cultivar-update-dialog";
+import { CultivarUpdateManyDialog } from "@/components/gardening/cultivar/cultivar-update-many-dialog";
 import { DeleteConfirmDialog } from "@/components/gardening/shared/delete-confirm-dialog";
 import { ItemPresentationIcon } from "@/components/icon/item-presentation-icon";
-import { DataTable } from "@/components/table/data-table";
+import { buildCollectionGlobalSearch, CollectionItemsView } from "@/components/table/collection-items-view";
 import { DataTableColumnHeader } from "@/components/table/data-table-column-header";
 import { fuzzyFilter } from "@/components/table/fuzzy-filter";
 import {
@@ -54,11 +53,11 @@ import {
 	DropdownMenuSubTrigger,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useCollectionPageState } from "@/hooks/use-collection-table-state";
 import { CATALOG_FILTER_NO_VALUE } from "@/lib/catalog-filter-sentinel";
 import { renderError } from "@/lib/render-error";
 import { tableSelectionBulkTooltip } from "@/lib/table-selection-tooltips";
 import { parseUrlColumnFilters, serializeUrlColumnFilters } from "@/lib/table-url-filters";
-import { useTableUrlSync } from "@/lib/use-table-url-sync";
 import { translateCatalogField } from "@/lib/translate-catalog-field";
 import * as m from "@/paraglide/messages.js";
 import { queryKeys } from "@/store/keys";
@@ -90,6 +89,8 @@ export const Route = createFileRoute("/_authenticated/catalog/cultivars")({
 	},
 	component: CultivarsPage,
 });
+
+const CULTIVARS_LIST_DEFAULT_SORTING: SortingState = [{ id: "title", desc: false }];
 
 function applyUpdater<T>(updater: Updater<T>, previous: T): T {
 	return typeof updater === "function" ? (updater as (old: T) => T)(previous) : updater;
@@ -266,17 +267,38 @@ function CultivarsPage() {
 		return sorted;
 	}, [items, speciesById]);
 
-	const [sorting, setSorting] = useState<SortingState>([
-		{ id: sortByFromSearch ?? "title", desc: Boolean(sortDescFromSearch) },
-	]);
-	const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>(() => {
-		const parsed = parseUrlColumnFilters(cfFromSearch);
-		if (parsed.length > 0) return parsed;
-		return [];
+	const {
+		sorting,
+		setSorting,
+		columnFilters,
+		setColumnFilters,
+		globalFilter,
+		setGlobalFilter,
+		rowSelection,
+		setRowSelection,
+		columnVisibility,
+		setColumnVisibility,
+		viewMode,
+		setViewMode,
+	} = useCollectionPageState({
+		initialSortId: "title",
+		searchQ: qFromSearch,
+		searchSortBy: sortByFromSearch,
+		searchSortDesc: sortDescFromSearch,
+		initialColumnFilters: () => {
+			const parsed = parseUrlColumnFilters(cfFromSearch);
+			return parsed.length > 0 ? parsed : [];
+		},
+		getUrlColumnFilters: (filters) => reconcileCultivarColumnFilters(filters, filters, speciesById),
+		navigate,
+		urlSearch: {
+			q: qFromSearch,
+			sortBy: sortByFromSearch,
+			sortDesc: sortDescFromSearch,
+			cf: cfFromSearch,
+		},
+		initialSorting: CULTIVARS_LIST_DEFAULT_SORTING,
 	});
-	const [globalFilter, setGlobalFilter] = useState(qFromSearch ?? "");
-	const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
-	const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({ globalSearch: false });
 	const [createOpen, setCreateOpen] = useState(false);
 	const [bulkUpdateOpen, setBulkUpdateOpen] = useState(false);
 	const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
@@ -295,7 +317,7 @@ function CultivarsPage() {
 				return reconcileCultivarColumnFilters(prevEffective, next, speciesById);
 			});
 		},
-		[speciesById],
+		[setColumnFilters, speciesById],
 	);
 
 	const columnHelper = useMemo(() => createColumnHelper<CachedCultivar>(), []);
@@ -311,7 +333,7 @@ function CultivarsPage() {
 				header: ({ table }) => (
 					<div className={tableListCompactHeaderInnerClass}>
 						<Checkbox
-							aria-label="Select all"
+							aria-label={m.table_selectAll()}
 							checked={table.getIsAllRowsSelected()}
 							onCheckedChange={(checked) => table.toggleAllRowsSelected(checked === true)}
 						/>
@@ -320,7 +342,9 @@ function CultivarsPage() {
 				cell: ({ row }) => (
 					<div className={tableListCompactHeaderInnerClass}>
 						<Checkbox
-							aria-label="Select row"
+							aria-label={m.table_selectRow({
+								name: row.original.characteristics.name || m.items_untitled(),
+							})}
 							checked={row.getIsSelected()}
 							onCheckedChange={(checked) => row.toggleSelected(checked === true)}
 						/>
@@ -593,6 +617,10 @@ function CultivarsPage() {
 			items,
 			onColumnFiltersChange,
 			rowSelection,
+			setColumnVisibility,
+			setGlobalFilter,
+			setRowSelection,
+			setSorting,
 			sorting,
 		],
 	);
@@ -619,40 +647,17 @@ function CultivarsPage() {
 			: filteredRowCount === 0
 				? m.filtering_noFilteredElements()
 				: m.items_noElements();
-	useTableUrlSync({
-		searchQ: qFromSearch,
-		searchSortBy: sortByFromSearch,
-		searchSortDesc: sortDescFromSearch,
-		searchCf: cfFromSearch,
-		initialSorting: [{ id: "title", desc: false }],
-		sorting,
-		setSorting,
-		globalFilter,
-		setGlobalFilter,
-		columnFilters: effectiveColumnFilters,
-		setColumnFilters,
-		navigate,
-		currentSearch: {
-			q: qFromSearch,
-			sortBy: sortByFromSearch,
-			sortDesc: sortDescFromSearch,
-			cf: cfFromSearch,
-		},
-	});
-
 	return (
 		<div id="cultivars-page" className="flex min-h-0 flex-1 flex-col overflow-hidden">
-			<DashboardPageHeading collection="cultivar">
+			<DashboardPageHeading
+				collection="cultivar"
+				viewModeToggle={{ value: viewMode, onValueChange: setViewMode }}
+			>
 				<h1 className="font-heading font-medium text-lg" id="page-title">
 					{m.collections_cultivar_titlePlural()}
 				</h1>
 				<ButtonTooltip label={m.collections_cultivar_create()}>
-					<Button
-						type="button"
-						size="icon"
-						variant="outline"
-						onClick={() => setCreateOpen(true)}
-					>
+					<Button type="button" size="icon" variant="outline" onClick={() => setCreateOpen(true)}>
 						<span className="sr-only">{m.collections_cultivar_create()}</span>
 						<PlusIcon />
 					</Button>
@@ -660,28 +665,29 @@ function CultivarsPage() {
 			</DashboardPageHeading>
 			<DashboardPageContent className="flex min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-hidden">
 				<div className="flex min-h-0 min-w-0 flex-1 flex-col px-1 pt-1 pb-2">
-					<DataTable
+					<CollectionItemsView
+						viewMode={viewMode}
 						table={table}
 						isPending={isPending}
 						isError={isError}
 						errorMessage={renderError(error, m.common_loadError())}
 						emptyMessage={emptyMessage}
-						globalSearch={{
-							value: globalFilter,
-							onValueChange: setGlobalFilter,
-							searchPlaceholder: m.filtering_searchPlaceholder(),
-							clearSearchLabel: m.filtering_clearSearch(), 
-							clearFiltersLabel: m.filtering_clearFilters(),
-							onClearFilters: () => {
-								setGlobalFilter("");
-								setColumnFilters([]);
-								setRowSelection({});
-							},
-						}}
+						globalSearch={buildCollectionGlobalSearch({
+							globalFilter,
+							setGlobalFilter,
+							setColumnFilters,
+							setRowSelection,
+						})}
 						highlightPendingRows
+						listDefaultSorting={CULTIVARS_LIST_DEFAULT_SORTING}
 						selectedActions={
 							<div className="flex items-center gap-2">
-								<Button type="button" variant="outline" disabled={bulkUpdateDisabled} onClick={() => setBulkUpdateOpen(true)}>
+								<Button
+									type="button"
+									variant="outline"
+									disabled={bulkUpdateDisabled}
+									onClick={() => setBulkUpdateOpen(true)}
+								>
 									{m.common_updateSelected()}
 								</Button>
 								<ButtonTooltip label={bulkDeleteTooltip} disabled={bulkDeleteDisabled}>
@@ -696,11 +702,32 @@ function CultivarsPage() {
 								</ButtonTooltip>
 							</div>
 						}
+						renderListItem={(row) => {
+							const c = row.original;
+							const sp = c.speciesId != null ? speciesById.get(String(c.speciesId)) : undefined;
+							const speciesLabel =
+								sp != null
+									? (translateCatalogField(sp.characteristics.name, sp.systemCatalog) ?? "")
+									: m.filtering_catalogNoSpecies();
+							return (
+								<CultivarListCard
+									cultivar={c}
+									speciesLabel={speciesLabel}
+									linkedPlantsCount={linkedPlantsCountByCultivarId.get(String(c.id)) ?? 0}
+									selected={row.getIsSelected()}
+									onSelectedChange={(checked) => row.toggleSelected(checked)}
+								/>
+							);
+						}}
 					/>
 				</div>
 			</DashboardPageContent>
 			<CultivarCreateDialog open={createOpen} onOpenChange={setCreateOpen} />
-			<CultivarUpdateManyDialog open={bulkUpdateOpen} onOpenChange={setBulkUpdateOpen} items={selectedCultivars} />
+			<CultivarUpdateManyDialog
+				open={bulkUpdateOpen}
+				onOpenChange={setBulkUpdateOpen}
+				items={selectedCultivars}
+			/>
 			<DeleteConfirmDialog
 				open={bulkDeleteOpen}
 				onOpenChange={setBulkDeleteOpen}
@@ -719,13 +746,7 @@ function CultivarsPage() {
 	);
 }
 
-function CultivarRowActions({
-	cultivar,
-	linkedPlantsCount,
-}: {
-	cultivar: CachedCultivar;
-	linkedPlantsCount: number;
-}) {
+function CultivarRowActions({ cultivar, linkedPlantsCount }: { cultivar: CachedCultivar; linkedPlantsCount: number }) {
 	const [editOpen, setEditOpen] = useState(false);
 	const [deleteOpen, setDeleteOpen] = useState(false);
 	const del = useCultivarDeleteMutation();
@@ -768,7 +789,9 @@ function CultivarRowActions({
 									<Link
 										to="/plants"
 										search={{
-											cf: serializeUrlColumnFilters([{ id: "cultivar", value: String(cultivar.id) }]),
+											cf: serializeUrlColumnFilters([
+												{ id: "cultivar", value: String(cultivar.id) },
+											]),
 										}}
 										aria-label={linkedTitle}
 									>
@@ -803,7 +826,3 @@ function CultivarRowActions({
 		</div>
 	);
 }
-
-
-
-

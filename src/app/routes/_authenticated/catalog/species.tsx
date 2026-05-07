@@ -2,14 +2,11 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
 	type Column,
-	type ColumnFiltersState,
-	type VisibilityState,
 	createColumnHelper,
 	createTable,
 	getCoreRowModel,
 	getFilteredRowModel,
 	getSortedRowModel,
-	type RowSelectionState,
 	type SortingState,
 } from "@tanstack/react-table";
 import {
@@ -28,10 +25,11 @@ import { DashboardPageHeading } from "#/app/components/layout/dashboard-page-hea
 import type { SpeciesWithSystemCatalog } from "#/backend/core/application/use-cases/gardening/species.use-cases";
 import { DeleteConfirmDialog } from "@/components/gardening/shared/delete-confirm-dialog";
 import { SpeciesCreateDialog } from "@/components/gardening/species/species-create-dialog";
-import { SpeciesUpdateManyDialog } from "@/components/gardening/species/species-update-many-dialog";
+import { SpeciesListCard } from "@/components/gardening/species/species-list-card";
 import { SpeciesUpdateDialog } from "@/components/gardening/species/species-update-dialog";
+import { SpeciesUpdateManyDialog } from "@/components/gardening/species/species-update-many-dialog";
 import { ItemPresentationIcon } from "@/components/icon/item-presentation-icon";
-import { DataTable } from "@/components/table/data-table";
+import { buildCollectionGlobalSearch, CollectionItemsView } from "@/components/table/collection-items-view";
 import { DataTableColumnHeader } from "@/components/table/data-table-column-header";
 import { fuzzyFilter } from "@/components/table/fuzzy-filter";
 import {
@@ -62,10 +60,10 @@ import {
 	DropdownMenuSubTrigger,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useCollectionPageState } from "@/hooks/use-collection-table-state";
 import { renderError } from "@/lib/render-error";
 import { tableSelectionBulkTooltip } from "@/lib/table-selection-tooltips";
 import { parseUrlColumnFilters, serializeUrlColumnFilters } from "@/lib/table-url-filters";
-import { useTableUrlSync } from "@/lib/use-table-url-sync";
 import { translateCatalogField } from "@/lib/translate-catalog-field";
 import * as m from "@/paraglide/messages.js";
 import { queryKeys } from "@/store/keys";
@@ -82,6 +80,8 @@ export const Route = createFileRoute("/_authenticated/catalog/species")({
 	},
 	component: SpeciesPage,
 });
+
+const SPECIES_LIST_DEFAULT_SORTING: SortingState = [{ id: "name", desc: false }];
 
 function SpeciesPage() {
 	const navigate = useNavigate({ from: Route.fullPath });
@@ -120,17 +120,34 @@ function SpeciesPage() {
 		return map;
 	}, [cultivarsData?.items]);
 
-	const [sorting, setSorting] = useState<SortingState>([
-		{ id: sortByFromSearch ?? "name", desc: Boolean(sortDescFromSearch) },
-	]);
-	const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>(() => {
-		const parsed = parseUrlColumnFilters(cfFromSearch);
-		if (parsed.length > 0) return parsed;
-		return [];
+	const {
+		sorting,
+		setSorting,
+		columnFilters,
+		setColumnFilters,
+		globalFilter,
+		setGlobalFilter,
+		rowSelection,
+		setRowSelection,
+		columnVisibility,
+		setColumnVisibility,
+		viewMode,
+		setViewMode,
+	} = useCollectionPageState({
+		initialSortId: "name",
+		searchQ: qFromSearch,
+		searchSortBy: sortByFromSearch,
+		searchSortDesc: sortDescFromSearch,
+		initialColumnFilters: () => parseUrlColumnFilters(cfFromSearch),
+		navigate,
+		urlSearch: {
+			q: qFromSearch,
+			sortBy: sortByFromSearch,
+			sortDesc: sortDescFromSearch,
+			cf: cfFromSearch,
+		},
+		initialSorting: SPECIES_LIST_DEFAULT_SORTING,
 	});
-	const [globalFilter, setGlobalFilter] = useState(qFromSearch ?? "");
-	const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
-	const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({ globalSearch: false });
 	const [createOpen, setCreateOpen] = useState(false);
 	const [bulkUpdateOpen, setBulkUpdateOpen] = useState(false);
 	const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
@@ -158,21 +175,26 @@ function SpeciesPage() {
 				header: ({ table }) => (
 					<div className={tableListCompactHeaderInnerClass}>
 						<Checkbox
-							aria-label="Select all"
+							aria-label={m.table_selectAll()}
 							checked={table.getIsAllRowsSelected()}
 							onCheckedChange={(checked) => table.toggleAllRowsSelected(checked === true)}
 						/>
 					</div>
 				),
-				cell: ({ row }) => (
-					<div className={tableListCompactHeaderInnerClass}>
-						<Checkbox
-							aria-label="Select row"
-							checked={row.getIsSelected()}
-							onCheckedChange={(checked) => row.toggleSelected(checked === true)}
-						/>
-					</div>
-				),
+				cell: ({ row }) => {
+					const name =
+						translateCatalogField(row.original.characteristics.name, row.original.systemCatalog) ??
+						String(row.original.id);
+					return (
+						<div className={tableListCompactHeaderInnerClass}>
+							<Checkbox
+								aria-label={m.table_selectRow({ name })}
+								checked={row.getIsSelected()}
+								onCheckedChange={(checked) => row.toggleSelected(checked === true)}
+							/>
+						</div>
+					);
+				},
 				enableColumnFilter: false,
 				enableGlobalFilter: false,
 				enableSorting: false,
@@ -413,7 +435,20 @@ function SpeciesPage() {
 					columnPinning: { left: [], right: [] },
 				},
 			}),
-		[columnFilters, columnVisibility, columns, globalFilter, items, rowSelection, sorting],
+		[
+			columnFilters,
+			columnVisibility,
+			columns,
+			globalFilter,
+			items,
+			rowSelection,
+			setColumnFilters,
+			setColumnVisibility,
+			setGlobalFilter,
+			setRowSelection,
+			setSorting,
+			sorting,
+		],
 	);
 
 	const filteredRowCount = table.getFilteredRowModel().rows.length;
@@ -421,10 +456,7 @@ function SpeciesPage() {
 		() => table.getFilteredSelectedRowModel().rows.map((row) => row.original.id),
 		[table],
 	);
-	const selectedSpecies = useMemo(
-		() => table.getFilteredSelectedRowModel().rows.map((row) => row.original),
-		[table],
-	);
+	const selectedSpecies = useMemo(() => table.getFilteredSelectedRowModel().rows.map((row) => row.original), [table]);
 	const selectionIncludesSystemCatalog = useMemo(
 		() => table.getFilteredSelectedRowModel().rows.some((row) => row.original.systemCatalog),
 		[table],
@@ -450,40 +482,14 @@ function SpeciesPage() {
 			: filteredRowCount === 0
 				? m.filtering_noFilteredElements()
 				: m.items_noElements();
-	useTableUrlSync({
-		searchQ: qFromSearch,
-		searchSortBy: sortByFromSearch,
-		searchSortDesc: sortDescFromSearch,
-		searchCf: cfFromSearch,
-		initialSorting: [{ id: "name", desc: false }],
-		sorting,
-		setSorting,
-		globalFilter,
-		setGlobalFilter,
-		columnFilters,
-		setColumnFilters,
-		navigate,
-		currentSearch: {
-			q: qFromSearch,
-			sortBy: sortByFromSearch,
-			sortDesc: sortDescFromSearch,
-			cf: cfFromSearch,
-		},
-	});
-
 	return (
 		<div id="species-page" className="flex min-h-0 flex-1 flex-col overflow-hidden">
-			<DashboardPageHeading collection="species">
+			<DashboardPageHeading collection="species" viewModeToggle={{ value: viewMode, onValueChange: setViewMode }}>
 				<h1 className="font-heading font-medium text-lg" id="page-title">
 					{m.collections_species_titlePlural()}
 				</h1>
 				<ButtonTooltip label={m.collections_species_create()}>
-					<Button
-						type="button"
-						size="icon"
-						variant="outline"
-						onClick={() => setCreateOpen(true)}
-					>
+					<Button type="button" size="icon" variant="outline" onClick={() => setCreateOpen(true)}>
 						<span className="sr-only">{m.collections_species_create()}</span>
 						<PlusIcon />
 					</Button>
@@ -491,29 +497,30 @@ function SpeciesPage() {
 			</DashboardPageHeading>
 			<DashboardPageContent className="flex min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-hidden">
 				<div className="flex min-h-0 min-w-0 flex-1 flex-col px-1 pt-1 pb-2">
-					<DataTable
+					<CollectionItemsView
+						viewMode={viewMode}
 						table={table}
 						isPending={spPending}
 						isError={spError}
 						errorMessage={renderError(spErrorValue, m.common_loadError())}
 						emptyMessage={emptyMessage}
-						globalSearch={{
-							value: globalFilter,
-							onValueChange: setGlobalFilter,
-							searchPlaceholder: m.filtering_searchPlaceholder(),
-							clearSearchLabel: m.filtering_clearSearch(), 
-							clearFiltersLabel: m.filtering_clearFilters(),
-							onClearFilters: () => {
-								setGlobalFilter("");
-								setColumnFilters([]);
-								setRowSelection({});
-							},
-						}}
+						globalSearch={buildCollectionGlobalSearch({
+							globalFilter,
+							setGlobalFilter,
+							setColumnFilters,
+							setRowSelection,
+						})}
 						highlightPendingRows
+						listDefaultSorting={SPECIES_LIST_DEFAULT_SORTING}
 						selectedActions={
 							<div className="flex items-center gap-2">
 								<ButtonTooltip label={bulkUpdateTooltip} disabled={bulkUpdateDisabled}>
-									<Button type="button" variant="outline" disabled={bulkUpdateDisabled} onClick={() => setBulkUpdateOpen(true)}>
+									<Button
+										type="button"
+										variant="outline"
+										disabled={bulkUpdateDisabled}
+										onClick={() => setBulkUpdateOpen(true)}
+									>
 										{m.common_updateSelected()}
 									</Button>
 								</ButtonTooltip>
@@ -529,6 +536,15 @@ function SpeciesPage() {
 								</ButtonTooltip>
 							</div>
 						}
+						renderListItem={(row) => (
+							<SpeciesListCard
+								species={row.original}
+								categoryId={String(row.original.categoryId)}
+								categoryLabel={categoryTitle.get(String(row.original.categoryId)) ?? ""}
+								selected={row.getIsSelected()}
+								onSelectedChange={(checked) => row.toggleSelected(checked)}
+							/>
+						)}
 					/>
 				</div>
 			</DashboardPageContent>
@@ -675,7 +691,3 @@ function SpeciesRowActions({
 		</div>
 	);
 }
-
-
-
-

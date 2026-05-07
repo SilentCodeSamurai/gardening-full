@@ -1,8 +1,11 @@
-import type { HydratedPlantEntity } from "@backend/core/domain/gardening/entities";
+import type { LocationEntityId } from "@backend/core/domain/gardening/entities";
 import { Link } from "@tanstack/react-router";
-import { EllipsisVerticalIcon, PencilIcon, Trash2Icon } from "lucide-react";
+import { EllipsisVerticalIcon, PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
 import { useState } from "react";
-import { PlantUpdateDialog } from "@/components/gardening/plant/plant-update-dialog";
+import {
+	GardeningEventCreateDialog,
+} from "@/components/gardening/gardening-event/gardening-event-create-dialog";
+import { LocationUpdateDialog } from "@/components/gardening/location/location-update-dialog";
 import { DeleteConfirmDialog } from "@/components/gardening/shared/delete-confirm-dialog";
 import { ItemPresentationIcon } from "@/components/icon/item-presentation-icon";
 import { Button } from "@/components/ui/button";
@@ -16,40 +19,47 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Item, ItemActions } from "@/components/ui/item";
 import { pendingItemSurfaceClassName } from "@/components/ui/pending-item-surface";
+import type { LocationPlacementSummary } from "@/lib/spatial-placement-summary";
 import { cn } from "@/lib/utils";
 import * as m from "@/paraglide/messages.js";
-import { usePlantDeleteMutation } from "@/store/mutations";
-import type { CachedHydratedPlant } from "@/store/query-cache-types";
+import { useLocationDeleteMutation } from "@/store/mutations";
+import type { CachedLocation } from "@/store/query-cache-types";
 import { isQueryObjectPending } from "@/store/query-object-status";
 
-export function getPlantDisplayTitle(plant: HydratedPlantEntity | CachedHydratedPlant): string {
-	if (plant.title?.trim()) return plant.title.trim();
-
-	return plant.cultivar?.characteristics.name || m.items_untitled();
+function placementSubtitle(summary: LocationPlacementSummary, rootLabel: string): string {
+	if (summary.kind === "unplaced") return m.filtering_placedFilterUnplaced();
+	if (summary.kind === "rootCanvas") return rootLabel;
+	return summary.parentName;
 }
 
 type Props = {
-	plant: CachedHydratedPlant;
-	/** Resolved species name (e.g. translated catalog field when the species query is loaded). */
-	speciesLabel: string;
-	isPlaced?: boolean;
+	location: CachedLocation;
+	placementSummary: LocationPlacementSummary;
+	isPlaced: boolean;
 	selected?: boolean;
 	onSelectedChange?: (next: boolean) => void;
 };
 
-export function PlantListCard({ plant, speciesLabel, isPlaced = false, selected = false, onSelectedChange }: Props) {
+export function LocationListCard({
+	location,
+	placementSummary,
+	isPlaced,
+	selected = false,
+	onSelectedChange,
+}: Props) {
 	const [editOpen, setEditOpen] = useState(false);
 	const [deleteOpen, setDeleteOpen] = useState(false);
-	const del = usePlantDeleteMutation();
-	const cultivarName = plant.cultivar?.characteristics.name ?? "";
-	const title = getPlantDisplayTitle(plant);
-	const syncPending = isQueryObjectPending(plant);
-	const deleteDisabled = isPlaced || syncPending;
-	const deleteTooltip = isPlaced
+	const [createEventOpen, setCreateEventOpen] = useState(false);
+	const del = useLocationDeleteMutation();
+	const syncPending = isQueryObjectPending(location);
+	const placementLine = placementSubtitle(placementSummary, m.fields_placementRoot());
+
+	const deleteTitle = isPlaced
 		? m.common_deleteDisabledWhilePlaced()
 		: syncPending
 			? m.common_editDisabledPendingSync()
 			: m.common_delete();
+	const actionLocked = syncPending;
 
 	return (
 		<Item
@@ -65,32 +75,25 @@ export function PlantListCard({ plant, speciesLabel, isPlaced = false, selected 
 		>
 			<div className="relative flex w-full min-w-0 flex-row items-center justify-between gap-3">
 				<Link
-					to="/plant/$plantId"
-					params={{ plantId: String(plant.id) }}
+					to="/location/$locationId"
+					params={{ locationId: String(location.id) }}
 					className="absolute inset-0 z-0 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-					aria-label={`${title} — ${m.common_open()} ${m.common_details().toLowerCase()}`}
+					aria-label={`${location.name} — ${m.common_open()} ${m.common_details().toLowerCase()}`}
 				/>
 				<div className="relative z-20 flex shrink-0 items-center justify-center">
 					<Checkbox
-						aria-label={m.table_selectRow({ name: title })}
+						aria-label={m.table_selectRow({ name: location.name })}
 						checked={selected}
 						className="size-5"
 						onCheckedChange={(checked) => onSelectedChange?.(checked === true)}
 					/>
 				</div>
 				<div className="pointer-events-none relative z-10 flex min-w-0 flex-1 flex-row items-center gap-2">
-					<ItemPresentationIcon presentation={plant.presentation} />
+					<ItemPresentationIcon presentation={location.presentation} className="size-6 shrink-0" />
 					<div className="flex min-w-0 flex-col items-start justify-center">
-						<span className="truncate font-medium">{title}</span>
-						<span className="text-muted-foreground text-xs">
-							{speciesLabel && cultivarName
-								? `${speciesLabel} · ${cultivarName}`
-								: cultivarName || speciesLabel || m.filtering_catalogNoCultivar()}
-						</span>
+						<span className="truncate font-medium">{location.name}</span>
+						<span className="text-muted-foreground text-xs">{placementLine}</span>
 					</div>
-					{plant.description ? (
-						<span className="line-clamp-2 text-muted-foreground text-xs">{plant.description}</span>
-					) : null}
 				</div>
 				<ItemActions className="relative z-20 shrink-0 gap-1">
 					<DropdownMenu>
@@ -101,38 +104,59 @@ export function PlantListCard({ plant, speciesLabel, isPlaced = false, selected 
 						</DropdownMenuTrigger>
 						<DropdownMenuContent className="flex flex-col gap-1" align="end">
 							<DropdownMenuItem
-								disabled={syncPending}
-								title={syncPending ? m.common_editDisabledPendingSync() : m.common_edit()}
+								disabled={actionLocked}
+								title={
+									actionLocked
+										? m.common_editDisabledPendingSync()
+										: m.collections_gardeningEvent_createForLocationRowHint()
+								}
+								onSelect={() => setCreateEventOpen(true)}
+							>
+								<PlusIcon />
+								{m.collections_gardeningEvent_create()}
+							</DropdownMenuItem>
+							<DropdownMenuItem
+								disabled={actionLocked}
+								title={actionLocked ? m.common_editDisabledPendingSync() : m.common_edit()}
 								onSelect={() => setEditOpen(true)}
 							>
 								<PencilIcon />
 								{m.common_edit()}
 							</DropdownMenuItem>
-							{deleteDisabled ? (
-								<ButtonTooltip disabled label={deleteTooltip}>
-									<DropdownMenuItem disabled title={deleteTooltip}>
+
+							{isPlaced || actionLocked ? (
+								<ButtonTooltip label={deleteTitle} disabled>
+									<DropdownMenuItem disabled title={deleteTitle}>
 										<Trash2Icon />
 										{m.common_delete()}
 									</DropdownMenuItem>
 								</ButtonTooltip>
 							) : (
-								<DropdownMenuItem onSelect={() => setDeleteOpen(true)} title={m.common_delete()}>
+								<DropdownMenuItem onSelect={() => setDeleteOpen(true)} title={deleteTitle}>
 									<Trash2Icon />
 									{m.common_delete()}
 								</DropdownMenuItem>
 							)}
 						</DropdownMenuContent>
 					</DropdownMenu>
-					<PlantUpdateDialog plant={plant} open={editOpen} onOpenChange={setEditOpen} />
+					<LocationUpdateDialog location={location} open={editOpen} onOpenChange={setEditOpen} />
+					<GardeningEventCreateDialog
+						open={createEventOpen}
+						onOpenChange={setCreateEventOpen}
+						initialValues={{
+							target: "location",
+							locationId: location.id as LocationEntityId,
+						}}
+					/>
 					<DeleteConfirmDialog
 						open={deleteOpen}
 						onOpenChange={setDeleteOpen}
-						title={m.collections_plant_delete()}
-						description={title}
+						title={m.collections_location_delete()}
+						description={location.name}
 						isPending={del.isPending}
 						onConfirm={async () => {
 							setDeleteOpen(false);
-							await del.mutateAsync({ id: plant.id });
+							await del.mutateAsync({ id: location.id });
 						}}
 					/>
 				</ItemActions>

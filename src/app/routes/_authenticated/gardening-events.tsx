@@ -2,14 +2,11 @@ import type { GardeningEventEntity, GardeningEventEntityId } from "@backend/core
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
-	type ColumnFiltersState,
-	type VisibilityState,
 	createColumnHelper,
 	createTable,
 	getCoreRowModel,
 	getFilteredRowModel,
 	getSortedRowModel,
-	type RowSelectionState,
 	type SortingState,
 } from "@tanstack/react-table";
 import { EllipsisVerticalIcon, PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
@@ -18,10 +15,11 @@ import { DashboardPageContent } from "#/app/components/layout/dashboard-page-con
 import { DashboardPageHeading } from "#/app/components/layout/dashboard-page-heading";
 import { GardeningActionPresentationIcon } from "@/components/gardening/gardening-action-icon";
 import { GardeningEventCreateDialog } from "@/components/gardening/gardening-event/gardening-event-create-dialog";
-import { GardeningEventUpdateManyDialog } from "@/components/gardening/gardening-event/gardening-event-update-many-dialog";
+import { GardeningEventListCard } from "@/components/gardening/gardening-event/gardening-event-list-card";
 import { GardeningEventUpdateDialog } from "@/components/gardening/gardening-event/gardening-event-update-dialog";
+import { GardeningEventUpdateManyDialog } from "@/components/gardening/gardening-event/gardening-event-update-many-dialog";
 import { DeleteConfirmDialog } from "@/components/gardening/shared/delete-confirm-dialog";
-import { DataTable } from "@/components/table/data-table";
+import { buildCollectionGlobalSearch, CollectionItemsView } from "@/components/table/collection-items-view";
 import { DataTableColumnHeader } from "@/components/table/data-table-column-header";
 import { fuzzyFilter } from "@/components/table/fuzzy-filter";
 import {
@@ -40,12 +38,13 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useCollectionPageState } from "@/hooks/use-collection-table-state";
 import { gardeningActionMessage } from "@/lib/gardening-action-messages";
 import { renderError } from "@/lib/render-error";
 import { tableSelectionBulkTooltip } from "@/lib/table-selection-tooltips";
 import { parseUrlColumnFilters } from "@/lib/table-url-filters";
-import { useTableUrlSync } from "@/lib/use-table-url-sync";
 import * as m from "@/paraglide/messages.js";
+import { getLocale } from "@/paraglide/runtime";
 import { queryKeys } from "@/store/keys";
 import { useGardeningEventDeleteManyMutation, useGardeningEventDeleteMutation } from "@/store/mutations";
 
@@ -61,6 +60,8 @@ export const Route = createFileRoute("/_authenticated/gardening-events")({
 	component: GardeningEventsPage,
 });
 
+const GARDENING_EVENTS_LIST_DEFAULT_SORTING: SortingState = [{ id: "occurredAt", desc: true }];
+
 function GardeningEventsPage() {
 	const navigate = useNavigate({ from: Route.fullPath });
 	const search = Route.useSearch();
@@ -68,13 +69,34 @@ function GardeningEventsPage() {
 	const items = useMemo(() => data?.items ?? [], [data?.items]);
 	const [createOpen, setCreateOpen] = useState(false);
 
-	const [sorting, setSorting] = useState<SortingState>([
-		{ id: search.sortBy ?? "occurredAt", desc: Boolean(search.sortDesc) },
-	]);
-	const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>(() => parseUrlColumnFilters(search.cf));
-	const [globalFilter, setGlobalFilter] = useState(search.q ?? "");
-	const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
-	const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({ globalSearch: false });
+	const {
+		sorting,
+		setSorting,
+		columnFilters,
+		setColumnFilters,
+		globalFilter,
+		setGlobalFilter,
+		rowSelection,
+		setRowSelection,
+		columnVisibility,
+		setColumnVisibility,
+		viewMode,
+		setViewMode,
+	} = useCollectionPageState({
+		initialSortId: "occurredAt",
+		searchQ: search.q,
+		searchSortBy: search.sortBy,
+		searchSortDesc: search.sortDesc,
+		initialColumnFilters: () => parseUrlColumnFilters(search.cf),
+		navigate,
+		urlSearch: {
+			q: search.q,
+			sortBy: search.sortBy,
+			sortDesc: search.sortDesc,
+			cf: search.cf,
+		},
+		initialSorting: GARDENING_EVENTS_LIST_DEFAULT_SORTING,
+	});
 	const [bulkUpdateOpen, setBulkUpdateOpen] = useState(false);
 	const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
 	const bulkDeleteMany = useGardeningEventDeleteManyMutation();
@@ -91,21 +113,32 @@ function GardeningEventsPage() {
 				header: ({ table }) => (
 					<div className={tableListCompactHeaderInnerClass}>
 						<Checkbox
-							aria-label="Select all"
+							aria-label={m.table_selectAll()}
 							checked={table.getIsAllRowsSelected()}
 							onCheckedChange={(checked) => table.toggleAllRowsSelected(checked === true)}
 						/>
 					</div>
 				),
-				cell: ({ row }) => (
-					<div className={tableListCompactHeaderInnerClass}>
-						<Checkbox
-							aria-label="Select row"
-							checked={row.getIsSelected()}
-							onCheckedChange={(checked) => row.toggleSelected(checked === true)}
-						/>
-					</div>
-				),
+				cell: ({ row }) => {
+					const event = row.original;
+					const actionLabel = gardeningActionMessage(event.action.type);
+					const when =
+						event.occurredAt === null
+							? m.common_unknown()
+							: event.occurredAt.toLocaleString(getLocale(), {
+									dateStyle: "short",
+									timeStyle: "short",
+								});
+					return (
+						<div className={tableListCompactHeaderInnerClass}>
+							<Checkbox
+								aria-label={m.table_selectRow({ name: `${actionLabel}, ${when}` })}
+								checked={row.getIsSelected()}
+								onCheckedChange={(checked) => row.toggleSelected(checked === true)}
+							/>
+						</div>
+					);
+				},
 				enableColumnFilter: false,
 				enableGlobalFilter: false,
 				enableSorting: false,
@@ -217,16 +250,26 @@ function GardeningEventsPage() {
 					columnPinning: { left: [], right: [] },
 				},
 			}),
-		[columnFilters, columnVisibility, columns, globalFilter, items, rowSelection, sorting],
+		[
+			columnFilters,
+			columnVisibility,
+			columns,
+			globalFilter,
+			items,
+			rowSelection,
+			setColumnFilters,
+			setColumnVisibility,
+			setGlobalFilter,
+			setRowSelection,
+			setSorting,
+			sorting,
+		],
 	);
 	const selectedEventIds = useMemo(
 		() => table.getFilteredSelectedRowModel().rows.map((row) => row.original.id as GardeningEventEntityId),
 		[table],
 	);
-	const selectedEvents = useMemo(
-		() => table.getFilteredSelectedRowModel().rows.map((row) => row.original),
-		[table],
-	);
+	const selectedEvents = useMemo(() => table.getFilteredSelectedRowModel().rows.map((row) => row.original), [table]);
 	const bulkUpdateEventsDisabled = selectedEventIds.length === 0;
 	const bulkDeleteEventsDisabled = selectedEventIds.length === 0;
 	const bulkDeleteManyTooltip = tableSelectionBulkTooltip({
@@ -234,40 +277,17 @@ function GardeningEventsPage() {
 		hasPlacedInSelection: false,
 		enabledTooltip: m.collections_gardeningEvent_deleteManyTooltip(),
 	});
-	useTableUrlSync({
-		searchQ: search.q,
-		searchSortBy: search.sortBy,
-		searchSortDesc: search.sortDesc,
-		searchCf: search.cf,
-		initialSorting: [{ id: "occurredAt", desc: true }],
-		sorting,
-		setSorting,
-		globalFilter,
-		setGlobalFilter,
-		columnFilters,
-		setColumnFilters,
-		navigate,
-		currentSearch: {
-			q: search.q,
-			sortBy: search.sortBy,
-			sortDesc: search.sortDesc,
-			cf: search.cf,
-		},
-	});
-
 	return (
 		<div id="events-page" className="flex min-h-0 flex-1 flex-col overflow-hidden">
-			<DashboardPageHeading collection="gardeningEvent">
+			<DashboardPageHeading
+				collection="gardeningEvent"
+				viewModeToggle={{ value: viewMode, onValueChange: setViewMode }}
+			>
 				<h1 className="font-heading font-medium text-lg" id="page-title">
 					{m.collections_gardeningEvent_titlePlural()}
 				</h1>
 				<ButtonTooltip label={m.collections_gardeningEvent_create()}>
-					<Button
-						type="button"
-						size="icon"
-						variant="outline"
-						onClick={() => setCreateOpen(true)}
-					>
+					<Button type="button" size="icon" variant="outline" onClick={() => setCreateOpen(true)}>
 						<span className="sr-only">{m.collections_gardeningEvent_create()}</span>
 						<PlusIcon />
 					</Button>
@@ -275,28 +295,29 @@ function GardeningEventsPage() {
 			</DashboardPageHeading>
 			<DashboardPageContent className="flex min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-hidden">
 				<div className="flex min-h-0 min-w-0 flex-1 flex-col px-1 pt-1 pb-2">
-					<DataTable
+					<CollectionItemsView
+						viewMode={viewMode}
 						table={table}
 						isPending={isPending}
 						isError={isError}
 						errorMessage={renderError(error, m.common_loadError())}
 						emptyMessage={m.items_noElements()}
-						globalSearch={{
-							value: globalFilter,
-							onValueChange: setGlobalFilter,
-							searchPlaceholder: m.filtering_searchPlaceholder(),
-							clearSearchLabel: m.filtering_clearSearch(),
-							clearFiltersLabel: m.filtering_clearFilters(),
-							onClearFilters: () => {
-								setGlobalFilter("");
-								setColumnFilters([]);
-								setRowSelection({});
-							},
-						}}
+						globalSearch={buildCollectionGlobalSearch({
+							globalFilter,
+							setGlobalFilter,
+							setColumnFilters,
+							setRowSelection,
+						})}
 						highlightPendingRows
+						listDefaultSorting={GARDENING_EVENTS_LIST_DEFAULT_SORTING}
 						selectedActions={
 							<div className="flex flex-wrap items-center gap-2">
-								<Button type="button" variant="outline" disabled={bulkUpdateEventsDisabled} onClick={() => setBulkUpdateOpen(true)}>
+								<Button
+									type="button"
+									variant="outline"
+									disabled={bulkUpdateEventsDisabled}
+									onClick={() => setBulkUpdateOpen(true)}
+								>
 									{m.common_updateSelected()}
 								</Button>
 								<ButtonTooltip label={bulkDeleteManyTooltip} disabled={bulkDeleteEventsDisabled}>
@@ -311,6 +332,13 @@ function GardeningEventsPage() {
 								</ButtonTooltip>
 							</div>
 						}
+						renderListItem={(row) => (
+							<GardeningEventListCard
+								event={row.original}
+								selected={row.getIsSelected()}
+								onSelectedChange={(checked) => row.toggleSelected(checked)}
+							/>
+						)}
 					/>
 				</div>
 			</DashboardPageContent>
@@ -377,6 +405,3 @@ function GardeningEventRowActions({ event }: { event: GardeningEventEntity }) {
 		</div>
 	);
 }
-
-
-

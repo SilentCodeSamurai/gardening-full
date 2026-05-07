@@ -1,14 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
-	type ColumnFiltersState,
-	type VisibilityState,
 	createColumnHelper,
 	createTable,
 	getCoreRowModel,
 	getFilteredRowModel,
 	getSortedRowModel,
-	type RowSelectionState,
 	type SortingState,
 } from "@tanstack/react-table";
 import {
@@ -26,10 +23,11 @@ import { DashboardPageHeading } from "#/app/components/layout/dashboard-page-hea
 import type { SpeciesCategoryWithSystemCatalog } from "#/backend/core/application/use-cases/gardening/species-category.use-cases";
 import { DeleteConfirmDialog } from "@/components/gardening/shared/delete-confirm-dialog";
 import { SpeciesCategoryCreateDialog } from "@/components/gardening/species-category/species-category-create-dialog";
-import { SpeciesCategoryUpdateManyDialog } from "@/components/gardening/species-category/species-category-update-many-dialog";
+import { SpeciesCategoryListCard } from "@/components/gardening/species-category/species-category-list-card";
 import { SpeciesCategoryUpdateDialog } from "@/components/gardening/species-category/species-category-update-dialog";
+import { SpeciesCategoryUpdateManyDialog } from "@/components/gardening/species-category/species-category-update-many-dialog";
 import { ItemPresentationIcon } from "@/components/icon/item-presentation-icon";
-import { DataTable } from "@/components/table/data-table";
+import { buildCollectionGlobalSearch, CollectionItemsView } from "@/components/table/collection-items-view";
 import { DataTableColumnHeader } from "@/components/table/data-table-column-header";
 import { fuzzyFilter } from "@/components/table/fuzzy-filter";
 import {
@@ -52,10 +50,10 @@ import {
 	DropdownMenuSubTrigger,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useCollectionPageState } from "@/hooks/use-collection-table-state";
 import { renderError } from "@/lib/render-error";
 import { tableSelectionBulkTooltip } from "@/lib/table-selection-tooltips";
 import { parseUrlColumnFilters, serializeUrlColumnFilters } from "@/lib/table-url-filters";
-import { useTableUrlSync } from "@/lib/use-table-url-sync";
 import { translateCatalogField } from "@/lib/translate-catalog-field";
 import * as m from "@/paraglide/messages.js";
 import { queryKeys } from "@/store/keys";
@@ -72,6 +70,8 @@ export const Route = createFileRoute("/_authenticated/catalog/species-categories
 	},
 	component: SpeciesCategoriesPage,
 });
+
+const SPECIES_CATEGORIES_LIST_DEFAULT_SORTING: SortingState = [{ id: "title", desc: false }];
 
 function SpeciesCategoriesPage() {
 	const navigate = useNavigate({ from: Route.fullPath });
@@ -93,15 +93,34 @@ function SpeciesCategoriesPage() {
 		return map;
 	}, [speciesData?.items]);
 
-	const [sorting, setSorting] = useState<SortingState>([
-		{ id: sortByFromSearch ?? "title", desc: Boolean(sortDescFromSearch) },
-	]);
-	const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>(() =>
-		parseUrlColumnFilters(cfFromSearch),
-	);
-	const [globalFilter, setGlobalFilter] = useState(qFromSearch ?? "");
-	const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
-	const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({ globalSearch: false });
+	const {
+		sorting,
+		setSorting,
+		columnFilters,
+		setColumnFilters,
+		globalFilter,
+		setGlobalFilter,
+		rowSelection,
+		setRowSelection,
+		columnVisibility,
+		setColumnVisibility,
+		viewMode,
+		setViewMode,
+	} = useCollectionPageState({
+		initialSortId: "title",
+		searchQ: qFromSearch,
+		searchSortBy: sortByFromSearch,
+		searchSortDesc: sortDescFromSearch,
+		initialColumnFilters: () => parseUrlColumnFilters(cfFromSearch),
+		navigate,
+		urlSearch: {
+			q: qFromSearch,
+			sortBy: sortByFromSearch,
+			sortDesc: sortDescFromSearch,
+			cf: cfFromSearch,
+		},
+		initialSorting: SPECIES_CATEGORIES_LIST_DEFAULT_SORTING,
+	});
 	const [createOpen, setCreateOpen] = useState(false);
 	const [bulkUpdateOpen, setBulkUpdateOpen] = useState(false);
 	const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
@@ -119,21 +138,26 @@ function SpeciesCategoriesPage() {
 				header: ({ table }) => (
 					<div className={tableListCompactHeaderInnerClass}>
 						<Checkbox
-							aria-label="Select all"
+							aria-label={m.table_selectAll()}
 							checked={table.getIsAllRowsSelected()}
 							onCheckedChange={(checked) => table.toggleAllRowsSelected(checked === true)}
 						/>
 					</div>
 				),
-				cell: ({ row }) => (
-					<div className={tableListCompactHeaderInnerClass}>
-						<Checkbox
-							aria-label="Select row"
-							checked={row.getIsSelected()}
-							onCheckedChange={(checked) => row.toggleSelected(checked === true)}
-						/>
-					</div>
-				),
+				cell: ({ row }) => {
+					const label =
+						translateCatalogField(row.original.title, row.original.systemCatalog) ??
+						String(row.original.id);
+					return (
+						<div className={tableListCompactHeaderInnerClass}>
+							<Checkbox
+								aria-label={m.table_selectRow({ name: label })}
+								checked={row.getIsSelected()}
+								onCheckedChange={(checked) => row.toggleSelected(checked === true)}
+							/>
+						</div>
+					);
+				},
 				enableColumnFilter: false,
 				enableGlobalFilter: false,
 				enableSorting: false,
@@ -288,7 +312,20 @@ function SpeciesCategoriesPage() {
 					columnPinning: { left: [], right: [] },
 				},
 			}),
-		[columnFilters, columnVisibility, columns, globalFilter, items, rowSelection, sorting],
+		[
+			columnFilters,
+			columnVisibility,
+			columns,
+			globalFilter,
+			items,
+			rowSelection,
+			setColumnFilters,
+			setColumnVisibility,
+			setGlobalFilter,
+			setRowSelection,
+			setSorting,
+			sorting,
+		],
 	);
 
 	const selectedCategoryIds = useMemo(
@@ -318,40 +355,17 @@ function SpeciesCategoriesPage() {
 		defaultCatalogAction: "update",
 		enabledTooltip: m.common_updateSelected(),
 	});
-	useTableUrlSync({
-		searchQ: qFromSearch,
-		searchSortBy: sortByFromSearch,
-		searchSortDesc: sortDescFromSearch,
-		searchCf: cfFromSearch,
-		initialSorting: [{ id: "title", desc: false }],
-		sorting,
-		setSorting,
-		globalFilter,
-		setGlobalFilter,
-		columnFilters,
-		setColumnFilters,
-		navigate,
-		currentSearch: {
-			q: qFromSearch,
-			sortBy: sortByFromSearch,
-			sortDesc: sortDescFromSearch,
-			cf: cfFromSearch,
-		},
-	});
-
 	return (
 		<div id="species-categories-page" className="flex min-h-0 flex-1 flex-col overflow-hidden">
-			<DashboardPageHeading collection="speciesCategory">
+			<DashboardPageHeading
+				collection="speciesCategory"
+				viewModeToggle={{ value: viewMode, onValueChange: setViewMode }}
+			>
 				<h1 className="font-heading font-medium text-lg" id="page-title">
 					{m.collections_speciesCategory_titlePlural()}
 				</h1>
 				<ButtonTooltip label={m.collections_speciesCategory_create()}>
-					<Button
-						type="button"
-						size="icon"
-						variant="outline"
-						onClick={() => setCreateOpen(true)}
-					>
+					<Button type="button" size="icon" variant="outline" onClick={() => setCreateOpen(true)}>
 						<span className="sr-only">{m.collections_speciesCategory_create()}</span>
 						<PlusIcon />
 					</Button>
@@ -359,29 +373,30 @@ function SpeciesCategoriesPage() {
 			</DashboardPageHeading>
 			<DashboardPageContent className="flex min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-hidden">
 				<div className="flex min-h-0 min-w-0 flex-1 flex-col px-1 pt-1 pb-2">
-					<DataTable
+					<CollectionItemsView
+						viewMode={viewMode}
 						table={table}
 						isPending={isPending}
 						isError={isError}
 						errorMessage={renderError(error, m.common_loadError())}
 						emptyMessage={m.items_noElements()}
-						globalSearch={{
-							value: globalFilter,
-							onValueChange: setGlobalFilter,
-							searchPlaceholder: m.filtering_searchPlaceholder(),
-							clearSearchLabel: m.filtering_clearSearch(), 
-							clearFiltersLabel: m.filtering_clearFilters(),
-							onClearFilters: () => {
-								setGlobalFilter("");
-								setColumnFilters([]);
-								setRowSelection({});
-							},
-						}}
+						globalSearch={buildCollectionGlobalSearch({
+							globalFilter,
+							setGlobalFilter,
+							setColumnFilters,
+							setRowSelection,
+						})}
 						highlightPendingRows
+						listDefaultSorting={SPECIES_CATEGORIES_LIST_DEFAULT_SORTING}
 						selectedActions={
 							<div className="flex items-center gap-2">
 								<ButtonTooltip label={bulkUpdateTooltip} disabled={bulkUpdateDisabled}>
-									<Button type="button" variant="outline" disabled={bulkUpdateDisabled} onClick={() => setBulkUpdateOpen(true)}>
+									<Button
+										type="button"
+										variant="outline"
+										disabled={bulkUpdateDisabled}
+										onClick={() => setBulkUpdateOpen(true)}
+									>
 										{m.common_updateSelected()}
 									</Button>
 								</ButtonTooltip>
@@ -397,6 +412,13 @@ function SpeciesCategoriesPage() {
 								</ButtonTooltip>
 							</div>
 						}
+						renderListItem={(row) => (
+							<SpeciesCategoryListCard
+								category={row.original}
+								selected={row.getIsSelected()}
+								onSelectedChange={(checked) => row.toggleSelected(checked)}
+							/>
+						)}
 					/>
 				</div>
 			</DashboardPageContent>
@@ -485,7 +507,11 @@ function SpeciesCategoryRowActions({
 								<Button asChild variant="outline" size="xs" title={linkedTitle}>
 									<Link
 										to="/catalog/species"
-										search={{ cf: serializeUrlColumnFilters([{ id: "category", value: String(category.id) }]) }}
+										search={{
+											cf: serializeUrlColumnFilters([
+												{ id: "category", value: String(category.id) },
+											]),
+										}}
 										aria-label={linkedTitle}
 									>
 										<ExternalLinkIcon />
@@ -497,7 +523,11 @@ function SpeciesCategoryRowActions({
 								<Button asChild variant="outline" size="xs" title={linkedTitle}>
 									<Link
 										to="/catalog/cultivars"
-										search={{ cf: serializeUrlColumnFilters([{ id: "category", value: String(category.id) }]) }}
+										search={{
+											cf: serializeUrlColumnFilters([
+												{ id: "category", value: String(category.id) },
+											]),
+										}}
 										aria-label={linkedTitle}
 									>
 										<ExternalLinkIcon />
@@ -509,7 +539,11 @@ function SpeciesCategoryRowActions({
 								<Button asChild variant="outline" size="xs" title={linkedTitle}>
 									<Link
 										to="/plants"
-										search={{ cf: serializeUrlColumnFilters([{ id: "category", value: String(category.id) }]) }}
+										search={{
+											cf: serializeUrlColumnFilters([
+												{ id: "category", value: String(category.id) },
+											]),
+										}}
 										aria-label={linkedTitle}
 									>
 										<ExternalLinkIcon />
@@ -545,7 +579,3 @@ function SpeciesCategoryRowActions({
 		</div>
 	);
 }
-
-
-
-

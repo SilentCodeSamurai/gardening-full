@@ -5,13 +5,11 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
 	type Column,
 	type ColumnFiltersState,
-	type VisibilityState,
 	createColumnHelper,
 	createTable,
 	getCoreRowModel,
 	getFilteredRowModel,
 	getSortedRowModel,
-	type RowSelectionState,
 	type SortingState,
 	type Table,
 	type Updater,
@@ -26,11 +24,12 @@ import {
 	GardeningEventCreateDialogWithData,
 } from "@/components/gardening/gardening-event/gardening-event-create-dialog";
 import { PlantCreateDialog } from "@/components/gardening/plant/plant-create-dialog";
-import { PlantUpdateManyDialog } from "@/components/gardening/plant/plant-update-many-dialog";
+import { PlantListCard } from "@/components/gardening/plant/plant-list-card";
 import { PlantUpdateDialogWithCultivars } from "@/components/gardening/plant/plant-update-dialog";
+import { PlantUpdateManyDialog } from "@/components/gardening/plant/plant-update-many-dialog";
 import { DeleteConfirmDialog } from "@/components/gardening/shared/delete-confirm-dialog";
 import { ItemPresentationIcon } from "@/components/icon/item-presentation-icon";
-import { DataTable } from "@/components/table/data-table";
+import { buildCollectionGlobalSearch, CollectionItemsView } from "@/components/table/collection-items-view";
 import { DataTableColumnHeader } from "@/components/table/data-table-column-header";
 import { fuzzyFilter } from "@/components/table/fuzzy-filter";
 import {
@@ -63,17 +62,22 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useCollectionPageState } from "@/hooks/use-collection-table-state";
 import { CATALOG_FILTER_NO_VALUE } from "@/lib/catalog-filter-sentinel";
 import { renderError } from "@/lib/render-error";
 import { getPlantPlacementSummary, plantPlacementFilterToken } from "@/lib/spatial-placement-summary";
 import { tableSelectionBulkTooltip } from "@/lib/table-selection-tooltips";
 import { parseUrlColumnFilters } from "@/lib/table-url-filters";
-import { useTableUrlSync } from "@/lib/use-table-url-sync";
 import { translateCatalogField } from "@/lib/translate-catalog-field";
 import * as m from "@/paraglide/messages.js";
 import { queryKeys } from "@/store/keys";
 import { usePlantDeleteManyMutation, usePlantDeleteMutation } from "@/store/mutations";
-import type { CachedCultivar, CachedHydratedPlant, CachedLocation } from "@/store/query-cache-types";
+import type {
+	CachedCultivar,
+	CachedHydratedPlant,
+	CachedLocation,
+	CachedSpeciesWithSystemCatalog,
+} from "@/store/query-cache-types";
 import { collectPlacedEntityIds } from "@/store/spatial-placement";
 
 export const Route = createFileRoute("/_authenticated/plants")({
@@ -92,6 +96,8 @@ export const Route = createFileRoute("/_authenticated/plants")({
 	},
 	component: PlantsPage,
 });
+
+const PLANTS_LIST_DEFAULT_SORTING: SortingState = [{ id: "title", desc: false }];
 
 function humanizeToken(value: string): string {
 	return value
@@ -116,6 +122,19 @@ function resolveSpeciesDisplayName(rawSpeciesName: string): string {
 		if (token) return humanizeToken(token);
 	}
 	return trimmed;
+}
+
+function plantSpeciesDisplayLabel(
+	plant: CachedHydratedPlant,
+	speciesById: Map<string, CachedSpeciesWithSystemCatalog>,
+): string {
+	const sp = plant.cultivar?.species;
+	if (!sp) return "";
+	const speciesEntity = speciesById.get(String(sp.id));
+	return speciesEntity?.characteristics?.name != null
+		? (translateCatalogField(speciesEntity.characteristics.name, speciesEntity.systemCatalog) ??
+				sp.characteristics.name)
+		: resolveSpeciesDisplayName(sp.characteristics.name);
 }
 
 function getPlantDisplayTitle(plant: CachedHydratedPlant): string {
@@ -342,11 +361,7 @@ function PlantsPage() {
 			const sid = String(plant.cultivar.species.id);
 			if (seen.has(sid)) continue;
 			const speciesEntity = speciesById.get(sid);
-			const label =
-				speciesEntity?.characteristics?.name != null
-					? (translateCatalogField(speciesEntity.characteristics.name, speciesEntity.systemCatalog) ??
-						plant.cultivar.species.characteristics.name)
-					: resolveSpeciesDisplayName(plant.cultivar.species.characteristics.name);
+			const label = plantSpeciesDisplayLabel(plant, speciesById);
 			seen.set(sid, {
 				value: sid,
 				label,
@@ -368,15 +383,36 @@ function PlantsPage() {
 		return opts;
 	}, [items, speciesById]);
 
-	const [sorting, setSorting] = useState<SortingState>([
-		{ id: sortByFromSearch || "title", desc: Boolean(sortDescFromSearch) },
-	]);
-	const [globalFilter, setGlobalFilter] = useState(qFromSearch ?? "");
-	const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>(() => {
-		return parseUrlColumnFilters(cfFromSearch);
+	const {
+		sorting,
+		setSorting,
+		columnFilters,
+		setColumnFilters,
+		globalFilter,
+		setGlobalFilter,
+		rowSelection,
+		setRowSelection,
+		columnVisibility,
+		setColumnVisibility,
+		viewMode,
+		setViewMode,
+	} = useCollectionPageState({
+		initialSortId: "title",
+		searchQ: qFromSearch,
+		searchSortBy: sortByFromSearch,
+		searchSortDesc: sortDescFromSearch,
+		initialColumnFilters: () => parseUrlColumnFilters(cfFromSearch),
+		getUrlColumnFilters: (filters) =>
+			reconcilePlantsColumnFilters(filters, filters, speciesCategoryById, cultivarById),
+		navigate,
+		urlSearch: {
+			q: qFromSearch,
+			sortBy: sortByFromSearch,
+			sortDesc: sortDescFromSearch,
+			cf: cfFromSearch,
+		},
+		initialSorting: PLANTS_LIST_DEFAULT_SORTING,
 	});
-	const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
-	const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({ globalSearch: false });
 	const [createOpen, setCreateOpen] = useState(false);
 	const [createEventOpen, setCreateEventOpen] = useState(false);
 	const [bulkUpdateOpen, setBulkUpdateOpen] = useState(false);
@@ -421,7 +457,7 @@ function PlantsPage() {
 				return reconcilePlantsColumnFilters(prevEffective, next, speciesCategoryById, cultivarById);
 			});
 		},
-		[cultivarById, speciesCategoryById],
+		[cultivarById, setColumnFilters, speciesCategoryById],
 	);
 
 	const columnHelper = useMemo(() => createColumnHelper<CachedHydratedPlant>(), []);
@@ -437,7 +473,7 @@ function PlantsPage() {
 				header: ({ table }) => (
 					<div className={tableListCompactHeaderInnerClass}>
 						<Checkbox
-							aria-label="Select all"
+							aria-label={m.table_selectAll()}
 							checked={table.getIsAllRowsSelected()}
 							onCheckedChange={(checked) => table.toggleAllRowsSelected(checked === true)}
 						/>
@@ -446,7 +482,7 @@ function PlantsPage() {
 				cell: ({ row }) => (
 					<div className={tableListCompactHeaderInnerClass}>
 						<Checkbox
-							aria-label="Select row"
+							aria-label={m.table_selectRow({ name: getPlantDisplayTitle(row.original) })}
 							checked={row.getIsSelected()}
 							onCheckedChange={(checked) => row.toggleSelected(checked === true)}
 						/>
@@ -461,9 +497,7 @@ function PlantsPage() {
 					const title = getPlantDisplayTitle(p);
 					const desc = p.description ?? "";
 					const cv = p.cultivar?.characteristics.name ?? "";
-					const sp = p.cultivar?.species
-						? resolveSpeciesDisplayName(p.cultivar.species.characteristics.name)
-						: "";
+					const sp = p.cultivar?.species ? plantSpeciesDisplayLabel(p, speciesById) : "";
 					const catId = p.cultivar?.species
 						? (speciesCategoryById.get(String(p.cultivar.species.id)) ?? "")
 						: "";
@@ -579,10 +613,10 @@ function PlantsPage() {
 				header: ({ column }) => <DataTableColumnHeader column={column} title={m.collections_species_title()} />,
 				sortingFn: (rowA, rowB) => {
 					const a = rowA.original.cultivar?.species
-						? resolveSpeciesDisplayName(rowA.original.cultivar.species.characteristics.name)
+						? plantSpeciesDisplayLabel(rowA.original, speciesById)
 						: "\uffff";
 					const b = rowB.original.cultivar?.species
-						? resolveSpeciesDisplayName(rowB.original.cultivar.species.characteristics.name)
+						? plantSpeciesDisplayLabel(rowB.original, speciesById)
 						: "\uffff";
 					return a.localeCompare(b, undefined, { sensitivity: "base" });
 				},
@@ -650,7 +684,7 @@ function PlantsPage() {
 				cell: ({ row }) => (
 					<span className="text-muted-foreground text-xs">
 						{row.original.cultivar?.species
-							? resolveSpeciesDisplayName(row.original.cultivar.species.characteristics.name)
+							? plantSpeciesDisplayLabel(row.original, speciesById)
 							: m.filtering_catalogNoSpecies()}
 					</span>
 				),
@@ -868,6 +902,7 @@ function PlantsPage() {
 			plantPlacementFilterItems,
 			plantSpeciesFilterOptions,
 			spatialData?.items,
+			speciesById,
 			speciesCategoryById,
 		],
 	);
@@ -906,6 +941,10 @@ function PlantsPage() {
 			items,
 			onColumnFiltersChange,
 			rowSelection,
+			setColumnVisibility,
+			setGlobalFilter,
+			setRowSelection,
+			setSorting,
 			sorting,
 		],
 	);
@@ -915,10 +954,7 @@ function PlantsPage() {
 		() => table.getFilteredSelectedRowModel().rows.map((row) => row.original.id as PlantEntityId),
 		[table],
 	);
-	const selectedPlants = useMemo(
-		() => table.getFilteredSelectedRowModel().rows.map((row) => row.original),
-		[table],
-	);
+	const selectedPlants = useMemo(() => table.getFilteredSelectedRowModel().rows.map((row) => row.original), [table]);
 	const selectedPlantsEventInitialValues = useMemo<GardeningEventCreateDialogInitialValues>(
 		() => ({
 			target: "plants",
@@ -951,30 +987,9 @@ function PlantsPage() {
 			: filteredRowCount === 0
 				? m.filtering_noFilteredElements()
 				: m.items_noElements();
-	useTableUrlSync({
-		searchQ: qFromSearch,
-		searchSortBy: sortByFromSearch,
-		searchSortDesc: sortDescFromSearch,
-		searchCf: cfFromSearch,
-		initialSorting: [{ id: "title", desc: false }],
-		sorting,
-		setSorting,
-		globalFilter,
-		setGlobalFilter,
-		columnFilters: effectiveColumnFilters,
-		setColumnFilters,
-		navigate,
-		currentSearch: {
-			q: qFromSearch,
-			sortBy: sortByFromSearch,
-			sortDesc: sortDescFromSearch,
-			cf: cfFromSearch,
-		},
-	});
-
 	return (
 		<div id="plants-page" className="flex min-h-0 flex-1 flex-col overflow-hidden">
-			<DashboardPageHeading collection="plant">
+			<DashboardPageHeading collection="plant" viewModeToggle={{ value: viewMode, onValueChange: setViewMode }}>
 				<h1 className="font-heading font-medium text-lg" id="page-title">
 					{m.collections_plant_titlePlural()}
 				</h1>
@@ -993,25 +1008,21 @@ function PlantsPage() {
 			</DashboardPageHeading>
 			<DashboardPageContent className="flex min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-hidden">
 				<div className="flex min-h-0 min-w-0 flex-1 flex-col px-1 pt-1 pb-2">
-					<DataTable
+					<CollectionItemsView
+						viewMode={viewMode}
 						table={table}
 						isPending={isPending}
 						isError={isError}
 						errorMessage={renderError(error, m.common_loadError())}
 						emptyMessage={emptyMessage}
-						globalSearch={{
-							value: globalFilter,
-							onValueChange: setGlobalFilter,
-							searchPlaceholder: m.filtering_searchPlaceholder(),
-							clearSearchLabel: m.filtering_clearSearch(), 
-							clearFiltersLabel: m.filtering_clearFilters(),
-							onClearFilters: () => {
-								setGlobalFilter("");
-								setColumnFilters([]);
-								setRowSelection({});
-							},
-						}}
+						globalSearch={buildCollectionGlobalSearch({
+							globalFilter,
+							setGlobalFilter,
+							setColumnFilters,
+							setRowSelection,
+						})}
 						highlightPendingRows
+						listDefaultSorting={PLANTS_LIST_DEFAULT_SORTING}
 						selectedActions={
 							<div className="flex flex-wrap items-center gap-2">
 								<ButtonTooltip label={bulkCreateEventTooltip} disabled={bulkCreateEventDisabled}>
@@ -1024,7 +1035,12 @@ function PlantsPage() {
 										{m.collections_gardeningEvent_create()}
 									</Button>
 								</ButtonTooltip>
-								<Button type="button" variant="outline" disabled={bulkUpdateManyDisabled} onClick={() => setBulkUpdateOpen(true)}>
+								<Button
+									type="button"
+									variant="outline"
+									disabled={bulkUpdateManyDisabled}
+									onClick={() => setBulkUpdateOpen(true)}
+								>
 									{m.common_updateSelected()}
 								</Button>
 								<ButtonTooltip label={bulkDeleteManyTooltip} disabled={bulkDeleteManyDisabled}>
@@ -1039,6 +1055,15 @@ function PlantsPage() {
 								</ButtonTooltip>
 							</div>
 						}
+						renderListItem={(row) => (
+							<PlantListCard
+								plant={row.original}
+								speciesLabel={plantSpeciesDisplayLabel(row.original, speciesById)}
+								isPlaced={placedPlantIds.has(String(row.original.id))}
+								selected={row.getIsSelected()}
+								onSelectedChange={(checked) => row.toggleSelected(checked)}
+							/>
+						)}
 					/>
 				</div>
 			</DashboardPageContent>
@@ -1172,7 +1197,3 @@ function PlantRowActions({
 		</div>
 	);
 }
-
-
-
-

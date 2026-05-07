@@ -2,14 +2,11 @@ import type { LocationEntityId } from "@backend/core/domain/gardening/entities";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
-	type ColumnFiltersState,
-	type VisibilityState,
 	createColumnHelper,
 	createTable,
 	getCoreRowModel,
 	getFilteredRowModel,
 	getSortedRowModel,
-	type RowSelectionState,
 	type SortingState,
 } from "@tanstack/react-table";
 import { EllipsisVerticalIcon, PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
@@ -21,11 +18,12 @@ import {
 	type GardeningEventCreateDialogInitialValues,
 } from "@/components/gardening/gardening-event/gardening-event-create-dialog";
 import { LocationCreateDialog } from "@/components/gardening/location/location-create-dialog";
-import { LocationUpdateManyDialog } from "@/components/gardening/location/location-update-many-dialog";
+import { LocationListCard } from "@/components/gardening/location/location-list-card";
 import { LocationUpdateDialog } from "@/components/gardening/location/location-update-dialog";
+import { LocationUpdateManyDialog } from "@/components/gardening/location/location-update-many-dialog";
 import { DeleteConfirmDialog } from "@/components/gardening/shared/delete-confirm-dialog";
 import { ItemPresentationIcon } from "@/components/icon/item-presentation-icon";
-import { DataTable } from "@/components/table/data-table";
+import { buildCollectionGlobalSearch, CollectionItemsView } from "@/components/table/collection-items-view";
 import { DataTableColumnHeader } from "@/components/table/data-table-column-header";
 import { fuzzyFilter } from "@/components/table/fuzzy-filter";
 import {
@@ -50,11 +48,11 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useCollectionPageState } from "@/hooks/use-collection-table-state";
 import { renderError } from "@/lib/render-error";
 import { getLocationPlacementSummary, locationPlacementFilterToken } from "@/lib/spatial-placement-summary";
 import { tableSelectionBulkTooltip } from "@/lib/table-selection-tooltips";
 import { parseUrlColumnFilters } from "@/lib/table-url-filters";
-import { useTableUrlSync } from "@/lib/use-table-url-sync";
 import * as m from "@/paraglide/messages.js";
 import { queryKeys } from "@/store/keys";
 import { useLocationDeleteManyMutation, useLocationDeleteMutation } from "@/store/mutations";
@@ -74,6 +72,8 @@ export const Route = createFileRoute("/_authenticated/locations")({
 	component: LocationsPage,
 });
 
+const LOCATIONS_LIST_DEFAULT_SORTING: SortingState = [{ id: "name", desc: false }];
+
 function LocationsPage() {
 	const navigate = useNavigate({ from: Route.fullPath });
 	const {
@@ -81,8 +81,7 @@ function LocationsPage() {
 		sortBy: sortByFromSearch,
 		sortDesc: sortDescFromSearch,
 		cf: cfFromSearch,
-	} =
-		Route.useSearch();
+	} = Route.useSearch();
 	const { data, isPending, isError, error } = useQuery({ ...queryKeys.location.all });
 	const { data: spatialData } = useQuery({
 		...queryKeys.spatial.allNodes,
@@ -91,9 +90,34 @@ function LocationsPage() {
 
 	const rootItems = useMemo(() => data?.items ?? [], [data?.items]);
 
-	const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>(() =>
-		parseUrlColumnFilters(cfFromSearch),
-	);
+	const {
+		sorting,
+		setSorting,
+		columnFilters,
+		setColumnFilters,
+		globalFilter,
+		setGlobalFilter,
+		rowSelection,
+		setRowSelection,
+		columnVisibility,
+		setColumnVisibility,
+		viewMode,
+		setViewMode,
+	} = useCollectionPageState({
+		initialSortId: "name",
+		searchQ: qFromSearch,
+		searchSortBy: sortByFromSearch,
+		searchSortDesc: sortDescFromSearch,
+		initialColumnFilters: () => parseUrlColumnFilters(cfFromSearch),
+		navigate,
+		urlSearch: {
+			q: qFromSearch,
+			sortBy: sortByFromSearch,
+			sortDesc: sortDescFromSearch,
+			cf: cfFromSearch,
+		},
+		initialSorting: LOCATIONS_LIST_DEFAULT_SORTING,
+	});
 
 	const locationParentIdsFromTable = useMemo(() => {
 		const spatial = spatialData?.items ?? [];
@@ -136,12 +160,6 @@ function LocationsPage() {
 		[spatialData?.items],
 	);
 
-	const [sorting, setSorting] = useState<SortingState>([
-		{ id: sortByFromSearch ?? "name", desc: Boolean(sortDescFromSearch) },
-	]);
-	const [globalFilter, setGlobalFilter] = useState(qFromSearch ?? "");
-	const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
-	const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({ globalSearch: false });
 	const [createOpen, setCreateOpen] = useState(false);
 	const [createEventOpen, setCreateEventOpen] = useState(false);
 	const [bulkUpdateOpen, setBulkUpdateOpen] = useState(false);
@@ -160,7 +178,7 @@ function LocationsPage() {
 				header: ({ table }) => (
 					<div className={tableListCompactHeaderInnerClass}>
 						<Checkbox
-							aria-label="Select all"
+							aria-label={m.table_selectAll()}
 							checked={table.getIsAllRowsSelected()}
 							onCheckedChange={(checked) => table.toggleAllRowsSelected(checked === true)}
 						/>
@@ -169,7 +187,7 @@ function LocationsPage() {
 				cell: ({ row }) => (
 					<div className={tableListCompactHeaderInnerClass}>
 						<Checkbox
-							aria-label="Select row"
+							aria-label={m.table_selectRow({ name: row.original.name })}
 							checked={row.getIsSelected()}
 							onCheckedChange={(checked) => row.toggleSelected(checked === true)}
 						/>
@@ -319,7 +337,20 @@ function LocationsPage() {
 					columnPinning: { left: [], right: [] },
 				},
 			}),
-		[columnFilters, columnVisibility, columns, globalFilter, rootItems, rowSelection, sorting],
+		[
+			columnFilters,
+			columnVisibility,
+			columns,
+			globalFilter,
+			rootItems,
+			rowSelection,
+			setColumnFilters,
+			setColumnVisibility,
+			setGlobalFilter,
+			setRowSelection,
+			setSorting,
+			sorting,
+		],
 	);
 
 	const filteredRowCount = table.getFilteredRowModel().rows.length;
@@ -364,30 +395,12 @@ function LocationsPage() {
 			: filteredRowCount === 0
 				? m.filtering_noFilteredElements()
 				: m.items_noElements();
-	useTableUrlSync({
-		searchQ: qFromSearch,
-		searchSortBy: sortByFromSearch,
-		searchSortDesc: sortDescFromSearch,
-		searchCf: cfFromSearch,
-		initialSorting: [{ id: "name", desc: false }],
-		sorting,
-		setSorting,
-		globalFilter,
-		setGlobalFilter,
-		columnFilters,
-		setColumnFilters,
-		navigate,
-		currentSearch: {
-			q: qFromSearch,
-			sortBy: sortByFromSearch,
-			sortDesc: sortDescFromSearch,
-			cf: cfFromSearch,
-		},
-	});
-
 	return (
 		<div id="locations-page" className="flex min-h-0 flex-1 flex-col overflow-hidden">
-			<DashboardPageHeading collection="location">
+			<DashboardPageHeading
+				collection="location"
+				viewModeToggle={{ value: viewMode, onValueChange: setViewMode }}
+			>
 				<h1 className="font-heading font-medium text-lg" id="page-title">
 					{m.collections_location_titlePlural()}
 				</h1>
@@ -406,25 +419,21 @@ function LocationsPage() {
 			</DashboardPageHeading>
 			<DashboardPageContent className="flex min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-hidden">
 				<div className="flex min-h-0 min-w-0 flex-1 flex-col px-1 pt-1 pb-2">
-					<DataTable
+					<CollectionItemsView
+						viewMode={viewMode}
 						table={table}
 						isPending={isPending}
 						isError={isError}
 						errorMessage={renderError(error, m.common_loadError())}
 						emptyMessage={emptyMessage}
-						globalSearch={{
-							value: globalFilter,
-							onValueChange: setGlobalFilter,
-							searchPlaceholder: m.filtering_searchPlaceholder(),
-							clearSearchLabel: m.filtering_clearSearch(), 
-							clearFiltersLabel: m.filtering_clearFilters(),
-							onClearFilters: () => {
-								setGlobalFilter("");
-								setColumnFilters([]);
-								setRowSelection({});
-							},
-						}}
+						globalSearch={buildCollectionGlobalSearch({
+							globalFilter,
+							setGlobalFilter,
+							setColumnFilters,
+							setRowSelection,
+						})}
 						highlightPendingRows
+						listDefaultSorting={LOCATIONS_LIST_DEFAULT_SORTING}
 						selectedActions={
 							<div className="flex flex-wrap items-center gap-2">
 								<ButtonTooltip
@@ -440,7 +449,12 @@ function LocationsPage() {
 										{m.collections_gardeningEvent_create()}
 									</Button>
 								</ButtonTooltip>
-								<Button type="button" variant="outline" disabled={bulkLocationUpdateDisabled} onClick={() => setBulkUpdateOpen(true)}>
+								<Button
+									type="button"
+									variant="outline"
+									disabled={bulkLocationUpdateDisabled}
+									onClick={() => setBulkUpdateOpen(true)}
+								>
 									{m.common_updateSelected()}
 								</Button>
 								<ButtonTooltip label={bulkDeleteManyTooltip} disabled={bulkLocationDeleteDisabled}>
@@ -455,6 +469,19 @@ function LocationsPage() {
 								</ButtonTooltip>
 							</div>
 						}
+						renderListItem={(row) => (
+							<LocationListCard
+								location={row.original}
+								placementSummary={getLocationPlacementSummary(
+									spatialData?.items ?? [],
+									row.original,
+									rootItems,
+								)}
+								isPlaced={placedLocationIds.has(String(row.original.id))}
+								selected={row.getIsSelected()}
+								onSelectedChange={(checked) => row.toggleSelected(checked)}
+							/>
+						)}
 					/>
 				</div>
 			</DashboardPageContent>
@@ -570,7 +597,3 @@ function LocationRowActions({ location, isPlaced }: { location: CachedLocation; 
 		</div>
 	);
 }
-
-
-
-
