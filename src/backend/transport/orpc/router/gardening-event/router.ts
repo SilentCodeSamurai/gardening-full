@@ -1,4 +1,5 @@
 import {
+	GardeningEventBulkEditByIdsUseCase,
 	GardeningEventCreateForLocationUseCase,
 	GardeningEventCreateForPlantListUseCase,
 	GardeningEventCreateUseCase,
@@ -16,6 +17,7 @@ import { createUseCaseContextFromOrpc } from "../../create-use-case-context";
 import { authenticatedProcedure } from "../../orpc-procedure";
 import { runUseCaseOrpc } from "../../shared/run-use-case-orpc";
 import {
+	BulkEditByIdsGardeningEventInputSchema,
 	CreateGardeningEventForLocationInputSchema,
 	CreateGardeningEventForPlantListInputSchema,
 	CreateGardeningEventInputSchema,
@@ -42,6 +44,14 @@ export const gardeningEventRouter = {
 		.input(UpdateGardeningEventInputSchema)
 		.handler(({ input, context }) =>
 			runUseCaseOrpc(GardeningEventUpdateUseCase, { context: createUseCaseContextFromOrpc(context), dto: input }),
+		),
+	bulkEditByIds: authenticatedProcedure
+		.input(BulkEditByIdsGardeningEventInputSchema)
+		.handler(({ input, context }) =>
+			runUseCaseOrpc(GardeningEventBulkEditByIdsUseCase, {
+				context: createUseCaseContextFromOrpc(context),
+				dto: input,
+			}),
 		),
 	delete: authenticatedProcedure.input(DeleteGardeningEventInputSchema).handler(({ input, context }) =>
 		runUseCaseOrpc(GardeningEventDeleteUseCase, {

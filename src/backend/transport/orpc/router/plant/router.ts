@@ -1,4 +1,5 @@
 import {
+	PlantBulkEditByIdsUseCase,
 	PlantCreateManyUseCase,
 	PlantCreateUseCase,
 	PlantDeleteManyUseCase,
@@ -12,6 +13,7 @@ import { createUseCaseContextFromOrpc } from "../../create-use-case-context";
 import { authenticatedProcedure } from "../../orpc-procedure";
 import { runUseCaseOrpc } from "../../shared/run-use-case-orpc";
 import {
+	BulkEditByIdsPlantInputSchema,
 	CreateManyPlantInputSchema,
 	CreatePlantInputSchema,
 	DeleteManyPlantInputSchema,
@@ -44,6 +46,14 @@ export const plantRouter = {
 		.input(UpdatePlantInputSchema)
 		.handler(({ input, context }) =>
 			runUseCaseOrpc(PlantUpdateUseCase, { context: createUseCaseContextFromOrpc(context), dto: input }),
+		),
+	bulkEditByIds: authenticatedProcedure
+		.input(BulkEditByIdsPlantInputSchema)
+		.handler(({ input, context }) =>
+			runUseCaseOrpc(PlantBulkEditByIdsUseCase, {
+				context: createUseCaseContextFromOrpc(context),
+				dto: input,
+			}),
 		),
 	delete: authenticatedProcedure
 		.input(DeletePlantInputSchema)

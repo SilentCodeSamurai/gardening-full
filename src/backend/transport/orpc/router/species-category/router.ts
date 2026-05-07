@@ -1,4 +1,5 @@
 import {
+	SpeciesCategoryBulkEditByIdsUseCase,
 	SpeciesCategoryCreateUseCase,
 	SpeciesCategoryDeleteManyUseCase,
 	SpeciesCategoryDeleteUseCase,
@@ -11,6 +12,7 @@ import { createUseCaseContextFromOrpc } from "../../create-use-case-context";
 import { authenticatedProcedure } from "../../orpc-procedure";
 import { runUseCaseOrpc } from "../../shared/run-use-case-orpc";
 import {
+	BulkEditByIdsSpeciesCategoryInputSchema,
 	CreateSpeciesCategoryInputSchema,
 	DeleteManySpeciesCategoryInputSchema,
 	DeleteSpeciesCategoryInputSchema,
@@ -40,6 +42,14 @@ export const speciesCategoryRouter = {
 			dto: input,
 		}),
 	),
+	bulkEditByIds: authenticatedProcedure
+		.input(BulkEditByIdsSpeciesCategoryInputSchema)
+		.handler(({ input, context }) =>
+			runUseCaseOrpc(SpeciesCategoryBulkEditByIdsUseCase, {
+				context: createUseCaseContextFromOrpc(context),
+				dto: input,
+			}),
+		),
 	delete: authenticatedProcedure.input(DeleteSpeciesCategoryInputSchema).handler(({ input, context }) =>
 		runUseCaseOrpc(SpeciesCategoryDeleteUseCase, {
 			context: createUseCaseContextFromOrpc(context),

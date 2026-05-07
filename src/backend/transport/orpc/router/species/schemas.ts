@@ -21,6 +21,12 @@ export const UpdateSpeciesInputSchema = z.object({
 	characteristics: SpeciesCharacteristicsSchema.optional(),
 	presentation: ItemPresentationSchema,
 });
+export const BulkEditByIdsSpeciesInputSchema = z.object({
+	ids: SpeciesEntityIdsSchema,
+	categoryId: z.union([SpeciesCategoryEntityIdSchema, z.null()]).optional(),
+	characteristics: SpeciesCharacteristicsSchema.optional(),
+	presentation: ItemPresentationSchema.optional(),
+});
 export const DeleteSpeciesInputSchema = z.object({
 	id: SpeciesEntityIdSchema,
 });

@@ -15,6 +15,7 @@ import {
 } from "../../ports/repositories/gardening/cultivar.repository.port";
 import { AccessControlApplicationService } from "../../services/access-control/access-control.application-service";
 import { BaseUseCase } from "../shared/base.use-case";
+import { UseCaseValidationError } from "../shared/errors";
 import type { ExcludeWorkspace } from "../shared/types";
 import type { UseCaseRequest } from "../use-case-context";
 
@@ -132,6 +133,45 @@ export class CultivarUpdateUseCase extends BaseUseCase<CultivarUpdateUseCaseInpu
 		const { id, ...patch } = input.dto;
 		return this.cultivarRepository.updateOne({
 			filters: [{ id, workspace: scope }],
+			dto: patch,
+		});
+	}
+}
+
+export type CultivarBulkEditByIdsUseCaseInput = UseCaseRequest<
+	{ ids: CultivarEntityId[] } & CultivarUpdatePayload
+>;
+export type CultivarBulkEditByIdsUseCaseOutput = { count: number };
+
+@injectable()
+export class CultivarBulkEditByIdsUseCase extends BaseUseCase<
+	CultivarBulkEditByIdsUseCaseInput,
+	CultivarBulkEditByIdsUseCaseOutput
+> {
+	constructor(
+		@inject(AccessControlApplicationService) private readonly access: AccessControlApplicationService,
+		@inject(CultivarRepositoryPortToken) private readonly cultivarRepository: CultivarRepositoryPort,
+	) {
+		super();
+	}
+	protected async execute(
+		input: CultivarBulkEditByIdsUseCaseInput,
+	): Promise<CultivarBulkEditByIdsUseCaseOutput> {
+		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "update" });
+		if (input.dto.ids.length < 1) {
+			throw new UseCaseValidationError({
+				useCaseName: "CultivarBulkEditByIdsUseCase",
+				validationCode: "invalid-ids",
+				i18nMessageKey: "errors_application_cultivar_bulk_edit_by_ids_invalid_ids",
+				context: { idCount: input.dto.ids.length },
+				details: { minAllowed: 1 },
+				message: "bulkEditByIds ids must be at least 1.",
+			});
+		}
+		const scope = input.context.activeWorkspaceScope;
+		const { ids, ...patch } = input.dto;
+		return this.cultivarRepository.updateMany({
+			filters: ids.map((id) => ({ id, workspace: scope })),
 			dto: patch,
 		});
 	}

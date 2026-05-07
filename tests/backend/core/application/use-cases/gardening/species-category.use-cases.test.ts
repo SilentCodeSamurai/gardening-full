@@ -1,6 +1,7 @@
 import { defineDefaultCatalog } from "@backend/core/application/use-cases/gardening/default-catalog.config";
 import { PopulateDefaultCatalogUseCase } from "@backend/core/application/use-cases/gardening/populate-default-catalog.use-case";
 import {
+  SpeciesCategoryBulkEditByIdsUseCase,
   SpeciesCategoryCreateUseCase,
   SpeciesCategoryDeleteManyUseCase,
   SpeciesCategoryDeleteUseCase,
@@ -177,6 +178,22 @@ describe("Species category use-cases", () => {
     const remaining = await getAll.run({ context });
     expect(remaining.items.some((x) => x.id === c1.id)).toBe(false);
     expect(remaining.items.some((x) => x.id === c2.id)).toBe(false);
+  });
+
+  it("bulkEditByIds updates selected categories via repository updateMany", async () => {
+    const create = c.resolve(SpeciesCategoryCreateUseCase);
+    const bulkEdit = c.resolve(SpeciesCategoryBulkEditByIdsUseCase);
+    const getAll = c.resolve(SpeciesCategoryGetAllUseCase);
+
+    const c1 = await create.run({ context, dto: { title: "BE-1", presentation: null } });
+    const c2 = await create.run({ context, dto: { title: "BE-2", presentation: null } });
+
+    const out = await bulkEdit.run({ context, dto: { ids: [c1.id, c2.id], title: "Edited in bulk" } });
+    expect(out.count).toBe(2);
+
+    const rows = (await getAll.run({ context })).items.filter((x) => [c1.id, c2.id].includes(x.id));
+    expect(rows).toHaveLength(2);
+    expect(rows.every((x) => x.title === "Edited in bulk")).toBe(true);
   });
 
   it("deleteMany in user workspace only deletes rows in that scope (default catalog ids are no-ops)", async () => {

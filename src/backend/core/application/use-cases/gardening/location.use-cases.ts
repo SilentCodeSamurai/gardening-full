@@ -114,6 +114,46 @@ export class LocationUpdateUseCase extends BaseUseCase<LocationUpdateUseCaseInpu
 	}
 }
 
+export type LocationBulkEditByIdsUseCaseInput = UseCaseRequest<
+	{ ids: LocationEntityId[] } & LocationUpdatePayload
+>;
+export type LocationBulkEditByIdsUseCaseOutput = { count: number };
+
+@injectable()
+export class LocationBulkEditByIdsUseCase extends BaseUseCase<
+	LocationBulkEditByIdsUseCaseInput,
+	LocationBulkEditByIdsUseCaseOutput
+> {
+	constructor(
+		@inject(AccessControlApplicationService) private readonly access: AccessControlApplicationService,
+		@inject(LocationRepositoryPortToken) private readonly locationRepository: LocationRepositoryPort,
+	) {
+		super();
+	}
+
+	protected async execute(
+		input: LocationBulkEditByIdsUseCaseInput,
+	): Promise<LocationBulkEditByIdsUseCaseOutput> {
+		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "update" });
+		if (input.dto.ids.length < 1) {
+			throw new UseCaseValidationError({
+				useCaseName: "LocationBulkEditByIdsUseCase",
+				validationCode: "invalid-ids",
+				i18nMessageKey: "errors_application_location_bulk_edit_by_ids_invalid_ids",
+				context: { idCount: input.dto.ids.length },
+				details: { minAllowed: 1 },
+				message: "bulkEditByIds ids must be at least 1.",
+			});
+		}
+		const scope = input.context.activeWorkspaceScope;
+		const { ids, ...patch } = input.dto;
+		return this.locationRepository.updateMany({
+			filters: ids.map((id) => ({ id, workspace: scope })),
+			dto: patch,
+		});
+	}
+}
+
 export type LocationDeleteUseCaseInput = UseCaseRequest<{ id: LocationEntityId }>;
 export type LocationDeleteUseCaseOutput = LocationRepositoryDeleteOutputDTO;
 

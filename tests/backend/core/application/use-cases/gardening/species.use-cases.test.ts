@@ -1,4 +1,5 @@
 import {
+  SpeciesBulkEditByIdsUseCase,
   SpeciesCreateUseCase,
   SpeciesDeleteManyUseCase,
   SpeciesDeleteUseCase,
@@ -225,6 +226,32 @@ describe("Species use-cases", () => {
     const remaining = await getAll.run({ context });
     expect(remaining.items.some((s) => s.id === s1.id)).toBe(false);
     expect(remaining.items.some((s) => s.id === s2.id)).toBe(false);
+  });
+
+  it("bulkEditByIds updates selected species via repository updateMany", async () => {
+    const { category } = await seedMinimalCatalog(c);
+    const create = c.resolve(SpeciesCreateUseCase);
+    const bulkEdit = c.resolve(SpeciesBulkEditByIdsUseCase);
+    const getAll = c.resolve(SpeciesGetAllUseCase);
+
+    const s1 = await create.run({
+      context,
+      dto: { categoryId: category.id, characteristics: fixtureSpeciesCharacteristics({ name: "be-1" }), presentation: null },
+    });
+    const s2 = await create.run({
+      context,
+      dto: { categoryId: category.id, characteristics: fixtureSpeciesCharacteristics({ name: "be-2" }), presentation: null },
+    });
+
+    const out = await bulkEdit.run({
+      context,
+      dto: { ids: [s1.id, s2.id], characteristics: fixtureSpeciesCharacteristics({ name: "bulk-edited" }) },
+    });
+    expect(out.count).toBe(2);
+
+    const edited = (await getAll.run({ context })).items.filter((x) => [s1.id, s2.id].includes(x.id));
+    expect(edited).toHaveLength(2);
+    expect(edited.every((x) => x.characteristics.name === "bulk-edited")).toBe(true);
   });
 
   it("deleteMany in user workspace only deletes rows in that scope (default catalog ids are no-ops)", async () => {

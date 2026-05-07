@@ -1,4 +1,5 @@
 import {
+  PlantBulkEditByIdsUseCase,
   PlantCreateManyUseCase,
   PlantCreateUseCase,
   PlantDeleteManyUseCase,
@@ -188,6 +189,29 @@ describe("Plant use-cases", () => {
     const allNodes = await getAllSpatial.run({ context });
     expect(allNodes.items.find((n) => String(n.id) === String(n1.id))).toBeUndefined();
     expect(allNodes.items.find((n) => String(n.id) === String(n2.id))).toBeUndefined();
+  });
+
+  it("bulkEditByIds updates selected plants via repository updateMany", async () => {
+    const { cultivar } = await seedMinimalCatalog(c);
+    const createPlant = c.resolve(PlantCreateUseCase);
+    const bulkEdit = c.resolve(PlantBulkEditByIdsUseCase);
+    const getAll = c.resolve(PlantGetAllUseCase);
+
+    const p1 = await createPlant.run({
+      context,
+      dto: { cultivarId: cultivar.id, title: "be-1", description: null, presentation: null },
+    });
+    const p2 = await createPlant.run({
+      context,
+      dto: { cultivarId: cultivar.id, title: "be-2", description: null, presentation: null },
+    });
+
+    const out = await bulkEdit.run({ context, dto: { ids: [p1.id, p2.id], title: "bulk-edited" } });
+    expect(out.count).toBe(2);
+
+    const edited = (await getAll.run({ context })).items.filter((x) => [p1.id, p2.id].includes(x.id));
+    expect(edited).toHaveLength(2);
+    expect(edited.every((x) => x.title === "bulk-edited")).toBe(true);
   });
 
   it("deleteMany throws when any plant is placed", async () => {

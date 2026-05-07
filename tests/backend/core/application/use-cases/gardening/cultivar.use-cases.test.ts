@@ -1,4 +1,5 @@
 import {
+  CultivarBulkEditByIdsUseCase,
   CultivarCreateUseCase,
   CultivarDeleteManyUseCase,
   CultivarDeleteUseCase,
@@ -154,5 +155,31 @@ describe("Cultivar use-cases", () => {
     const remaining = await getAll.run({ context });
     expect(remaining.items.some((x) => x.id === c1.id)).toBe(false);
     expect(remaining.items.some((x) => x.id === c2.id)).toBe(false);
+  });
+
+  it("bulkEditByIds updates selected cultivars via repository updateMany", async () => {
+    const { species } = await seedMinimalCatalog(c);
+    const create = c.resolve(CultivarCreateUseCase);
+    const bulkEdit = c.resolve(CultivarBulkEditByIdsUseCase);
+    const getAll = c.resolve(CultivarGetAllUseCase);
+
+    const c1 = await create.run({
+      context,
+      dto: { speciesId: species.id, characteristics: fixtureCultivarCharacteristics({ name: "be-1" }), presentation: null },
+    });
+    const c2 = await create.run({
+      context,
+      dto: { speciesId: species.id, characteristics: fixtureCultivarCharacteristics({ name: "be-2" }), presentation: null },
+    });
+
+    const out = await bulkEdit.run({
+      context,
+      dto: { ids: [c1.id, c2.id], characteristics: fixtureCultivarCharacteristics({ name: "bulk-edited" }) },
+    });
+    expect(out.count).toBe(2);
+
+    const edited = (await getAll.run({ context })).items.filter((x) => [c1.id, c2.id].includes(x.id));
+    expect(edited).toHaveLength(2);
+    expect(edited.every((x) => x.characteristics.name === "bulk-edited")).toBe(true);
   });
 });

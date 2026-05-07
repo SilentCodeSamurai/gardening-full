@@ -11,6 +11,7 @@ import {
 } from "../../ports/repositories/gardening/species.repository.port";
 import { AccessControlApplicationService } from "../../services/access-control/access-control.application-service";
 import { BaseUseCase } from "../shared/base.use-case";
+import { UseCaseValidationError } from "../shared/errors";
 import type { ExcludeWorkspace } from "../shared/types";
 import type { UseCaseRequest } from "../use-case-context";
 
@@ -113,6 +114,44 @@ export class SpeciesUpdateUseCase extends BaseUseCase<SpeciesUpdateUseCaseInput,
 			dto: patch,
 		});
 		return { ...updated, systemCatalog: WorkspaceVO.isGlobalShared(updated.workspace) };
+	}
+}
+
+export type SpeciesBulkEditByIdsUseCaseInput = UseCaseRequest<
+	{ ids: SpeciesEntityId[] } & SpeciesUpdatePayload
+>;
+export type SpeciesBulkEditByIdsUseCaseOutput = { count: number };
+
+@injectable()
+export class SpeciesBulkEditByIdsUseCase extends BaseUseCase<
+	SpeciesBulkEditByIdsUseCaseInput,
+	SpeciesBulkEditByIdsUseCaseOutput
+> {
+	constructor(
+		@inject(AccessControlApplicationService) private readonly access: AccessControlApplicationService,
+		@inject(SpeciesRepositoryPortToken) private readonly speciesRepository: SpeciesRepositoryPort,
+	) {
+		super();
+	}
+
+	protected async execute(input: SpeciesBulkEditByIdsUseCaseInput): Promise<SpeciesBulkEditByIdsUseCaseOutput> {
+		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "update" });
+		if (input.dto.ids.length < 1) {
+			throw new UseCaseValidationError({
+				useCaseName: "SpeciesBulkEditByIdsUseCase",
+				validationCode: "invalid-ids",
+				i18nMessageKey: "errors_application_species_bulk_edit_by_ids_invalid_ids",
+				context: { idCount: input.dto.ids.length },
+				details: { minAllowed: 1 },
+				message: "bulkEditByIds ids must be at least 1.",
+			});
+		}
+		const scope = input.context.activeWorkspaceScope;
+		const { ids, ...patch } = input.dto;
+		return this.speciesRepository.updateMany({
+			filters: ids.map((id) => ({ id, workspace: scope })),
+			dto: patch,
+		});
 	}
 }
 

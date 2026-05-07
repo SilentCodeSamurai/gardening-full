@@ -1,4 +1,5 @@
 import {
+	CultivarBulkEditByIdsUseCase,
 	CultivarCreateUseCase,
 	CultivarDeleteManyUseCase,
 	CultivarDeleteUseCase,
@@ -12,6 +13,7 @@ import { createUseCaseContextFromOrpc } from "../../create-use-case-context";
 import { authenticatedProcedure } from "../../orpc-procedure";
 import { runUseCaseOrpc } from "../../shared/run-use-case-orpc";
 import {
+	BulkEditByIdsCultivarInputSchema,
 	CreateCultivarInputSchema,
 	DeleteCultivarInputSchema,
 	DeleteManyCultivarInputSchema,
@@ -44,6 +46,14 @@ export const cultivarRouter = {
 		.input(UpdateCultivarInputSchema)
 		.handler(({ input, context }) =>
 			runUseCaseOrpc(CultivarUpdateUseCase, { context: createUseCaseContextFromOrpc(context), dto: input }),
+		),
+	bulkEditByIds: authenticatedProcedure
+		.input(BulkEditByIdsCultivarInputSchema)
+		.handler(({ input, context }) =>
+			runUseCaseOrpc(CultivarBulkEditByIdsUseCase, {
+				context: createUseCaseContextFromOrpc(context),
+				dto: input,
+			}),
 		),
 	delete: authenticatedProcedure
 		.input(DeleteCultivarInputSchema)

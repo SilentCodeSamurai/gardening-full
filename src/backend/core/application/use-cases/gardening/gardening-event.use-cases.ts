@@ -20,6 +20,7 @@ import {
 } from "@backend/core/application/ports/transaction/transaction-manager.port";
 import { AccessControlApplicationService } from "@backend/core/application/services/access-control/access-control.application-service";
 import { BaseUseCase } from "@backend/core/application/use-cases/shared/base.use-case";
+import { UseCaseValidationError } from "@backend/core/application/use-cases/shared/errors";
 import { TransactionalUseCase } from "@backend/core/application/use-cases/shared/transactional.use-case";
 import type { UseCaseRequest } from "@backend/core/application/use-cases/use-case-context";
 import type {
@@ -104,6 +105,49 @@ export class GardeningEventUpdateUseCase extends BaseUseCase<
 		const { id, ...patch } = input.dto;
 		return this.gardeningEventRepository.updateOne({
 			filters: [{ id, workspace: scope }],
+			dto: patch,
+		});
+	}
+}
+
+export type GardeningEventBulkEditByIdsUseCaseInput = UseCaseRequest<{
+	ids: GardeningEventEntityId[];
+	action?: GardeningAction;
+	occurredAt?: Date | null;
+}>;
+export type GardeningEventBulkEditByIdsUseCaseOutput = { count: number };
+
+@injectable()
+export class GardeningEventBulkEditByIdsUseCase extends BaseUseCase<
+	GardeningEventBulkEditByIdsUseCaseInput,
+	GardeningEventBulkEditByIdsUseCaseOutput
+> {
+	constructor(
+		@inject(AccessControlApplicationService) private readonly access: AccessControlApplicationService,
+		@inject(GardeningEventRepositoryPortToken)
+		private readonly gardeningEventRepository: GardeningEventRepositoryPort,
+	) {
+		super();
+	}
+
+	protected async execute(
+		input: GardeningEventBulkEditByIdsUseCaseInput,
+	): Promise<GardeningEventBulkEditByIdsUseCaseOutput> {
+		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "update" });
+		if (input.dto.ids.length < 1) {
+			throw new UseCaseValidationError({
+				useCaseName: "GardeningEventBulkEditByIdsUseCase",
+				validationCode: "invalid-ids",
+				i18nMessageKey: "errors_application_gardening_event_bulk_edit_by_ids_invalid_ids",
+				context: { idCount: input.dto.ids.length },
+				details: { minAllowed: 1 },
+				message: "bulkEditByIds ids must be at least 1.",
+			});
+		}
+		const scope = input.context.activeWorkspaceScope;
+		const { ids, ...patch } = input.dto;
+		return this.gardeningEventRepository.updateMany({
+			filters: ids.map((id) => ({ id, workspace: scope })),
 			dto: patch,
 		});
 	}

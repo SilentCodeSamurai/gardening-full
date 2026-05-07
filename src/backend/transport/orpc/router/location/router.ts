@@ -1,4 +1,5 @@
 import {
+	LocationBulkEditByIdsUseCase,
 	LocationCreateUseCase,
 	LocationDeleteManyUseCase,
 	LocationDeleteUseCase,
@@ -11,6 +12,7 @@ import { createUseCaseContextFromOrpc } from "../../create-use-case-context";
 import { authenticatedProcedure } from "../../orpc-procedure";
 import { runUseCaseOrpc } from "../../shared/run-use-case-orpc";
 import {
+	BulkEditByIdsLocationInputSchema,
 	CreateLocationInputSchema,
 	DeleteLocationInputSchema,
 	DeleteManyLocationInputSchema,
@@ -37,6 +39,14 @@ export const locationRouter = {
 		.input(UpdateLocationInputSchema)
 		.handler(({ input, context }) =>
 			runUseCaseOrpc(LocationUpdateUseCase, { context: createUseCaseContextFromOrpc(context), dto: input }),
+		),
+	bulkEditByIds: authenticatedProcedure
+		.input(BulkEditByIdsLocationInputSchema)
+		.handler(({ input, context }) =>
+			runUseCaseOrpc(LocationBulkEditByIdsUseCase, {
+				context: createUseCaseContextFromOrpc(context),
+				dto: input,
+			}),
 		),
 	delete: authenticatedProcedure.input(DeleteLocationInputSchema).handler(({ input, context }) =>
 		runUseCaseOrpc(LocationDeleteUseCase, {

@@ -1,4 +1,5 @@
 import {
+  LocationBulkEditByIdsUseCase,
   LocationCreateUseCase,
   LocationDeleteManyUseCase,
   LocationDeleteManyUseCasePlacedEntityError,
@@ -150,6 +151,22 @@ describe("Location use-cases", () => {
     const allNodes = await getAllSpatial.run({ context });
     expect(allNodes.items.find((n) => String(n.id) === String(n1.id))).toBeUndefined();
     expect(allNodes.items.find((n) => String(n.id) === String(n2.id))).toBeUndefined();
+  });
+
+  it("bulkEditByIds updates selected locations via repository updateMany", async () => {
+    const createLocation = c.resolve(LocationCreateUseCase);
+    const bulkEdit = c.resolve(LocationBulkEditByIdsUseCase);
+    const getAll = c.resolve(LocationGetAllUseCase);
+
+    const l1 = await createLocation.run({ context, dto: { name: "be-1", presentation: null } });
+    const l2 = await createLocation.run({ context, dto: { name: "be-2", presentation: null } });
+
+    const out = await bulkEdit.run({ context, dto: { ids: [l1.id, l2.id], name: "bulk-edited" } });
+    expect(out.count).toBe(2);
+
+    const edited = (await getAll.run({ context })).items.filter((x) => [l1.id, l2.id].includes(x.id));
+    expect(edited).toHaveLength(2);
+    expect(edited.every((x) => x.name === "bulk-edited")).toBe(true);
   });
 
   it("deleteMany throws when any location is placed", async () => {

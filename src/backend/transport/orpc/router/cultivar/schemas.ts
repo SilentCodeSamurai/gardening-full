@@ -24,6 +24,12 @@ export const UpdateCultivarInputSchema = z.object({
 	characteristics: CultivarCharacteristicsSchema.optional(),
 	presentation: ItemPresentationSchema,
 });
+export const BulkEditByIdsCultivarInputSchema = z.object({
+	ids: CultivarEntityIdsSchema,
+	speciesId: z.union([SpeciesEntityIdSchema, z.null()]).optional(),
+	characteristics: CultivarCharacteristicsSchema.optional(),
+	presentation: ItemPresentationSchema.optional(),
+});
 export const DeleteCultivarInputSchema = z.object({
 	id: CultivarEntityIdSchema,
 });

@@ -11,6 +11,7 @@ import {
 } from "../../ports/repositories/gardening/species-category.repository.port";
 import { AccessControlApplicationService } from "../../services/access-control/access-control.application-service";
 import { BaseUseCase } from "../shared/base.use-case";
+import { UseCaseValidationError } from "../shared/errors";
 import type { ExcludeWorkspace } from "../shared/types";
 import type { UseCaseRequest } from "../use-case-context";
 
@@ -131,6 +132,47 @@ export class SpeciesCategoryUpdateUseCase extends BaseUseCase<
 			dto: patch,
 		});
 		return { ...updated, systemCatalog: WorkspaceVO.isGlobalShared(updated.workspace) };
+	}
+}
+
+export type SpeciesCategoryBulkEditByIdsUseCaseInput = UseCaseRequest<
+	{ ids: SpeciesCategoryEntityId[] } & ExcludeWorkspace<SpeciesCategoryRepositoryUpdatePatchDTO>
+>;
+export type SpeciesCategoryBulkEditByIdsUseCaseOutput = { count: number };
+
+@injectable()
+export class SpeciesCategoryBulkEditByIdsUseCase extends BaseUseCase<
+	SpeciesCategoryBulkEditByIdsUseCaseInput,
+	SpeciesCategoryBulkEditByIdsUseCaseOutput
+> {
+	constructor(
+		@inject(AccessControlApplicationService) private readonly access: AccessControlApplicationService,
+		@inject(SpeciesCategoryRepositoryPortToken)
+		private readonly speciesCategoryRepository: SpeciesCategoryRepositoryPort,
+	) {
+		super();
+	}
+
+	protected async execute(
+		input: SpeciesCategoryBulkEditByIdsUseCaseInput,
+	): Promise<SpeciesCategoryBulkEditByIdsUseCaseOutput> {
+		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "update" });
+		if (input.dto.ids.length < 1) {
+			throw new UseCaseValidationError({
+				useCaseName: "SpeciesCategoryBulkEditByIdsUseCase",
+				validationCode: "invalid-ids",
+				i18nMessageKey: "errors_application_species_category_bulk_edit_by_ids_invalid_ids",
+				context: { idCount: input.dto.ids.length },
+				details: { minAllowed: 1 },
+				message: "bulkEditByIds ids must be at least 1.",
+			});
+		}
+		const scope = input.context.activeWorkspaceScope;
+		const { ids, ...patch } = input.dto;
+		return this.speciesCategoryRepository.updateMany({
+			filters: ids.map((id) => ({ id, workspace: scope })),
+			dto: patch,
+		});
 	}
 }
 

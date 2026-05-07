@@ -13,6 +13,11 @@ export const UpdateLocationInputSchema = z.object({
 	name: z.string().min(1).optional(),
 	presentation: ItemPresentationSchema,
 });
+export const BulkEditByIdsLocationInputSchema = z.object({
+	ids: LocationEntityIdsSchema,
+	name: z.string().min(1).optional(),
+	presentation: ItemPresentationSchema.optional(),
+});
 export const DeleteLocationInputSchema = z.object({
 	id: LocationEntityIdSchema,
 });

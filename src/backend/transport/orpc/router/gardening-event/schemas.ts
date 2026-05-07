@@ -30,6 +30,11 @@ export const UpdateGardeningEventInputSchema = z.object({
 	action: GardeningActionSchema.optional(),
 	occurredAt: z.union([z.coerce.date(), z.null()]).optional(),
 });
+export const BulkEditByIdsGardeningEventInputSchema = z.object({
+	ids: GardeningEventEntityIdsSchema,
+	action: GardeningActionSchema.optional(),
+	occurredAt: z.union([z.coerce.date(), z.null()]).optional(),
+});
 export const DeleteGardeningEventInputSchema = z.object({
 	id: GardeningEventEntityIdSchema,
 });

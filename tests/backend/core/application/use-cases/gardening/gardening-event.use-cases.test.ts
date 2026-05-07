@@ -1,4 +1,5 @@
 import {
+  GardeningEventBulkEditByIdsUseCase,
   GardeningEventCreateUseCase,
   GardeningEventCreateForLocationUseCase,
   GardeningEventCreateForPlantListUseCase,
@@ -253,5 +254,30 @@ describe("Gardening event use-cases", () => {
     const remaining = await getAll.run({ context });
     expect(remaining.items.some((e) => e.id === e1.id)).toBe(false);
     expect(remaining.items.some((e) => e.id === e2.id)).toBe(false);
+  });
+
+  it("bulkEditByIds updates selected events via repository updateMany", async () => {
+    const create = c.resolve(GardeningEventCreateUseCase);
+    const bulkEdit = c.resolve(GardeningEventBulkEditByIdsUseCase);
+    const getAll = c.resolve(GardeningEventGetAllUseCase);
+
+    const e1 = await create.run({ context, dto: { action: fixtureNoteAction({ content: "be-1" }), occurredAt: null } });
+    const e2 = await create.run({ context, dto: { action: fixtureNoteAction({ content: "be-2" }), occurredAt: null } });
+
+    const nextOccurredAt = new Date("2026-04-20T12:00:00.000Z");
+    const out = await bulkEdit.run({
+      context,
+      dto: {
+        ids: [e1.id, e2.id],
+        action: fixtureNoteAction({ type: "watering", content: "bulk-edited" }),
+        occurredAt: nextOccurredAt,
+      },
+    });
+    expect(out.count).toBe(2);
+
+    const edited = (await getAll.run({ context })).items.filter((x) => [e1.id, e2.id].includes(x.id));
+    expect(edited).toHaveLength(2);
+    expect(edited.every((x) => x.action.type === "watering" && x.action.content === "bulk-edited")).toBe(true);
+    expect(edited.every((x) => x.occurredAt?.toISOString() === nextOccurredAt.toISOString())).toBe(true);
   });
 });

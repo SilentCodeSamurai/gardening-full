@@ -173,6 +173,41 @@ export class PlantUpdateUseCase extends BaseUseCase<PlantUpdateUseCaseInput, Pla
 	}
 }
 
+export type PlantBulkEditByIdsUseCaseInput = UseCaseRequest<{ ids: PlantEntityId[] } & PlantUpdatePayload>;
+export type PlantBulkEditByIdsUseCaseOutput = { count: number };
+
+@injectable()
+export class PlantBulkEditByIdsUseCase extends BaseUseCase<
+	PlantBulkEditByIdsUseCaseInput,
+	PlantBulkEditByIdsUseCaseOutput
+> {
+	constructor(
+		@inject(AccessControlApplicationService) private readonly access: AccessControlApplicationService,
+		@inject(PlantRepositoryPortToken) private readonly plantRepository: PlantRepositoryPort,
+	) {
+		super();
+	}
+	protected async execute(input: PlantBulkEditByIdsUseCaseInput): Promise<PlantBulkEditByIdsUseCaseOutput> {
+		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "update" });
+		if (input.dto.ids.length < 1) {
+			throw new UseCaseValidationError({
+				useCaseName: "PlantBulkEditByIdsUseCase",
+				validationCode: "invalid-ids",
+				i18nMessageKey: "errors_application_plant_bulk_edit_by_ids_invalid_ids",
+				context: { idCount: input.dto.ids.length },
+				details: { minAllowed: 1 },
+				message: "bulkEditByIds ids must be at least 1.",
+			});
+		}
+		const scope = input.context.activeWorkspaceScope;
+		const { ids, ...patch } = input.dto;
+		return this.plantRepository.updateMany({
+			filters: ids.map((id) => ({ id, workspace: scope })),
+			dto: patch,
+		});
+	}
+}
+
 export type PlantDeleteUseCaseInput = UseCaseRequest<{ id: PlantEntityId }>;
 export type PlantDeleteUseCaseOutput = PlantRepositoryDeleteOutputDTO;
 
