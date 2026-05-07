@@ -97,7 +97,7 @@ type LayoutNode = {
 	label: string;
 	acceptsChildren: boolean;
 	nodeType: LayoutNodeType;
-	presentation?: ItemPresentationValueObject;
+	presentation?: ItemPresentationValueObject | null;
 	ref: { entity: LayoutNodeType; entityId: string };
 };
 
@@ -128,7 +128,7 @@ type PendingExistingPlacement = {
 type AddExistingOption = {
 	id: string;
 	label: string;
-	presentation?: ItemPresentationValueObject;
+	presentation?: ItemPresentationValueObject | null;
 	nodeType: LayoutNodeType;
 	existingNode: LayoutNode | null;
 };
@@ -165,7 +165,7 @@ function spatialToLayoutNode(args: {
 	return {
 		...base,
 		label: args.entity.value.title ?? args.entity.value.cultivar?.characteristics.name ?? "",
-		presentation: args.entity.value.cultivar?.presentation,
+		presentation: args.entity.value.presentation,
 	};
 }
 
@@ -475,7 +475,7 @@ export function LocationLayoutEditor({ rootLocation, className, highlightLocatio
 			result.push({
 				id: String(plant.id),
 				label: plant.title ?? plant.cultivar?.characteristics.name ?? "",
-				presentation: plant.cultivar?.presentation,
+				presentation: plant.presentation,
 				nodeType: "plant" as const,
 				existingNode,
 			});

@@ -136,7 +136,7 @@ function GardeningEventsPage() {
 					</span>
 				),
 			}),
-			columnHelper.accessor((event) => event.occurredAt.getTime(), {
+			columnHelper.accessor((event) => event.occurredAt?.getTime() ?? 0, {
 				id: "occurredAt",
 				header: ({ column }) => <DataTableColumnHeader column={column} title={m.fields_occurredAt()} />,
 				sortingFn: "basic",
@@ -144,10 +144,12 @@ function GardeningEventsPage() {
 				enableGlobalFilter: false,
 				cell: ({ row }) => (
 					<span className="text-muted-foreground text-xs">
-						{row.original.occurredAt.toLocaleString(undefined, {
-							dateStyle: "short",
-							timeStyle: "short",
-						})}
+						{row.original.occurredAt === null
+							? m.common_unknown()
+							: row.original.occurredAt.toLocaleString(undefined, {
+									dateStyle: "short",
+									timeStyle: "short",
+								})}
 					</span>
 				),
 			}),

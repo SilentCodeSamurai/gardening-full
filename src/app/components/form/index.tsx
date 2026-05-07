@@ -373,7 +373,7 @@ export function Select({
 export type CatalogComboboxOption = {
 	value: string;
 	label: string;
-	presentation?: ItemPresentationValueObject;
+	presentation?: ItemPresentationValueObject | null;
 };
 
 /** Searchable combobox for lists of user-created catalog entities (ids as strings). */

@@ -15,7 +15,7 @@ export type PlacementFilterComboboxItem = {
 	id: string;
 	filter: string;
 	label: string;
-	presentation?: ItemPresentationValueObject;
+	presentation?: ItemPresentationValueObject | null;
 };
 
 type ColumnLike = {

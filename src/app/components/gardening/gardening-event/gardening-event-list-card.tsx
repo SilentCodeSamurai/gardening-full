@@ -20,10 +20,13 @@ type Props = {
 export function GardeningEventListCard({ event }: Props) {
 	const [editOpen, setEditOpen] = useState(false);
 	const actionLabel = gardeningActionMessage(event.action.type);
-	const when = event.occurredAt.toLocaleString(getLocale(), {
-		dateStyle: "short",
-		timeStyle: "short",
-	});
+	const when =
+		event.occurredAt === null
+			? m.common_unknown()
+			: event.occurredAt.toLocaleString(getLocale(), {
+					dateStyle: "short",
+					timeStyle: "short",
+				});
 	const syncPending = isQueryObjectPending(event);
 
 	return (

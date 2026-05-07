@@ -9,7 +9,7 @@ export function normalizePresentationInput(input: {
 	iconKey: string;
 	iconColor: string;
 	backgroundColor: string;
-}): ItemPresentationValueObject | undefined {
+}): ItemPresentationValueObject | null {
 	const iconKeyRaw = input.iconKey.trim();
 	const iconColor = input.iconColor.trim();
 	const backgroundColor = input.backgroundColor.trim();
@@ -17,7 +17,7 @@ export function normalizePresentationInput(input: {
 		? (iconKeyRaw as ItemPresentationIconKey)
 		: undefined;
 
-	if (!iconKey && !iconColor && !backgroundColor) return undefined;
+	if (!iconKey && !iconColor && !backgroundColor) return null;
 
 	return {
 		...(iconKey ? { iconKey } : {}),

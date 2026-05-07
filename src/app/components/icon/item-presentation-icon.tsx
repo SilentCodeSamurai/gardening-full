@@ -6,7 +6,7 @@ export function ItemPresentationIcon({
 	presentation,
 	className,
 }: {
-	presentation?: ItemPresentationValueObject;
+	presentation?: ItemPresentationValueObject | null;
 	className?: string;
 }) {
 	if (!presentation) return null;

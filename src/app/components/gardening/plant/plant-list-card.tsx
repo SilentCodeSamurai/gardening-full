@@ -86,7 +86,7 @@ export function PlantListCard({ plant, isPlaced = false }: Props) {
 					aria-label={`${title} — ${m.common_open()} ${m.common_details().toLowerCase()}`}
 				/>
 				<div className="pointer-events-none relative z-10 flex min-w-0 flex-1 flex-row items-center gap-2">
-					<ItemPresentationIcon presentation={plant.cultivar?.presentation} />
+					<ItemPresentationIcon presentation={plant.presentation} />
 					<div className="flex min-w-0 flex-col items-start justify-center">
 						<span className="truncate font-medium">{title}</span>
 						<span className="text-muted-foreground text-xs">

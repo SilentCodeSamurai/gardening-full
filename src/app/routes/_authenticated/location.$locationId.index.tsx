@@ -243,7 +243,7 @@ function LocationDetailPage() {
 												params={{ plantId: String(plant.id) }}
 												className="inline-flex min-w-0 items-center gap-2 text-primary underline-offset-4 hover:underline"
 											>
-												<ItemPresentationIcon presentation={plant.cultivar?.presentation} />
+												<ItemPresentationIcon presentation={plant.presentation} />
 												<span className="truncate">{getPlantDisplayTitle(plant)}</span>
 											</Link>
 										</li>
@@ -280,10 +280,12 @@ function LocationDetailPage() {
 												{gardeningActionMessage(event.action.type)}
 											</div>
 											<div className="text-muted-foreground text-xs">
-												{event.occurredAt.toLocaleString(getLocale(), {
-													dateStyle: "short",
-													timeStyle: "short",
-												})}
+												{event.occurredAt === null
+													? m.common_unknown()
+													: event.occurredAt.toLocaleString(getLocale(), {
+															dateStyle: "short",
+															timeStyle: "short",
+														})}
 											</div>
 											{event.action.content ? (
 												<p className="mt-1 line-clamp-2 text-muted-foreground text-xs">

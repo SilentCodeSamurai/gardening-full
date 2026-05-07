@@ -1,4 +1,5 @@
 import type { SpeciesEntityId } from "@backend/core/domain/gardening/entities";
+import type { ItemPresentationValueObject } from "@backend/core/domain/gardening/value-objects";
 import { useStore } from "@tanstack/react-form";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
@@ -35,6 +36,14 @@ type FormValues = {
 	backgroundColor: string;
 };
 
+function toPresentationFields(presentation: ItemPresentationValueObject | null): Pick<FormValues, "iconKey" | "iconColor" | "backgroundColor"> {
+	return {
+		iconKey: presentation?.iconKey ? String(presentation.iconKey) : SELECT_NONE,
+		iconColor: presentation?.iconColor ?? "",
+		backgroundColor: presentation?.backgroundColor ?? "",
+	};
+}
+
 export function CultivarUpdateDialog({ cultivar, open, onOpenChange }: Props) {
 	const { data: speciesData } = useQuery({ ...queryKeys.species.all });
 	const mut = useCultivarUpdateMutation();
@@ -53,9 +62,7 @@ export function CultivarUpdateDialog({ cultivar, open, onOpenChange }: Props) {
 			speciesId: cultivar.speciesId != null ? String(cultivar.speciesId) : SELECT_NONE,
 			name: cultivar.characteristics.name,
 			description: cultivar.characteristics.description ?? "",
-			iconKey: cultivar.presentation?.iconKey ?? SELECT_NONE,
-			iconColor: cultivar.presentation?.iconColor ?? "",
-			backgroundColor: cultivar.presentation?.backgroundColor ?? "",
+			...toPresentationFields(cultivar.presentation),
 		} satisfies FormValues as FormValues,
 		onSubmit: async ({ value }) => {
 			if (!value.name.trim()) return;
@@ -83,14 +90,13 @@ export function CultivarUpdateDialog({ cultivar, open, onOpenChange }: Props) {
 			speciesId: cultivar.speciesId != null ? String(cultivar.speciesId) : SELECT_NONE,
 			name: cultivar.characteristics.name,
 			description: cultivar.characteristics.description ?? "",
-			iconKey: cultivar.presentation?.iconKey ?? SELECT_NONE,
-			iconColor: cultivar.presentation?.iconColor ?? "",
-			backgroundColor: cultivar.presentation?.backgroundColor ?? "",
+			...toPresentationFields(cultivar.presentation),
 		});
 	}, [open, cultivar, form]);
 
 	const iconColor = useStore(form.store, (state) => state.values.iconColor);
 	const backgroundColor = useStore(form.store, (state) => state.values.backgroundColor);
+	const selectedSpeciesId = useStore(form.store, (state) => state.values.speciesId);
 
 	const close = () => onOpenChange(false);
 
@@ -154,6 +160,25 @@ export function CultivarUpdateDialog({ cultivar, open, onOpenChange }: Props) {
 									<field.ColorPicker label={m.fields_backgroundColor()} placeholder="#e6ffed" />
 								)}
 							</form.AppField>
+						</div>
+						<div className="flex justify-end">
+							<Button
+								type="button"
+								variant="outline"
+								size="sm"
+								disabled={selectedSpeciesId === SELECT_NONE}
+								onClick={() => {
+									const species = speciesData?.items.find(
+										(item) => String(item.id) === selectedSpeciesId,
+									);
+									const next = toPresentationFields(species?.presentation ?? null);
+									form.setFieldValue("iconKey", next.iconKey);
+									form.setFieldValue("iconColor", next.iconColor);
+									form.setFieldValue("backgroundColor", next.backgroundColor);
+								}}
+							>
+								Select from parent species
+							</Button>
 						</div>
 						<DialogFooter>
 							<Button type="button" variant="outline" onClick={close}>

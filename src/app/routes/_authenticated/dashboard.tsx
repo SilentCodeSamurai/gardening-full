@@ -52,7 +52,10 @@ function DashboardPage() {
 		error: plantsError,
 	} = useQuery({ ...queryKeys.plant.all });
 	const sortedEvents = useMemo(
-		() => [...(eventsData?.items ?? [])].sort((a, b) => b.occurredAt.getTime() - a.occurredAt.getTime()),
+		() =>
+			[...(eventsData?.items ?? [])].sort(
+				(a, b) => (b.occurredAt?.getTime() ?? 0) - (a.occurredAt?.getTime() ?? 0),
+			),
 		[eventsData?.items],
 	);
 	const allRootLocations = useMemo(() => {
@@ -107,10 +110,12 @@ function DashboardPage() {
 										<div className="min-w-0 flex-1">
 											<p className="truncate text-sm capitalize">{gardeningActionMessage(event.action.type)}</p>
 											<p className="truncate text-muted-foreground text-xs">
-												{event.occurredAt.toLocaleString(undefined, {
-													dateStyle: "short",
-													timeStyle: "short",
-												})}
+												{event.occurredAt === null
+													? m.common_unknown()
+													: event.occurredAt.toLocaleString(undefined, {
+															dateStyle: "short",
+															timeStyle: "short",
+														})}
 											</p>
 										</div>
 									</Link>
@@ -177,7 +182,7 @@ function DashboardPage() {
 											params={{ plantId: String(plant.id) }}
 											className="flex min-w-0 flex-1 items-center gap-2"
 										>
-											<ItemPresentationIcon presentation={plant.cultivar?.presentation} className="size-6 shrink-0" />
+											<ItemPresentationIcon presentation={plant.presentation} className="size-6 shrink-0" />
 											<div className="min-w-0 flex-1">
 												<p className="truncate font-medium text-sm">{getPlantDisplayTitle(plant)}</p>
 												<p className="truncate text-muted-foreground text-xs">

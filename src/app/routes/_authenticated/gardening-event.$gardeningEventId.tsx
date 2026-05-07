@@ -146,10 +146,12 @@ function GardeningEventDetailPage() {
 						<div className="contents">
 							<dt className="text-muted-foreground">{m.fields_occurredAt()}</dt>
 							<dd className="wrap-break-word min-w-0">
-								{data.occurredAt.toLocaleString(getLocale(), {
-									dateStyle: "medium",
-									timeStyle: "short",
-								})}
+								{data.occurredAt === null
+									? m.common_unknown()
+									: data.occurredAt.toLocaleString(getLocale(), {
+											dateStyle: "medium",
+											timeStyle: "short",
+										})}
 							</dd>
 						</div>
 						<div className="contents">
@@ -183,7 +185,7 @@ function GardeningEventDetailPage() {
 													params={{ plantId: item.id }}
 													className="inline-flex min-w-0 items-center gap-2 text-primary underline-offset-4 hover:underline"
 												>
-													<ItemPresentationIcon presentation={item.plant.cultivar?.presentation} />
+													<ItemPresentationIcon presentation={item.plant.presentation} />
 													<span className="truncate">{item.label}</span>
 												</Link>
 											) : (

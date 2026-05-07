@@ -66,14 +66,14 @@ import { isQueryObjectPending } from "@/store/query-object-status";
 type CultivarCategoryFilterOption = {
 	value: string;
 	label: string;
-	presentation?: ItemPresentationValueObject;
+	presentation?: ItemPresentationValueObject | null;
 };
 
 type CultivarSpeciesFilterOption = {
 	value: string;
 	label: string;
 	categoryId: string;
-	presentation?: ItemPresentationValueObject;
+	presentation?: ItemPresentationValueObject | null;
 };
 
 export const Route = createFileRoute("/_authenticated/catalog/cultivars")({

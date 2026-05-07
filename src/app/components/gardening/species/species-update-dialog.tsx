@@ -1,4 +1,5 @@
 import type { SpeciesCategoryEntityId } from "@backend/core/domain/gardening/entities";
+import type { ItemPresentationValueObject } from "@backend/core/domain/gardening/value-objects";
 import { useStore } from "@tanstack/react-form";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
@@ -35,6 +36,14 @@ type FormValues = {
 	backgroundColor: string;
 };
 
+function toPresentationFields(presentation: ItemPresentationValueObject | null): Pick<FormValues, "iconKey" | "iconColor" | "backgroundColor"> {
+	return {
+		iconKey: presentation?.iconKey ? String(presentation.iconKey) : SELECT_NONE,
+		iconColor: presentation?.iconColor ?? "",
+		backgroundColor: presentation?.backgroundColor ?? "",
+	};
+}
+
 export function SpeciesUpdateDialog({ species, open, onOpenChange }: Props) {
 	const { data: catData } = useQuery({ ...queryKeys.speciesCategory.all });
 	const mut = useSpeciesUpdateMutation();
@@ -53,9 +62,7 @@ export function SpeciesUpdateDialog({ species, open, onOpenChange }: Props) {
 			categoryId: species.categoryId != null ? String(species.categoryId) : SELECT_NONE,
 			name: species.characteristics.name,
 			description: species.characteristics.description ?? "",
-			iconKey: species.presentation?.iconKey ?? SELECT_NONE,
-			iconColor: species.presentation?.iconColor ?? "",
-			backgroundColor: species.presentation?.backgroundColor ?? "",
+			...toPresentationFields(species.presentation),
 		} satisfies FormValues as FormValues,
 		onSubmit: async ({ value }) => {
 			if (!value.name.trim()) return;
@@ -83,14 +90,13 @@ export function SpeciesUpdateDialog({ species, open, onOpenChange }: Props) {
 			categoryId: species.categoryId != null ? String(species.categoryId) : SELECT_NONE,
 			name: species.characteristics.name,
 			description: species.characteristics.description ?? "",
-			iconKey: species.presentation?.iconKey ?? SELECT_NONE,
-			iconColor: species.presentation?.iconColor ?? "",
-			backgroundColor: species.presentation?.backgroundColor ?? "",
+			...toPresentationFields(species.presentation),
 		});
 	}, [open, species, form]);
 
 	const iconColor = useStore(form.store, (state) => state.values.iconColor);
 	const backgroundColor = useStore(form.store, (state) => state.values.backgroundColor);
+	const selectedCategoryId = useStore(form.store, (state) => state.values.categoryId);
 
 	const close = () => onOpenChange(false);
 
@@ -156,6 +162,25 @@ export function SpeciesUpdateDialog({ species, open, onOpenChange }: Props) {
 									<field.ColorPicker label={m.fields_backgroundColor()} placeholder="#e6ffed" />
 								)}
 							</form.AppField>
+						</div>
+						<div className="flex justify-end">
+							<Button
+								type="button"
+								variant="outline"
+								size="sm"
+								disabled={selectedCategoryId === SELECT_NONE}
+								onClick={() => {
+									const category = catData?.items.find(
+										(item) => String(item.id) === selectedCategoryId,
+									);
+									const next = toPresentationFields(category?.presentation ?? null);
+									form.setFieldValue("iconKey", next.iconKey);
+									form.setFieldValue("iconColor", next.iconColor);
+									form.setFieldValue("backgroundColor", next.backgroundColor);
+								}}
+							>
+								Select from parent category
+							</Button>
 						</div>
 						<DialogFooter>
 							<Button type="button" variant="outline" onClick={close}>

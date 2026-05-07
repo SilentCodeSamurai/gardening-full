@@ -196,7 +196,7 @@ function reconcilePlantsColumnFilters(
 type CultivarOption = {
 	value: string;
 	label: string;
-	presentation?: ItemPresentationValueObject;
+	presentation?: ItemPresentationValueObject | null;
 	speciesId: string;
 	categoryId: string;
 };
@@ -313,7 +313,7 @@ function PlantsPage() {
 			{
 				value: string;
 				label: string;
-				presentation?: ItemPresentationValueObject;
+				presentation?: ItemPresentationValueObject | null;
 				categoryId: string;
 			}
 		>();
@@ -478,7 +478,7 @@ function PlantsPage() {
 							params={{ plantId: String(plant.id) }}
 							className="flex min-w-0 items-center gap-2 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
 						>
-							<ItemPresentationIcon presentation={plant.cultivar?.presentation} />
+							<ItemPresentationIcon presentation={plant.presentation} />
 							<p className="truncate font-medium">{title}</p>
 						</Link>
 					);

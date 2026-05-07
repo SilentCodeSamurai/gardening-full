@@ -2,6 +2,7 @@ import type { SpeciesCategoryEntityId } from "@backend/core/domain/gardening/ent
 import { useStore } from "@tanstack/react-form";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
+import type { ItemPresentationValueObject } from "@backend/core/domain/gardening/value-objects";
 import { SELECT_NONE } from "@/components/form/select-sentinel";
 import { Button } from "@/components/ui/button";
 import {
@@ -32,6 +33,14 @@ type FormValues = {
 	iconColor: string;
 	backgroundColor: string;
 };
+
+function toPresentationFields(presentation: ItemPresentationValueObject | null): Pick<FormValues, "iconKey" | "iconColor" | "backgroundColor"> {
+	return {
+		iconKey: presentation?.iconKey ? String(presentation.iconKey) : SELECT_NONE,
+		iconColor: presentation?.iconColor ?? "",
+		backgroundColor: presentation?.backgroundColor ?? "",
+	};
+}
 
 export function SpeciesCreateDialog({ open, onOpenChange }: Props) {
 	const { data: catData } = useQuery({ ...queryKeys.speciesCategory.all });
@@ -79,6 +88,17 @@ export function SpeciesCreateDialog({ open, onOpenChange }: Props) {
 	}, [open, form]);
 	const iconColor = useStore(form.store, (state) => state.values.iconColor);
 	const backgroundColor = useStore(form.store, (state) => state.values.backgroundColor);
+	const selectedCategoryId = useStore(form.store, (state) => state.values.categoryId);
+
+	useEffect(() => {
+		if (!open || selectedCategoryId === SELECT_NONE) return;
+		const selectedCategory = catData?.items.find((item) => String(item.id) === selectedCategoryId);
+		if (!selectedCategory?.presentation) return;
+		const defaults = toPresentationFields(selectedCategory.presentation);
+		form.setFieldValue("iconKey", defaults.iconKey);
+		form.setFieldValue("iconColor", defaults.iconColor);
+		form.setFieldValue("backgroundColor", defaults.backgroundColor);
+	}, [selectedCategoryId, catData?.items, form, open]);
 
 	const close = () => onOpenChange(false);
 

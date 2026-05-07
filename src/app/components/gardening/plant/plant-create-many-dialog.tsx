@@ -103,6 +103,9 @@ export function PlantCreateManyDialog({
 			if (nodes.length === 0 || value.cultivarId === SELECT_NONE) return;
 			if (value.nameMode === "customStem" && !value.customStem.trim()) return;
 			const cultivarId = value.cultivarId as CultivarEntityId;
+			const cultivarPresentation =
+				cultivarData?.items.find((item) => String(item.id) === String(cultivarId))?.presentation ??
+				null;
 			const description = value.description.trim() || null;
 			const titles =
 				value.nameMode === "preview"
@@ -118,6 +121,7 @@ export function PlantCreateManyDialog({
 					cultivarId,
 					title: titles[i] ?? null,
 					description,
+					presentation: cultivarPresentation,
 				})),
 			});
 			const spatialCreateInputs: Array<{

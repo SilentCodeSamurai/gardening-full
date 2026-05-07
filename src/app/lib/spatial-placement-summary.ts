@@ -10,13 +10,13 @@ export type LocationPlacementSummary =
 			kind: "underParent";
 			parentLocationId: string;
 			parentName: string;
-			parentPresentation?: ItemPresentationValueObject;
+			parentPresentation?: ItemPresentationValueObject | null;
 	  }
 	| {
 			kind: "rootCanvas";
 			selfLocationId: string;
 			selfName: string;
-			selfPresentation?: ItemPresentationValueObject;
+			selfPresentation?: ItemPresentationValueObject | null;
 	  };
 
 export type PlantPlacementSummary =
@@ -25,7 +25,7 @@ export type PlantPlacementSummary =
 			kind: "underLocation";
 			locationId: string;
 			locationName: string;
-			locationPresentation?: ItemPresentationValueObject;
+			locationPresentation?: ItemPresentationValueObject | null;
 	  };
 
 /** Column filter value for locations list placement column (matches `TablePlacementFilterCombobox`). */

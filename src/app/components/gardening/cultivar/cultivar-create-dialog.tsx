@@ -1,4 +1,5 @@
 import type { SpeciesEntityId } from "@backend/core/domain/gardening/entities";
+import type { ItemPresentationValueObject } from "@backend/core/domain/gardening/value-objects";
 import { useStore } from "@tanstack/react-form";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
@@ -32,6 +33,14 @@ type FormValues = {
 	iconColor: string;
 	backgroundColor: string;
 };
+
+function toPresentationFields(presentation: ItemPresentationValueObject | null): Pick<FormValues, "iconKey" | "iconColor" | "backgroundColor"> {
+	return {
+		iconKey: presentation?.iconKey ? String(presentation.iconKey) : SELECT_NONE,
+		iconColor: presentation?.iconColor ?? "",
+		backgroundColor: presentation?.backgroundColor ?? "",
+	};
+}
 
 export function CultivarCreateDialog({ open, onOpenChange }: Props) {
 	const { data: speciesData } = useQuery({ ...queryKeys.species.all });
@@ -79,6 +88,17 @@ export function CultivarCreateDialog({ open, onOpenChange }: Props) {
 	}, [open, form]);
 	const iconColor = useStore(form.store, (state) => state.values.iconColor);
 	const backgroundColor = useStore(form.store, (state) => state.values.backgroundColor);
+	const selectedSpeciesId = useStore(form.store, (state) => state.values.speciesId);
+
+	useEffect(() => {
+		if (!open || selectedSpeciesId === SELECT_NONE) return;
+		const selectedSpecies = speciesData?.items.find((item) => String(item.id) === selectedSpeciesId);
+		if (!selectedSpecies?.presentation) return;
+		const defaults = toPresentationFields(selectedSpecies.presentation);
+		form.setFieldValue("iconKey", defaults.iconKey);
+		form.setFieldValue("iconColor", defaults.iconColor);
+		form.setFieldValue("backgroundColor", defaults.backgroundColor);
+	}, [selectedSpeciesId, speciesData?.items, form, open]);
 
 	const close = () => onOpenChange(false);
 

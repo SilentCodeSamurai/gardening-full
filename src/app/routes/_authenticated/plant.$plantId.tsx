@@ -72,7 +72,7 @@ function PlantDetailPage() {
 		<div className="flex min-h-0 flex-1 flex-col overflow-hidden">
 			<DashboardPageHeading className="min-w-0 flex-wrap" collection="plant">
 				<div className="flex min-w-0 flex-wrap items-center gap-3">
-					<ItemPresentationIcon presentation={cultivar?.presentation} />
+					<ItemPresentationIcon presentation={data.presentation} />
 					<h1 className="font-heading font-medium text-lg">{title}</h1>
 				</div>
 				<div className="auto flex shrink-0 items-center gap-1">
@@ -251,10 +251,12 @@ function PlantDetailPage() {
 												{gardeningActionMessage(event.action.type)}
 											</div>
 											<div className="text-muted-foreground text-xs">
-												{event.occurredAt.toLocaleString(getLocale(), {
-													dateStyle: "short",
-													timeStyle: "short",
-												})}
+												{event.occurredAt === null
+													? m.common_unknown()
+													: event.occurredAt.toLocaleString(getLocale(), {
+															dateStyle: "short",
+															timeStyle: "short",
+														})}
 											</div>
 											{event.action.content ? (
 												<p className="mt-1 line-clamp-2 text-muted-foreground text-xs">

@@ -31,13 +31,14 @@ import {
 
 type Ctx = { snapshots: QuerySnapshot[]; pendingId?: string };
 
-function toDateOrNow(value: unknown): Date {
+function toDateOrNull(value: unknown): Date | null {
+	if (value === null) return null;
 	if (value instanceof Date && !Number.isNaN(value.getTime())) return value;
 	if (typeof value === "string" || typeof value === "number") {
 		const parsed = new Date(value);
 		if (!Number.isNaN(parsed.getTime())) return parsed;
 	}
-	return new Date();
+	return null;
 }
 
 export function useGardeningEventUpdateMutation() {
@@ -52,7 +53,9 @@ export function useGardeningEventUpdateMutation() {
 					previousAll?.items.find((item) => String(item.id) === String(variables.id)) ?? null;
 				if (existing && !isQueryObjectPending(existing)) {
 					const occurredAt =
-						"occurredAt" in variables ? toDateOrNow((variables as { occurredAt?: unknown }).occurredAt) : undefined;
+						"occurredAt" in variables
+							? toDateOrNull((variables as { occurredAt?: unknown }).occurredAt)
+							: undefined;
 					const optimistic = markQueryObjectPending({
 						...existing,
 						...(variables.action !== undefined ? { action: variables.action } : {}),
@@ -178,7 +181,7 @@ export function useGardeningEventCreateForLocationMutation() {
 					workspace: WorkspaceVO.fromKey(workspaceKey),
 					id: pendingId as GardeningEventEntity["id"],
 					action: variables.action,
-					occurredAt: toDateOrNow(variables.occurredAt),
+					occurredAt: toDateOrNull(variables.occurredAt),
 					createdAt: new Date(),
 					updatedAt: new Date(),
 					objectStatus: QUERY_OBJECT_PENDING,
@@ -223,7 +226,7 @@ export function useGardeningEventCreateMutation() {
 					workspace: WorkspaceVO.fromKey(workspaceKey),
 					id: pendingId as GardeningEventEntity["id"],
 					action: variables.action,
-					occurredAt: toDateOrNow(variables.occurredAt),
+					occurredAt: toDateOrNull(variables.occurredAt),
 					createdAt: new Date(),
 					updatedAt: new Date(),
 					objectStatus: QUERY_OBJECT_PENDING,
@@ -266,7 +269,7 @@ export function useGardeningEventCreateForPlantListMutation() {
 					workspace: WorkspaceVO.fromKey(workspaceKey),
 					id: pendingId as GardeningEventEntity["id"],
 					action: variables.action,
-					occurredAt: toDateOrNow(variables.occurredAt),
+					occurredAt: toDateOrNull(variables.occurredAt),
 					createdAt: new Date(),
 					updatedAt: new Date(),
 					objectStatus: QUERY_OBJECT_PENDING,

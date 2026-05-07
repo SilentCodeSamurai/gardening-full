@@ -87,7 +87,7 @@ type FormValues = {
 type PlantOption = {
 	value: string;
 	label: string;
-	presentation?: ItemPresentationValueObject;
+	presentation?: ItemPresentationValueObject | null;
 };
 
 type ActionTypeOption = { value: GardeningAction["type"]; label: string };
@@ -123,7 +123,7 @@ export function GardeningEventCreateDialog({ open, onOpenChange, initialValues }
 			(plantData?.items ?? []).map((plant) => ({
 				value: String(plant.id),
 				label: getPlantDisplayTitle(plant),
-				presentation: plant.cultivar?.presentation,
+				presentation: plant.presentation,
 			})),
 		[plantData?.items],
 	);

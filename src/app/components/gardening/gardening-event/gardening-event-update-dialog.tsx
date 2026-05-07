@@ -44,7 +44,7 @@ export function GardeningEventUpdateDialog({ event, open, onOpenChange }: Props)
 		defaultValues: {
 			actionType: event.action.type,
 			content: event.action.content,
-			occurredAt: event.occurredAt,
+			occurredAt: event.occurredAt ?? new Date(),
 		} satisfies FormValues as FormValues,
 		onSubmit: async ({ value }) => {
 			const actionType = value.actionType as GardeningAction["type"];
@@ -70,7 +70,7 @@ export function GardeningEventUpdateDialog({ event, open, onOpenChange }: Props)
 		form.reset({
 			actionType: event.action.type,
 			content: event.action.content,
-			occurredAt: event.occurredAt,
+			occurredAt: event.occurredAt ?? new Date(),
 		});
 	}, [open, event, form]);
 

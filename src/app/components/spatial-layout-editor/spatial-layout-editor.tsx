@@ -2305,7 +2305,10 @@ export function SpatialLayoutEditor<TNode extends SpatialLayoutNode = SpatialLay
 			});
 		return (
 			<div className={cn("absolute left-0 w-full px-1", positionClassName)}>
-				<Card className="mx-auto max-w-[min(100%,28rem)] bg-background/95 shadow-sm">
+				<Card
+					className="mx-auto max-w-[min(100%,28rem)] bg-background/95 shadow-sm"
+					onPointerDown={(event) => event.stopPropagation()}
+				>
 					<div className="flex flex-col gap-2">
 						<div className="grid gap-2">
 							<div className="grid gap-1">
@@ -2317,6 +2320,7 @@ export function SpatialLayoutEditor<TNode extends SpatialLayoutNode = SpatialLay
 									max={99}
 									className="h-8"
 									value={createManyForm.quantity}
+									onPointerDown={(event) => event.stopPropagation()}
 									onChange={(e) => {
 										const v = Number.parseInt(e.target.value, 10);
 										setCreateManyForm((f) => ({
