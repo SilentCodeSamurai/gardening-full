@@ -2,7 +2,7 @@ import { type Column, flexRender, type RowData, type Table as TanstackTable } fr
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { SlidersHorizontalIcon } from "lucide-react";
 import type { ReactNode } from "react";
-import { useCallback, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useRef } from "react";
 import { PageLoading } from "@/components/layout/page-loading";
 import { TableGlobalSearch } from "@/components/table/table-global-search";
 import { TABLE_LIST_SELECT_COLUMN_WIDTH_PX } from "@/components/table/table-list-column-sizes";
@@ -36,6 +36,7 @@ type DataTableProps<TData extends RowData> = {
 		searchPlaceholder: string;
 		clearSearchLabel: string;
 		clearFiltersLabel: string;
+		trailingActions?: ReactNode;
 	};
 	/** When true, rows with {@link isQueryObjectPending} originals get a left accent and tinted background. */
 	highlightPendingRows?: boolean;
@@ -225,37 +226,10 @@ export function DataTable<TData extends RowData>({
 		}
 	}, []);
 
-	const [showTable, setShowTable] = useState(false);
-	const tableDomReadyRef = useRef(false);
-
-	useLayoutEffect(() => {
-		if (isError || isPending || rowCount === 0) {
-			if (isPending || isError) tableDomReadyRef.current = false;
-			setShowTable(false);
-			return;
-		}
-		if (tableDomReadyRef.current) {
-			setShowTable(true);
-			return;
-		}
-		setShowTable(false);
-		let innerRaf = 0;
-		const outerRaf = requestAnimationFrame(() => {
-			innerRaf = requestAnimationFrame(() => {
-				setShowTable(true);
-				tableDomReadyRef.current = true;
-			});
-		});
-		return () => {
-			cancelAnimationFrame(outerRaf);
-			cancelAnimationFrame(innerRaf);
-		};
-	}, [isPending, isError, rowCount]);
-
 	// eslint-disable-next-line react-hooks/incompatible-library -- TanStack Virtual scroll sync; compiler skips memoization for this subtree.
 	const rowVirtualizer = useVirtualizer({
 		count: rowCount,
-		enabled: rowCount > 0 && !isPending && !isError && showTable,
+		enabled: rowCount > 0 && !isError,
 		getScrollElement: () => scrollParentRef.current,
 		estimateSize: () => 49,
 		overscan: TABLE_ROW_OVERSCAN,
@@ -271,10 +245,6 @@ export function DataTable<TData extends RowData>({
 				{errorMessage}
 			</p>
 		);
-	}
-
-	if (isPending || (rowCount > 0 && !showTable)) {
-		return <PageLoading showLabel={false} variant="page" />;
 	}
 
 	const selectedCount = table.getFilteredSelectedRowModel().rows.length;
@@ -356,7 +326,12 @@ export function DataTable<TData extends RowData>({
 						searchPlaceholder={globalSearch.searchPlaceholder}
 						clearSearchLabel={globalSearch.clearSearchLabel}
 						clearFiltersLabel={globalSearch.clearFiltersLabel}
-						trailingActions={<DataTableColumnVisibility table={table} />}
+						trailingActions={
+							<>
+								{globalSearch.trailingActions}
+								<DataTableColumnVisibility table={table} />
+							</>
+						}
 					/>
 				) : (
 					<DataTableColumnVisibility table={table} />
@@ -384,21 +359,25 @@ export function DataTable<TData extends RowData>({
 					<div
 						ref={bodyScrollRef}
 						className={cn(
-							"min-h-0 min-w-0 flex-1 overflow-x-auto overflow-y-auto [overflow-anchor:none]",
+							"flex min-h-0 min-w-0 flex-1 flex-col overflow-x-auto overflow-y-auto [overflow-anchor:none]",
 							"[scrollbar-gutter:stable]",
 						)}
 						onScroll={(event) => syncHorizontalScroll(event.currentTarget)}
 					>
-						<table className={fixedTableClass}>
-							{colgroup}
-							<TableBody>
-								<TableRow>
-									<TableCell colSpan={leafColumns.length} className="h-24 text-center">
-										{emptyMessage}
-									</TableCell>
-								</TableRow>
-							</TableBody>
-						</table>
+						{isPending ? (
+							<PageLoading showLabel={false} variant="page" className="w-full" />
+						) : (
+							<table className={fixedTableClass}>
+								{colgroup}
+								<TableBody>
+									<TableRow>
+										<TableCell colSpan={leafColumns.length} className="h-24 text-center">
+											{emptyMessage}
+										</TableCell>
+									</TableRow>
+								</TableBody>
+							</table>
+						)}
 					</div>
 				</div>
 			</div>
@@ -415,7 +394,12 @@ export function DataTable<TData extends RowData>({
 					searchPlaceholder={globalSearch.searchPlaceholder}
 					clearSearchLabel={globalSearch.clearSearchLabel}
 					clearFiltersLabel={globalSearch.clearFiltersLabel}
-					trailingActions={<DataTableColumnVisibility table={table} />}
+					trailingActions={
+						<>
+							{globalSearch.trailingActions}
+							<DataTableColumnVisibility table={table} />
+						</>
+					}
 				/>
 			) : (
 				<DataTableColumnVisibility table={table} />
@@ -445,7 +429,7 @@ export function DataTable<TData extends RowData>({
 				<div
 					ref={bodyScrollRef}
 					className={cn(
-						"min-h-0 min-w-0 flex-1 overflow-x-auto overflow-y-auto [overflow-anchor:none]",
+						"flex min-h-0 min-w-0 flex-1 flex-col overflow-x-auto overflow-y-auto [overflow-anchor:none]",
 						"[scrollbar-gutter:stable]",
 					)}
 					onScroll={(event) => syncHorizontalScroll(event.currentTarget)}
