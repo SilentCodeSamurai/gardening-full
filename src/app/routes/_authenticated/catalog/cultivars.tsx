@@ -5,6 +5,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
 	type Column,
 	type ColumnFiltersState,
+	type VisibilityState,
 	createColumnHelper,
 	createTable,
 	getCoreRowModel,
@@ -275,6 +276,7 @@ function CultivarsPage() {
 	});
 	const [globalFilter, setGlobalFilter] = useState(qFromSearch ?? "");
 	const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+	const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({ globalSearch: false });
 	const [createOpen, setCreateOpen] = useState(false);
 	const [bulkUpdateOpen, setBulkUpdateOpen] = useState(false);
 	const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
@@ -359,6 +361,7 @@ function CultivarsPage() {
 				header: ({ column }) => <DataTableColumnHeader column={column} title={m.fields_title()} />,
 				filterFn: "includesString",
 				enableGlobalFilter: false,
+				meta: { displayRequired: true },
 				cell: ({ row }) => (
 					<Link
 						to="/catalog/cultivar/$cultivarId"
@@ -571,17 +574,27 @@ function CultivarsPage() {
 				onColumnFiltersChange,
 				onGlobalFilterChange: setGlobalFilter,
 				onRowSelectionChange: setRowSelection,
+				onColumnVisibilityChange: setColumnVisibility,
 				renderFallbackValue: null,
 				state: {
 					sorting,
 					globalFilter,
 					columnFilters: effectiveColumnFilters,
 					rowSelection,
-					columnVisibility: { globalSearch: false },
+					columnVisibility,
 					columnPinning: { left: [], right: [] },
 				},
 			}),
-		[columns, effectiveColumnFilters, globalFilter, items, onColumnFiltersChange, rowSelection, sorting],
+		[
+			columnVisibility,
+			columns,
+			effectiveColumnFilters,
+			globalFilter,
+			items,
+			onColumnFiltersChange,
+			rowSelection,
+			sorting,
+		],
 	);
 
 	const filteredRowCount = table.getFilteredRowModel().rows.length;

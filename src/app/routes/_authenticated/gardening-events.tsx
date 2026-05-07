@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
 	type ColumnFiltersState,
+	type VisibilityState,
 	createColumnHelper,
 	createTable,
 	getCoreRowModel,
@@ -73,6 +74,7 @@ function GardeningEventsPage() {
 	const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>(() => parseUrlColumnFilters(search.cf));
 	const [globalFilter, setGlobalFilter] = useState(search.q ?? "");
 	const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+	const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({ globalSearch: false });
 	const [bulkUpdateOpen, setBulkUpdateOpen] = useState(false);
 	const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
 	const bulkDeleteMany = useGardeningEventDeleteManyMutation();
@@ -126,6 +128,7 @@ function GardeningEventsPage() {
 				header: ({ column }) => <DataTableColumnHeader column={column} title={m.fields_title()} />,
 				filterFn: "includesString",
 				enableGlobalFilter: false,
+				meta: { displayRequired: true },
 				cell: ({ row }) => {
 					const actionLabel = gardeningActionMessage(row.original.action.type);
 					return (
@@ -203,17 +206,18 @@ function GardeningEventsPage() {
 				onColumnFiltersChange: setColumnFilters,
 				onGlobalFilterChange: setGlobalFilter,
 				onRowSelectionChange: setRowSelection,
+				onColumnVisibilityChange: setColumnVisibility,
 				renderFallbackValue: null,
 				state: {
 					sorting,
 					globalFilter,
 					columnFilters,
 					rowSelection,
-					columnVisibility: { globalSearch: false },
+					columnVisibility,
 					columnPinning: { left: [], right: [] },
 				},
 			}),
-		[columnFilters, columns, globalFilter, items, rowSelection, sorting],
+		[columnFilters, columnVisibility, columns, globalFilter, items, rowSelection, sorting],
 	);
 	const selectedEventIds = useMemo(
 		() => table.getFilteredSelectedRowModel().rows.map((row) => row.original.id as GardeningEventEntityId),

@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
 	type ColumnFiltersState,
+	type VisibilityState,
 	createColumnHelper,
 	createTable,
 	getCoreRowModel,
@@ -140,6 +141,7 @@ function LocationsPage() {
 	]);
 	const [globalFilter, setGlobalFilter] = useState(qFromSearch ?? "");
 	const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+	const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({ globalSearch: false });
 	const [createOpen, setCreateOpen] = useState(false);
 	const [createEventOpen, setCreateEventOpen] = useState(false);
 	const [bulkUpdateOpen, setBulkUpdateOpen] = useState(false);
@@ -191,6 +193,7 @@ function LocationsPage() {
 				header: ({ column }) => <DataTableColumnHeader column={column} title={m.fields_name()} />,
 				filterFn: "includesString",
 				enableGlobalFilter: false,
+				meta: { displayRequired: true },
 				cell: ({ row }) => (
 					<Link
 						to="/location/$locationId"
@@ -304,6 +307,7 @@ function LocationsPage() {
 				onColumnFiltersChange: setColumnFilters,
 				onGlobalFilterChange: setGlobalFilter,
 				onRowSelectionChange: setRowSelection,
+				onColumnVisibilityChange: setColumnVisibility,
 				globalFilterFn: fuzzyFilter,
 				renderFallbackValue: null,
 				state: {
@@ -311,11 +315,11 @@ function LocationsPage() {
 					globalFilter,
 					columnFilters,
 					rowSelection,
-					columnVisibility: { globalSearch: false },
+					columnVisibility,
 					columnPinning: { left: [], right: [] },
 				},
 			}),
-		[columnFilters, columns, globalFilter, rootItems, rowSelection, sorting],
+		[columnFilters, columnVisibility, columns, globalFilter, rootItems, rowSelection, sorting],
 	);
 
 	const filteredRowCount = table.getFilteredRowModel().rows.length;

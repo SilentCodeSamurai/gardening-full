@@ -1,11 +1,20 @@
 import { type Column, flexRender, type RowData, type Table as TanstackTable } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
+import { SlidersHorizontalIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import { PageLoading } from "@/components/layout/page-loading";
 import { TableGlobalSearch } from "@/components/table/table-global-search";
 import { TABLE_LIST_SELECT_COLUMN_WIDTH_PX } from "@/components/table/table-list-column-sizes";
+import { Button } from "@/components/ui/button";
+import { ButtonTooltip } from "@/components/ui/button-tooltip";
 import { DebouncedInput } from "@/components/ui/debounced-input";
+import {
+	DropdownMenu,
+	DropdownMenuCheckboxItem,
+	DropdownMenuContent,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { pendingItemSurfaceClassName } from "@/components/ui/pending-item-surface";
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
@@ -42,6 +51,7 @@ type ColumnMeta<TData extends RowData> =
 			filter?: ColumnFilterRenderer<TData>;
 			headerClassName?: string;
 			cellClassName?: string;
+			displayRequired?: boolean;
 	  }
 	| undefined;
 
@@ -88,12 +98,98 @@ function DataTableToolbar({
 	selectedActions?: ReactNode;
 }) {
 	return (
-		<div className="flex h-8 shrink-0 flex-wrap items-center justify-between gap-2">
-			<p className="text-muted-foreground text-xs">
-				{selectedCount} / {rowCount} {selectedLabel}
-			</p>
+		<div className="flex h-8 shrink-0 flex-wrap items-center gap-2">
+			<p className="text-muted-foreground text-xs">{`${selectedCount} / ${rowCount} ${selectedLabel}`}</p>
 			{selectedActions}
 		</div>
+	);
+}
+
+function DataTableColumnVisibility<TData extends RowData>({ table }: { table: TanstackTable<TData> }) {
+	const manageColumnsLabel = m.common_manageColumns();
+	const toggleableColumns = table
+		.getAllLeafColumns()
+		.filter((column) => column.getCanHide() && !["select", "actions", "globalSearch"].includes(column.id));
+
+	if (toggleableColumns.length === 0) return null;
+	const allVisible = toggleableColumns.every((column) => column.getIsVisible());
+	const requiredColumns = toggleableColumns.filter(
+		(column) => ((column.columnDef.meta as ColumnMeta<TData>)?.displayRequired ?? false) === true,
+	);
+	const effectiveRequiredColumns = requiredColumns.length > 0 ? requiredColumns : toggleableColumns.slice(0, 1);
+	const requiredColumnIds = new Set(effectiveRequiredColumns.map((column) => column.id));
+
+	const getColumnLabel = (columnId: string): string => {
+		switch (columnId) {
+			case "title":
+				return m.fields_title();
+			case "name":
+				return m.fields_name();
+			case "description":
+			case "content":
+				return m.fields_description();
+			case "category":
+				return m.collections_speciesCategory_title();
+			case "species":
+				return m.collections_species_title();
+			case "cultivar":
+				return m.collections_cultivar_title();
+			case "isCustom":
+				return m.fields_isCustom();
+			case "updatedAt":
+			case "createdAt":
+				return m.fields_updatedAt();
+			case "placement":
+				return m.fields_placement();
+			case "occurredAt":
+				return m.fields_occurredAt();
+			case "actionType":
+				return m.fields_title();
+			default:
+				return columnId;
+		}
+	};
+
+	return (
+		<DropdownMenu>
+			<ButtonTooltip label={manageColumnsLabel}>
+				<DropdownMenuTrigger asChild>
+					<Button type="button" variant="outline" size="icon" aria-label={manageColumnsLabel}>
+						<SlidersHorizontalIcon />
+					</Button>
+				</DropdownMenuTrigger>
+			</ButtonTooltip>
+			<DropdownMenuContent align="end" className="w-44">
+				<DropdownMenuCheckboxItem
+					checked={allVisible}
+					onSelect={(event) => event.preventDefault()}
+					onCheckedChange={(checked) => {
+						const nextVisible = Boolean(checked);
+						for (const column of toggleableColumns) {
+							if (nextVisible) {
+								column.toggleVisibility(true);
+								continue;
+							}
+							column.toggleVisibility(requiredColumnIds.has(column.id));
+						}
+					}}
+				>
+					{m.common_all()}
+				</DropdownMenuCheckboxItem>
+				{toggleableColumns.map((column) => (
+					<DropdownMenuCheckboxItem
+						key={column.id}
+						className="capitalize"
+						checked={column.getIsVisible()}
+						disabled={requiredColumnIds.has(column.id)}
+						onSelect={(event) => event.preventDefault()}
+						onCheckedChange={(checked) => column.toggleVisibility(Boolean(checked))}
+					>
+						{getColumnLabel(column.id)}
+					</DropdownMenuCheckboxItem>
+				))}
+			</DropdownMenuContent>
+		</DropdownMenu>
 	);
 }
 
@@ -103,7 +199,7 @@ export function DataTable<TData extends RowData>({
 	isError,
 	errorMessage,
 	emptyMessage,
-	selectedLabel = "selected",
+	selectedLabel = m.common_selected(),
 	selectedActions,
 	globalSearch,
 	highlightPendingRows = false,
@@ -260,8 +356,11 @@ export function DataTable<TData extends RowData>({
 						searchPlaceholder={globalSearch.searchPlaceholder}
 						clearSearchLabel={globalSearch.clearSearchLabel}
 						clearFiltersLabel={globalSearch.clearFiltersLabel}
+						trailingActions={<DataTableColumnVisibility table={table} />}
 					/>
-				) : null}
+				) : (
+					<DataTableColumnVisibility table={table} />
+				)}
 				<DataTableToolbar
 					selectedCount={selectedCount}
 					rowCount={rowCount}
@@ -316,8 +415,11 @@ export function DataTable<TData extends RowData>({
 					searchPlaceholder={globalSearch.searchPlaceholder}
 					clearSearchLabel={globalSearch.clearSearchLabel}
 					clearFiltersLabel={globalSearch.clearFiltersLabel}
+					trailingActions={<DataTableColumnVisibility table={table} />}
 				/>
-			) : null}
+			) : (
+				<DataTableColumnVisibility table={table} />
+			)}
 			<DataTableToolbar
 				selectedCount={selectedCount}
 				rowCount={rowCount}

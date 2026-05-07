@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
 	type ColumnFiltersState,
+	type VisibilityState,
 	createColumnHelper,
 	createTable,
 	getCoreRowModel,
@@ -100,6 +101,7 @@ function SpeciesCategoriesPage() {
 	);
 	const [globalFilter, setGlobalFilter] = useState(qFromSearch ?? "");
 	const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+	const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({ globalSearch: false });
 	const [createOpen, setCreateOpen] = useState(false);
 	const [bulkUpdateOpen, setBulkUpdateOpen] = useState(false);
 	const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
@@ -157,6 +159,7 @@ function SpeciesCategoriesPage() {
 				header: ({ column }) => <DataTableColumnHeader column={column} title={m.fields_title()} />,
 				filterFn: "includesString",
 				enableGlobalFilter: false,
+				meta: { displayRequired: true },
 				cell: ({ row }) => {
 					const label = translateCatalogField(row.original.title, row.original.systemCatalog);
 					return (
@@ -274,17 +277,18 @@ function SpeciesCategoriesPage() {
 				onColumnFiltersChange: setColumnFilters,
 				onGlobalFilterChange: setGlobalFilter,
 				onRowSelectionChange: setRowSelection,
+				onColumnVisibilityChange: setColumnVisibility,
 				renderFallbackValue: null,
 				state: {
 					sorting,
 					globalFilter,
 					columnFilters,
 					rowSelection,
-					columnVisibility: { globalSearch: false },
+					columnVisibility,
 					columnPinning: { left: [], right: [] },
 				},
 			}),
-		[columnFilters, columns, globalFilter, items, rowSelection, sorting],
+		[columnFilters, columnVisibility, columns, globalFilter, items, rowSelection, sorting],
 	);
 
 	const selectedCategoryIds = useMemo(
