@@ -10,17 +10,17 @@ import {
 
 export const CreateGardeningEventInputSchema = z.object({
 	action: GardeningActionSchema,
-	occurredAt: z.coerce.date().optional().default(() => new Date()),
+	occurredAt: z.union([z.coerce.date(), z.null()]),
 });
 export const CreateGardeningEventForLocationInputSchema = z.object({
 	locationId: LocationEntityIdSchema,
 	action: GardeningActionSchema,
-	occurredAt: z.coerce.date().optional().default(() => new Date()),
+	occurredAt: z.union([z.coerce.date(), z.null()]),
 });
 export const CreateGardeningEventForPlantListInputSchema = z.object({
 	action: GardeningActionSchema,
 	plantIds: PlantEntityIdsSchema,
-	occurredAt: z.coerce.date().optional().default(() => new Date()),
+	occurredAt: z.union([z.coerce.date(), z.null()]),
 });
 export const GetGardeningEventByIdInputSchema = z.object({
 	id: GardeningEventEntityIdSchema,
@@ -28,7 +28,7 @@ export const GetGardeningEventByIdInputSchema = z.object({
 export const UpdateGardeningEventInputSchema = z.object({
 	id: GardeningEventEntityIdSchema,
 	action: GardeningActionSchema.optional(),
-	occurredAt: z.coerce.date().optional(),
+	occurredAt: z.union([z.coerce.date(), z.null()]).optional(),
 });
 export const DeleteGardeningEventInputSchema = z.object({
 	id: GardeningEventEntityIdSchema,

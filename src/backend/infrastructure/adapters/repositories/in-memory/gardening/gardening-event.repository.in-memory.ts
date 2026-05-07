@@ -16,7 +16,7 @@ import type {
 	GardeningEventRepositoryUpdateOutputDTO,
 	GardeningEventRepositoryUpdatePatchDTO,
 } from "@backend/core/application/ports/repositories/gardening/gardening-event.repository.port";
-import { BaseRepositoryErrors } from "@backend/core/application/ports/repositories/shared/base-repository.errors";
+import { BaseRepository } from "@backend/core/application/ports/repositories/shared/base.repository";
 import type { GardeningEventEntity, LocationEntityId, PlantEntityId } from "@backend/core/domain/gardening/entities";
 import { InMemoryTransactionManagerAdapter } from "@backend/infrastructure/adapters/transaction/in-memory-transaction-manager.adapter";
 import type { InMemoryStore } from "@backend/infrastructure/integrations/in-memory-database/client";
@@ -28,7 +28,7 @@ import {
 } from "#/backend/infrastructure/adapters/repositories/in-memory/shared/in-memory-entity-filter";
 
 @injectable()
-export class GardeningEventInMemoryRepository extends BaseRepositoryErrors implements GardeningEventRepositoryPort {
+export class GardeningEventInMemoryRepository extends BaseRepository implements GardeningEventRepositoryPort {
 	constructor(
 		@inject(InMemoryTransactionManagerAdapter)
 		private readonly transactionManager: InMemoryTransactionManagerAdapter,
@@ -41,7 +41,6 @@ export class GardeningEventInMemoryRepository extends BaseRepositoryErrors imple
 		const id = gardeningEventId();
 		const row: GardeningEventEntity = {
 			...dto,
-			occurredAt: dto.occurredAt ?? now,
 			id,
 			createdAt: now,
 			updatedAt: now,

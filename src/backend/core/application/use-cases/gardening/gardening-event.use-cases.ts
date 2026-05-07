@@ -81,7 +81,7 @@ export class GardeningEventGetByIdUseCase extends BaseUseCase<
 export type GardeningEventUpdateUseCaseInput = UseCaseRequest<{
 	id: GardeningEventEntityId;
 	action?: GardeningAction;
-	occurredAt?: Date;
+	occurredAt?: Date | null;
 }>;
 export type GardeningEventUpdateUseCaseOutput = GardeningEventEntity;
 
@@ -163,7 +163,7 @@ export class GardeningEventDeleteManyUseCase extends BaseUseCase<
 
 export type GardeningEventCreateUseCaseInput = UseCaseRequest<{
 	action: GardeningAction;
-	occurredAt?: Date;
+	occurredAt: Date | null;
 }>;
 export type GardeningEventCreateUseCaseOutput = GardeningEventEntity;
 
@@ -184,7 +184,7 @@ export class GardeningEventCreateUseCase extends BaseUseCase<
 		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "create" });
 		return this.gardeningEventRepository.createOne({
 			action: input.dto.action,
-			occurredAt: input.dto.occurredAt ?? new Date(),
+			occurredAt: input.dto.occurredAt,
 			workspace: input.context.activeWorkspaceScope,
 		});
 	}
@@ -193,7 +193,7 @@ export class GardeningEventCreateUseCase extends BaseUseCase<
 export type GardeningEventCreateForLocationUseCaseInput = UseCaseRequest<{
 	locationId: LocationEntityId;
 	action: GardeningAction;
-	occurredAt?: Date;
+	occurredAt: Date | null;
 }>;
 export type GardeningEventCreateForLocationUseCaseOutput = GardeningEventEntity;
 
@@ -226,7 +226,7 @@ export class GardeningEventCreateForLocationUseCase extends TransactionalUseCase
 		});
 		const gardeningEvent = await this.gardeningEventRepository.createOne({
 			action: input.dto.action,
-			occurredAt: input.dto.occurredAt ?? new Date(),
+			occurredAt: input.dto.occurredAt,
 			workspace: input.context.activeWorkspaceScope,
 		});
 		const activeScope = input.context.activeWorkspaceScope;
@@ -275,7 +275,7 @@ export class GardeningEventCreateForLocationUseCase extends TransactionalUseCase
 export type GardeningEventCreateForPlantListUseCaseInput = UseCaseRequest<{
 	action: GardeningAction;
 	plantIds: PlantEntityId[];
-	occurredAt?: Date;
+	occurredAt: Date | null;
 }>;
 export type GardeningEventCreateForPlantListUseCaseOutput = GardeningEventEntity;
 
@@ -301,7 +301,7 @@ export class GardeningEventCreateForPlantListUseCase extends TransactionalUseCas
 		await this.access.assertCanPerformActionOnWorkspace({ ...input.context, action: "read" });
 		const gardeningEvent = await this.gardeningEventRepository.createOne({
 			action: input.dto.action,
-			occurredAt: input.dto.occurredAt ?? new Date(),
+			occurredAt: input.dto.occurredAt,
 			workspace: input.context.activeWorkspaceScope,
 		});
 		const activeScope = input.context.activeWorkspaceScope;

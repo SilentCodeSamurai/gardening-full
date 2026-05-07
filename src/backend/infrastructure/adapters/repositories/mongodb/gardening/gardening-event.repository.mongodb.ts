@@ -39,7 +39,6 @@ export class GardeningEventMongoDBRepository extends BaseMongoDBRepository imple
 		const now = new Date();
 		const doc: GardeningEventDoc = {
 			...dto,
-			occurredAt: dto.occurredAt ?? now,
 			id: gardeningEventId(),
 			createdAt: now,
 			updatedAt: now,
@@ -57,7 +56,6 @@ export class GardeningEventMongoDBRepository extends BaseMongoDBRepository imple
 		const now = new Date();
 		const docs: GardeningEventDoc[] = input.items.map((item) => ({
 			...item,
-			occurredAt: item.occurredAt ?? now,
 			id: gardeningEventId(),
 			createdAt: now,
 			updatedAt: now,

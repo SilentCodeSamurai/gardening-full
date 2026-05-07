@@ -44,7 +44,7 @@ export function mapLocationDocToEntity(doc: LocationDoc): LocationEntity {
 export function mapGardeningEventDocToEntity(doc: GardeningEventDoc): GardeningEventEntity {
 	return {
 		...doc,
-		occurredAt: doc.occurredAt ?? doc.createdAt,
+		occurredAt: doc.occurredAt ?? null,
 		workspace: WorkspaceVO.fromKey(doc.workspaceKey as never),
 	};
 }
