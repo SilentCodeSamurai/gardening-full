@@ -175,15 +175,15 @@ export function DashboardSidebar() {
 				</SidebarGroup>
 			</SidebarContent>
 			<SidebarFooter className="gap-3 border-sidebar-border border-t pt-3">
+				<ThemeToggle />
+				<SidebarLanguageMenu />
+				<ToursMenu />
 				<div className="flex w-full items-center gap-2">
 					<UserButton
 						size="sm"
 						className="w-full border border-border bg-input/20 text-foreground hover:bg-input/50 hover:text-foreground"
 					/>
 				</div>
-				<ThemeToggle />
-				<SidebarLanguageMenu />
-				<ToursMenu />
 			</SidebarFooter>
 			<SidebarRail />
 		</Sidebar>
