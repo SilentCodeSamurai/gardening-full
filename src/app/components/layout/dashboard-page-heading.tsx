@@ -34,32 +34,31 @@ export function DashboardPageHeading({
 		<>
 			<div className={cn("flex min-w-0 items-center gap-1 py-1 pl-1", className)}>
 				<SidebarTrigger className={cn("shrink-0", triggerClassName)} />
+				<ButtonTooltip label={m.common_back()}>
+					<Button
+						type="button"
+						size="icon"
+						variant="outline"
+						className="shrink-0"
+						aria-label={m.common_back()}
+						onClick={() => window.history.back()}
+					>
+						<span className="sr-only">{m.common_back()}</span>
+						<ArrowLeftIcon />
+					</Button>
+				</ButtonTooltip>
 				<Separator orientation="vertical" />
 				<div className="ml-1 flex min-w-0 flex-1 items-center justify-between gap-2 pr-1">
 					<div className="flex min-w-0 items-center gap-2">
 						{collection ? <CollectionIcon collection={collection} className="size-5" /> : null}
 						{children}
 					</div>
-					<div className="flex shrink-0 items-center gap-2">
-						{viewModeToggle ? (
-							<TableViewModeToggle
-								value={viewModeToggle.value}
-								onValueChange={viewModeToggle.onValueChange}
-							/>
-						) : null}
-						<ButtonTooltip label={m.common_back()}>
-							<Button
-								type="button"
-								size="icon"
-								variant="outline"
-								aria-label={m.common_back()}
-								onClick={() => window.history.back()}
-							>
-								<span className="sr-only">{m.common_back()}</span>
-								<ArrowLeftIcon />
-							</Button>
-						</ButtonTooltip>
-					</div>
+					{viewModeToggle ? (
+						<TableViewModeToggle
+							value={viewModeToggle.value}
+							onValueChange={viewModeToggle.onValueChange}
+						/>
+					) : null}
 				</div>
 			</div>
 			<Separator orientation="horizontal" className="w-full" />
