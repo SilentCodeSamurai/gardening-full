@@ -7,11 +7,19 @@ import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import viteReact from "@vitejs/plugin-react";
 import { config as loadEnvConfig } from "dotenv";
 import { nitro } from "nitro/vite";
+import type { WarningHandlerWithDefault } from "rollup";
 import { defineConfig } from "vite";
 import tsconfigPaths from "vite-tsconfig-paths";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 loadEnvConfig({ path: [".env.development.local", ".env.development", ".env.local", ".env"] });
+
+const ignoreModuleLevelDirectiveWarnings: WarningHandlerWithDefault = (warning, warn) => {
+	if (warning.code === "MODULE_LEVEL_DIRECTIVE" && warning.id?.includes("node_modules")) {
+		return;
+	}
+	warn(warning);
+};
 
 const config = defineConfig({
 	resolve: {
@@ -28,7 +36,7 @@ const config = defineConfig({
 			cookieName: "locale",
 			strategy: ["cookie", "baseLocale", "preferredLanguage"],
 		}),
-		nitro({ rollupConfig: { external: [/^@sentry\//] } }),
+		nitro({ rollupConfig: { external: [/^@sentry\//], onwarn: ignoreModuleLevelDirectiveWarnings } }),
 		tsconfigPaths({ projects: ["./tsconfig.json"] }),
 		tailwindcss(),
 		tanstackStart({
